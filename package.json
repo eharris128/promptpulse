@@ -14,7 +14,7 @@
     "migrate": "node migrate.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": "eharris128",
   "license": "MIT",
   "dependencies": {
     "@sqlitecloud/drivers": "^1.0.507",

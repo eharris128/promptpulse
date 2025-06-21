@@ -1,34 +1,53 @@
-# Claude Code Usage Leaderboard
+# PromptPulse
 
-A system to aggregate Claude Code usage data across multiple machines and display usage statistics.
-
-## Overview
-
-This project consists of:
-- **Server**: Collects and stores usage data from multiple machines
-- **Upload Script**: Reads local Claude Code usage data and uploads to server
-- **Automated Upload**: Cron jobs and login scripts to ensure data is uploaded regularly
+Track and aggregate Claude Code usage across multiple machines with automatic collection via cron.
 
 ## Installation
 
-### 1. Download/Clone Repository
-
 ```bash
-# Clone to your desired location (any directory works)
-git clone <repository-url> /any/path/you/want
-cd /any/path/you/want
-
-# Or download and extract to your preferred directory
+npm install -g promptpulse
 ```
 
-### 2. Make Scripts Executable
+## Setup
+
+After installation, run the setup command to configure automatic usage collection every 15 minutes:
 
 ```bash
-# Make scripts executable (scripts auto-detect their location)
-chmod +x cron-upload.sh upload-on-login.sh upload-usage.js
+promptpulse setup
+# or use the shorthand
+ppulse setup
 ```
 
-**Note**: The scripts automatically detect their installation directory, so no path configuration is needed!
+This will add a cron job that runs collection every 15 minutes.
+
+## Configuration
+
+Set the following environment variables:
+
+- `DATABASE_URL` - SQLite Cloud database connection string (required)
+- `MACHINE_ID` - Custom machine identifier (optional, defaults to hostname)
+
+You can set these in a `.env` file in your project directory or export them in your shell.
+
+## Usage
+
+### Manual Collection
+
+To manually collect and upload usage data:
+
+```bash
+promptpulse collect
+# or
+ppulse collect
+```
+
+### View Commands
+
+```bash
+promptpulse --help
+# or
+ppulse --help
+```
 
 ## Quick Start
 
@@ -357,3 +376,21 @@ This data includes:
 - Upload logs: `logs/upload-YYYY-MM.log`
 - Last upload tracking: `logs/last-upload`
 - System cron logs: `/var/log/cron` (requires sudo)
+
+## Development
+
+The original server and migration scripts are still available:
+
+```bash
+npm start        # Start the API server
+npm run migrate  # Run database migrations
+```
+
+To develop locally:
+
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Create a `.env` file with your `DATABASE_URL`
+4. Run migrations: `npm run migrate`
+5. Link the package locally: `npm link`
+6. Test commands: `promptpulse --help`

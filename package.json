@@ -15,10 +15,10 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@sqlitecloud/drivers": "^1.0.507",
-    "ccusage": "^13.0.1",
+    "ccusage": "^15.0.0",
     "commander": "^12.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

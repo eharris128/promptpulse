@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { formatCost, formatTokens, getAverageLabel } from '@/lib/utils'
 import { apiClient } from '@/lib/api'
 import { LeaderboardData, LeaderboardEntry } from '@/types'
 import { Navigation } from '@/components/navigation'
@@ -60,18 +61,6 @@ export default function Leaderboard() {
     setLeaderboardData(null)
   }
 
-  const formatTokens = (tokens: number) => {
-    return new Intl.NumberFormat('en-US').format(tokens)
-  }
-
-  const formatCost = (cost: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
-    }).format(cost)
-  }
 
   const getRankColor = (rank: number) => {
     if (rank === 1) return 'text-yellow-600'
@@ -216,7 +205,7 @@ export default function Leaderboard() {
                             {formatTokens(entry.total_tokens)} tokens
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {formatCost(entry.total_cost)} • {formatTokens(entry.daily_average)} avg/day
+                            {formatCost(entry.total_cost)} • {getAverageLabel(period, entry.daily_average)}
                           </p>
                         </div>
                       </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { formatCost, formatTokens } from '@/lib/utils'
 import { AggregateData } from '@/types'
 
 interface StatsCardsProps {
@@ -10,21 +11,6 @@ interface StatsCardsProps {
 export function StatsCards({ data }: StatsCardsProps) {
   console.log('StatsCards received data:', data)
   const { totals } = data
-
-  const formatCost = (cost: number) => {
-    if (cost === 0) return '$0.00'
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
-    }).format(cost)
-  }
-
-  const formatNumber = (num: number) => {
-    if (num === 0) return '0'
-    return new Intl.NumberFormat('en-US').format(num)
-  }
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -47,7 +33,7 @@ export function StatsCards({ data }: StatsCardsProps) {
           <span className="text-2xl">🎯</span>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatNumber(totals?.total_tokens || 0)}</div>
+          <div className="text-2xl font-bold">{formatTokens(totals?.total_tokens || 0)}</div>
           <p className="text-xs text-muted-foreground">
             Input + Output + Cache tokens
           </p>
@@ -60,7 +46,7 @@ export function StatsCards({ data }: StatsCardsProps) {
           <span className="text-2xl">📝</span>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatNumber(totals?.total_input_tokens || 0)}</div>
+          <div className="text-2xl font-bold">{formatTokens(totals?.total_input_tokens || 0)}</div>
           <p className="text-xs text-muted-foreground">
             User prompts and context
           </p>
@@ -73,7 +59,7 @@ export function StatsCards({ data }: StatsCardsProps) {
           <span className="text-2xl">🤖</span>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatNumber(totals?.total_output_tokens || 0)}</div>
+          <div className="text-2xl font-bold">{formatTokens(totals?.total_output_tokens || 0)}</div>
           <p className="text-xs text-muted-foreground">
             Claude responses
           </p>

@@ -1,6 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { formatCost } from '@/lib/utils'
 import { Machine } from '@/types'
 import { format, parseISO } from 'date-fns'
 
@@ -9,13 +10,6 @@ interface MachinesTableProps {
 }
 
 export function MachinesTable({ machines }: MachinesTableProps) {
-  const formatCost = (cost: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(cost)
-  }
 
   const formatDate = (dateString: string) => {
     try {

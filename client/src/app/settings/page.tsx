@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { sanitizeDisplayName } from '@/lib/utils'
 import { apiClient } from '@/lib/api'
 import { LeaderboardSettings } from '@/types'
 import { Navigation } from '@/components/navigation'
@@ -61,7 +62,14 @@ export default function Settings() {
       setError(null)
       setSuccess(null)
       
-      await apiClient.updateLeaderboardSettings(settings)
+      // Sanitize display name before saving
+      const sanitizedSettings = {
+        ...settings,
+        display_name: sanitizeDisplayName(settings.display_name || '')
+      }
+      
+      await apiClient.updateLeaderboardSettings(sanitizedSettings)
+      setSettings(sanitizedSettings) // Update local state with sanitized version
       setSuccess('Settings saved successfully!')
       
       // Clear success message after 3 seconds
@@ -159,9 +167,11 @@ export default function Settings() {
                     id="display-name"
                     placeholder="Leave empty to use your username"
                     value={settings.display_name || ''}
-                    onChange={(e) => 
-                      setSettings(prev => ({ ...prev, display_name: e.target.value }))
-                    }
+                    maxLength={50}
+                    onChange={(e) => {
+                      const sanitized = sanitizeDisplayName(e.target.value)
+                      setSettings(prev => ({ ...prev, display_name: sanitized }))
+                    }}
                   />
                   <p className="text-sm text-muted-foreground">
                     This name will be shown on the leaderboard instead of your username

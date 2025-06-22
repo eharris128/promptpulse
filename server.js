@@ -649,16 +649,33 @@ app.get('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) =
   }
 });
 
+// Input sanitization function
+function sanitizeDisplayName(input) {
+  if (!input || typeof input !== 'string') return null;
+  
+  // Trim whitespace and limit length
+  let sanitized = input.trim().slice(0, 50);
+  
+  // Remove HTML tags and dangerous characters
+  sanitized = sanitized.replace(/<[^>]*>/g, '');
+  sanitized = sanitized.replace(/[<>'"&]/g, '');
+  
+  return sanitized || null;
+}
+
 app.put('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) => {
   const userId = req.user.id;
   const { leaderboard_enabled, display_name } = req.body;
+  
+  // Sanitize display name
+  const sanitizedDisplayName = sanitizeDisplayName(display_name);
   
   try {
     await db.sql`
       UPDATE users 
       SET 
         leaderboard_enabled = ${leaderboard_enabled ? 1 : 0},
-        display_name = ${display_name || null},
+        display_name = ${sanitizedDisplayName},
         leaderboard_updated_at = CURRENT_TIMESTAMP
       WHERE id = ${userId}
     `;
@@ -666,7 +683,7 @@ app.put('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) =
     res.json({ 
       message: 'Leaderboard settings updated successfully',
       leaderboard_enabled: Boolean(leaderboard_enabled),
-      display_name: display_name
+      display_name: sanitizedDisplayName
     });
     
   } catch (error) {

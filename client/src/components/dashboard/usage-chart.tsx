@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
+import { formatCost, formatTokens } from '@/lib/utils'
 import { AggregateData } from '@/types'
 import { format, parseISO } from 'date-fns'
 
@@ -62,8 +63,8 @@ export function UsageChart({ data, type }: UsageChartProps) {
     }))
     .sort((a, b) => a.date.localeCompare(b.date))
 
-  const formatCost = (value: number) => `$${value.toFixed(2)}`
-  const formatTokens = (value: number) => new Intl.NumberFormat('en-US').format(value)
+  const formatChartCost = (value: number) => formatCost(value)
+  const formatChartTokens = (value: number) => formatTokens(value)
 
   if (type === 'cost') {
     return (
@@ -83,14 +84,14 @@ export function UsageChart({ data, type }: UsageChartProps) {
               />
               <YAxis 
                 tick={{ fontSize: 12 }}
-                tickFormatter={formatCost}
+                tickFormatter={formatChartCost}
               />
               <Tooltip 
                 labelFormatter={(label, payload) => {
                   const data = payload?.[0]?.payload
                   return data ? format(parseISO(data.date), 'MMMM dd, yyyy') : label
                 }}
-                formatter={(value: number) => [formatCost(value), 'Cost']}
+                formatter={(value: number) => [formatChartCost(value), 'Cost']}
               />
               <Line 
                 type="monotone" 
@@ -124,7 +125,7 @@ export function UsageChart({ data, type }: UsageChartProps) {
             />
             <YAxis 
               tick={{ fontSize: 12 }}
-              tickFormatter={formatTokens}
+              tickFormatter={formatChartTokens}
             />
             <Tooltip 
               labelFormatter={(label, payload) => {
@@ -132,7 +133,7 @@ export function UsageChart({ data, type }: UsageChartProps) {
                 return data ? format(parseISO(data.date), 'MMMM dd, yyyy') : label
               }}
               formatter={(value: number, name: string) => [
-                formatTokens(value), 
+                formatChartTokens(value), 
                 name === 'inputTokens' ? 'Input Tokens' : 'Output Tokens'
               ]}
             />

@@ -1,4 +1,4 @@
-import { AggregateData, Machine, SessionData, BlockData, ApiResponse } from '@/types';
+import { AggregateData, Machine, SessionData, BlockData, ApiResponse, LeaderboardData, LeaderboardSettings } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -143,6 +143,22 @@ class ApiClient {
     return this.request<ApiResponse>('/api/usage/sample', {
       method: 'POST',
       body: JSON.stringify({ machineId }),
+    });
+  }
+
+  // Leaderboard methods
+  async getLeaderboard(period: 'daily' | 'weekly'): Promise<LeaderboardData> {
+    return this.request<LeaderboardData>(`/api/leaderboard/${period}`);
+  }
+
+  async getLeaderboardSettings(): Promise<LeaderboardSettings> {
+    return this.request<LeaderboardSettings>('/api/user/leaderboard-settings');
+  }
+
+  async updateLeaderboardSettings(settings: LeaderboardSettings): Promise<ApiResponse> {
+    return this.request<ApiResponse>('/api/user/leaderboard-settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
     });
   }
 }

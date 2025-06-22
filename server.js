@@ -438,6 +438,243 @@ app.post('/api/usage/sample', authenticateApiKey, async (req, res) => {
   }
 });
 
+// Admin endpoint to enable leaderboard for any user
+app.post('/api/admin/enable-leaderboard', authenticateApiKey, async (req, res) => {
+  const { userId, displayName } = req.body;
+  
+  try {
+    await db.sql`
+      UPDATE users 
+      SET 
+        leaderboard_enabled = 1,
+        display_name = ${displayName || null},
+        leaderboard_updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${userId}
+    `;
+    
+    res.json({ 
+      message: `Leaderboard enabled for user ${userId}`,
+      userId,
+      displayName: displayName || null
+    });
+    
+  } catch (error) {
+    console.error('Error enabling leaderboard:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Admin endpoint to fix missing columns
+app.post('/api/admin/fix-schema', authenticateApiKey, async (req, res) => {
+  try {
+    console.log('Adding missing leaderboard columns...');
+    
+    // Add leaderboard_enabled column
+    await db.sql`ALTER TABLE users ADD COLUMN leaderboard_enabled BOOLEAN DEFAULT 0`;
+    console.log('Added leaderboard_enabled column');
+    
+    // Add leaderboard_updated_at column
+    await db.sql`ALTER TABLE users ADD COLUMN leaderboard_updated_at DATETIME`;
+    console.log('Added leaderboard_updated_at column');
+    
+    // Update existing users with default timestamp
+    await db.sql`UPDATE users SET leaderboard_updated_at = CURRENT_TIMESTAMP WHERE leaderboard_updated_at IS NULL`;
+    console.log('Updated existing users with timestamps');
+    
+    res.json({ message: 'Schema fixed successfully' });
+  } catch (error) {
+    console.error('Error fixing schema:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin endpoint to check database schema
+app.get('/api/admin/schema', authenticateApiKey, async (req, res) => {
+  try {
+    const usersSchema = await db.sql`PRAGMA table_info(users)`;
+    const usageDataSchema = await db.sql`PRAGMA table_info(usage_data)`;
+    
+    res.json({ 
+      users: usersSchema,
+      usage_data: usageDataSchema
+    });
+  } catch (error) {
+    console.error('Error getting schema:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Admin endpoint to check user data distribution
+app.get('/api/admin/user-stats', authenticateApiKey, async (req, res) => {
+  try {
+    const userStats = await db.sql`
+      SELECT 
+        user_id,
+        COUNT(*) as record_count,
+        COUNT(DISTINCT machine_id) as machine_count,
+        MIN(date) as earliest_date,
+        MAX(date) as latest_date
+      FROM usage_data 
+      GROUP BY user_id 
+      ORDER BY user_id
+    `;
+    
+    const machineStats = await db.sql`
+      SELECT 
+        user_id,
+        machine_id,
+        COUNT(*) as record_count
+      FROM usage_data 
+      GROUP BY user_id, machine_id 
+      ORDER BY user_id, machine_id
+    `;
+    
+    res.json({ userStats, machineStats });
+  } catch (error) {
+    console.error('Error getting user stats:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Admin endpoint to update machine ownership
+app.post('/api/admin/update-machines', authenticateApiKey, async (req, res) => {
+  const { machines, targetUserId } = req.body;
+  
+  console.log('=== Admin update machines ===');
+  console.log('Machines to update:', machines);
+  console.log('Target user ID:', targetUserId);
+  
+  try {
+    for (const machineId of machines) {
+      const result = await db.sql`
+        UPDATE usage_data 
+        SET user_id = ${targetUserId} 
+        WHERE machine_id = ${machineId}
+      `;
+      console.log(`Updated ${machineId} to user ${targetUserId}`);
+    }
+    
+    res.json({ 
+      message: 'Machines updated successfully',
+      machinesUpdated: machines.length
+    });
+    
+  } catch (error) {
+    console.error('Error updating machines:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Leaderboard endpoints
+app.get('/api/leaderboard/:period', authenticateApiKey, async (req, res) => {
+  const { period } = req.params; // 'daily' or 'weekly'
+  const userId = req.user.id;
+  
+  try {
+    let dateFilter = '';
+    if (period === 'daily') {
+      dateFilter = "date = date('now')";
+    } else if (period === 'weekly') {
+      dateFilter = "date >= date('now', '-7 days')";
+    } else {
+      return res.status(400).json({ error: 'Invalid period. Use daily or weekly.' });
+    }
+    
+    // Get leaderboard data for users who opted in
+    const leaderboardQuery = `
+      SELECT 
+        u.id as user_id,
+        u.username,
+        u.display_name,
+        SUM(ud.total_tokens) as total_tokens,
+        SUM(ud.total_cost) as total_cost,
+        ROUND(AVG(ud.total_tokens), 0) as daily_average,
+        ROW_NUMBER() OVER (ORDER BY SUM(ud.total_tokens) DESC) as rank
+      FROM users u
+      JOIN usage_data ud ON u.id = ud.user_id
+      WHERE u.leaderboard_enabled = 1 AND ${dateFilter}
+      GROUP BY u.id, u.username, u.display_name
+      ORDER BY total_tokens DESC
+      LIMIT 100
+    `;
+    
+    const entries = await db.sql(leaderboardQuery);
+    const totalParticipants = entries.length;
+    
+    // Add percentiles
+    const entriesWithPercentiles = entries.map((entry, index) => ({
+      ...entry,
+      percentile: Math.round(((totalParticipants - index) / totalParticipants) * 100)
+    }));
+    
+    // Find current user's rank
+    const userRank = entriesWithPercentiles.find(entry => entry.user_id === userId)?.rank;
+    
+    res.json({
+      period,
+      entries: entriesWithPercentiles,
+      user_rank: userRank,
+      total_participants: totalParticipants
+    });
+    
+  } catch (error) {
+    console.error('Error fetching leaderboard:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// User leaderboard settings endpoints
+app.get('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) => {
+  const userId = req.user.id;
+  
+  try {
+    const user = await db.sql`
+      SELECT leaderboard_enabled, display_name 
+      FROM users 
+      WHERE id = ${userId}
+    `;
+    
+    if (user.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({
+      leaderboard_enabled: Boolean(user[0].leaderboard_enabled),
+      display_name: user[0].display_name
+    });
+    
+  } catch (error) {
+    console.error('Error fetching leaderboard settings:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.put('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) => {
+  const userId = req.user.id;
+  const { leaderboard_enabled, display_name } = req.body;
+  
+  try {
+    await db.sql`
+      UPDATE users 
+      SET 
+        leaderboard_enabled = ${leaderboard_enabled ? 1 : 0},
+        display_name = ${display_name || null},
+        leaderboard_updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${userId}
+    `;
+    
+    res.json({ 
+      message: 'Leaderboard settings updated successfully',
+      leaderboard_enabled: Boolean(leaderboard_enabled),
+      display_name: display_name
+    });
+    
+  } catch (error) {
+    console.error('Error updating leaderboard settings:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // Analytics endpoint - cost breakdown
 app.get('/api/usage/analytics/costs', authenticateApiKey, async (req, res) => {
   const { machineId, groupBy = 'day' } = req.query;

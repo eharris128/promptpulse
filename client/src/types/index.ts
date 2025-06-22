@@ -4,6 +4,9 @@ export interface User {
   username: string;
   full_name?: string;
   created_at: string;
+  leaderboard_enabled?: boolean;
+  display_name?: string;
+  leaderboard_updated_at?: string;
 }
 
 export interface Machine {
@@ -74,6 +77,29 @@ export interface AggregateData {
     total_tokens: number;
     total_cost: number;
   };
+}
+
+export interface LeaderboardEntry {
+  user_id: number;
+  username: string;
+  display_name?: string;
+  total_tokens: number;
+  total_cost: number;
+  daily_average: number;
+  rank: number;
+  percentile: number;
+}
+
+export interface LeaderboardData {
+  period: 'daily' | 'weekly';
+  entries: LeaderboardEntry[];
+  user_rank?: number;
+  total_participants: number;
+}
+
+export interface LeaderboardSettings {
+  leaderboard_enabled: boolean;
+  display_name?: string;
 }
 
 export interface ApiResponse<T = any> {

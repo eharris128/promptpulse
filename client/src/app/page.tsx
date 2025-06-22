@@ -6,8 +6,10 @@ import { StatsCards } from '@/components/dashboard/stats-cards'
 import { UsageChart } from '@/components/dashboard/usage-chart'
 import { MachinesTable } from '@/components/dashboard/machines-table'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Navigation } from '@/components/navigation'
 import { apiClient } from '@/lib/api'
-import { AggregateData, Machine } from '@/types'
+import { AggregateData, Machine, LeaderboardData } from '@/types'
 
 export default function Dashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -15,6 +17,7 @@ export default function Dashboard() {
   const [dataLoading, setDataLoading] = useState(false)
   const [usageData, setUsageData] = useState<AggregateData | null>(null)
   const [machines, setMachines] = useState<Machine[]>([])
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -50,6 +53,14 @@ export default function Dashboard() {
       
       setUsageData(usageResponse)
       setMachines(machinesResponse)
+      
+      // Load leaderboard data for quick access
+      try {
+        const leaderboard = await apiClient.getLeaderboard('daily')
+        setLeaderboardData(leaderboard)
+      } catch (err) {
+        console.log('Leaderboard not available or user not opted in')
+      }
     } catch (err) {
       console.error('Failed to load dashboard data:', err)
       setError(err instanceof Error ? err.message : 'Failed to load data')
@@ -68,6 +79,7 @@ export default function Dashboard() {
     setIsAuthenticated(false)
     setUsageData(null)
     setMachines([])
+    setLeaderboardData(null)
   }
 
   const generateSampleData = async () => {
@@ -97,21 +109,21 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={loadDashboardData} disabled={dataLoading}>
-            {dataLoading ? 'Loading...' : 'Refresh'}
-          </Button>
-          <Button variant="outline" onClick={generateSampleData} disabled={dataLoading}>
-            {dataLoading ? 'Generating...' : 'Generate Sample Data'}
-          </Button>
-          <Button variant="outline" onClick={handleLogout}>
-            Logout
-          </Button>
+    <div className="min-h-screen bg-background">
+      <Navigation onLogout={handleLogout} />
+      
+      <div className="flex-1 space-y-4 p-8 pt-6">
+        <div className="flex items-center justify-between space-y-2">
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" onClick={loadDashboardData} disabled={dataLoading}>
+              {dataLoading ? 'Loading...' : 'Refresh'}
+            </Button>
+            <Button variant="outline" onClick={generateSampleData} disabled={dataLoading}>
+              {dataLoading ? 'Generating...' : 'Generate Sample Data'}
+            </Button>
+          </div>
         </div>
-      </div>
 
       {error && (
         <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-md p-4">
@@ -137,6 +149,39 @@ export default function Dashboard() {
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
             <UsageChart data={usageData} type="tokens" />
+            {leaderboardData && leaderboardData.user_rank && (
+              <Card className="col-span-3">
+                <CardHeader>
+                  <CardTitle>Your Leaderboard Ranking</CardTitle>
+                  <CardDescription>Today's performance vs other users</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Daily Rank</span>
+                      <span className="font-semibold">#{leaderboardData.user_rank}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Total Participants</span>
+                      <span className="font-semibold">{leaderboardData.total_participants}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Top Percentile</span>
+                      <span className="font-semibold">
+                        {Math.round(((leaderboardData.total_participants - leaderboardData.user_rank + 1) / leaderboardData.total_participants) * 100)}%
+                      </span>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      className="w-full mt-4"
+                      onClick={() => window.location.href = '/leaderboard'}
+                    >
+                      View Full Leaderboard
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </>
       )}
@@ -155,6 +200,7 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

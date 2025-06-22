@@ -33,9 +33,21 @@ program
 program
   .command('collect')
   .description('Collect and upload Claude Code usage data to the database')
-  .action(async () => {
+  .option('-g, --granularity <type>', 'data granularity: daily, session, blocks, or all', 'all')
+  .action(async (options) => {
     const { collect } = await import('../lib/collect.js');
-    await collect();
+    await collect(options);
+  });
+
+// User management commands
+program
+  .command('user')
+  .description('Manage user accounts and authentication')
+  .argument('<action>', 'user action: init, create, list, config')
+  .argument('[...args]', 'additional arguments')
+  .action(async (action, args) => {
+    const { userCommand } = await import('../lib/user-cli.js');
+    await userCommand(action, args);
   });
 
 program.parse(process.argv);

@@ -51,7 +51,12 @@ async function runMigrations() {
         
         for (const statement of statements) {
           if (statement.trim()) {
-            await db.sql`${statement}`;
+            try {
+              await db.exec(statement);
+            } catch (error) {
+              console.error(`Error executing statement: ${statement}`);
+              throw error;
+            }
           }
         }
         

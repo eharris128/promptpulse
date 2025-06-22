@@ -1,6 +1,16 @@
 # PromptPulse
 
-Track and aggregate Claude Code usage across multiple machines with automatic collection via cron.
+Multi-user platform for tracking and analyzing Claude Code usage across multiple machines. Features automatic data collection, user authentication, and a beautiful web dashboard for visualizing usage patterns.
+
+## Features
+
+- 🔐 **Multi-user support** with API key authentication
+- 📊 **Beautiful dashboard** built with Next.js and Recharts
+- 🖥️ **Multi-machine tracking** - aggregate usage across all your devices
+- ⏰ **Automatic collection** via cron job configuration
+- 📈 **Detailed analytics** - daily costs, token usage, session tracking
+- 🏷️ **Project-based insights** - see usage by project
+- 💰 **Cost tracking** - monitor your Claude API spending
 
 ## Installation
 
@@ -8,26 +18,65 @@ Track and aggregate Claude Code usage across multiple machines with automatic co
 npm install -g promptpulse
 ```
 
-## Setup
+## Quick Start
 
-After installation, run the setup command to configure automatic usage collection every 15 minutes:
+### 1. Initialize Your User Account
 
 ```bash
-promptpulse setup
-# or use the shorthand
-ppulse setup
+# Create your first user account
+promptpulse user init
+
+# This will create a default user and save your API key
 ```
 
-This will add a cron job that runs collection every 15 minutes.
+### 2. Set Up Automatic Collection
+
+```bash
+# Configure cron job for automatic data collection
+promptpulse setup
+```
+
+### 3. Collect Usage Data
+
+```bash
+# Manually collect usage data
+promptpulse collect
+```
+
+### 4. Launch the Dashboard
+
+```bash
+# Option 1: Start both server and client simultaneously (recommended)
+npm run dev
+
+# Option 2: Start manually in separate terminals
+# Terminal 1: Start the API server
+node server.js
+
+# Terminal 2: Start the dashboard
+cd client && npm run dev
+
+# Open http://localhost:3001 in your browser
+```
 
 ## Configuration
 
-Set the following environment variables:
+### Environment Variables
 
-- `DATABASE_URL` - SQLite Cloud database connection string (required)
-- `MACHINE_ID` - Custom machine identifier (optional, defaults to hostname)
+Create a `.env` file in the project root:
 
-You can set these in a `.env` file in your project directory or export them in your shell.
+```bash
+# Required
+DATABASE_URL=your_sqlite_cloud_connection_string
+
+# Optional
+MACHINE_ID=custom-machine-name  # Defaults to hostname
+PORT=3000                       # API server port
+```
+
+### User Configuration
+
+User credentials are stored in `~/.promptpulse/config.json` after running `promptpulse user init`.
 
 ## Usage
 
@@ -36,9 +85,34 @@ You can set these in a `.env` file in your project directory or export them in y
 To manually collect and upload usage data:
 
 ```bash
+# Collect all data (daily, sessions, blocks)
 promptpulse collect
 # or
 ppulse collect
+
+# Collect specific granularity
+ppulse collect --granularity daily    # Only daily aggregates
+ppulse collect --granularity session  # Only session data
+ppulse collect --granularity blocks   # Only 5-hour blocks
+ppulse collect --granularity all      # Everything (default)
+```
+
+### User Management
+
+```bash
+# Create a new user
+promptpulse user create <email> <username> [fullName]
+
+# List all users
+promptpulse user list
+
+# Show current user
+promptpulse user whoami
+
+# Configure API key
+promptpulse user config set api-key <key>
+promptpulse user config get api-key
+promptpulse user config show
 ```
 
 ### View Commands
@@ -49,35 +123,43 @@ promptpulse --help
 ppulse --help
 ```
 
-## Quick Start
+## Web Dashboard
 
-### 1. Server Setup
+The PromptPulse dashboard provides a beautiful interface for visualizing your Claude Code usage:
 
-```bash
-# Install dependencies
-npm install
+### Features
 
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your database credentials
+- **Real-time statistics** - Total cost, tokens, and usage breakdowns
+- **Interactive charts** - Daily cost trends and token usage over time
+- **Machine management** - View usage across all your devices
+- **Session tracking** - Detailed session and project analytics
+- **Dark mode support** - Easy on the eyes during long coding sessions
 
-# Run migrations
-npm run migrate
-
-# Start server
-npm start
-```
-
-### 2. Upload Usage Data
+### Running the Dashboard
 
 ```bash
-# Manual upload
-node upload-usage.js
+# Option 1: Start both server and client together (recommended)
+npm run dev
 
-# Check what data was uploaded
-curl http://localhost:3000/api/machines
-curl http://localhost:3000/api/usage/aggregate
+# Option 2: Manual startup in separate terminals
+# Terminal 1: Start the API server
+node server.js
+
+# Terminal 2: Start the dashboard
+cd client
+npm install  # First time only
+npm run dev
+
+# Open http://localhost:3001
 ```
+
+### Dashboard Authentication
+
+1. Open http://localhost:3001
+2. Enter your API key (shown when you ran `promptpulse user init`)
+3. Click "Connect" to access your dashboard
+
+Your API key is securely stored in localStorage for future sessions.
 
 ## Automated Upload Setup
 
@@ -104,40 +186,6 @@ The automated upload system was installed with the following components:
 Added to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.) to run on each terminal session:
 ```bash
 /path/to/ccleaderboard/upload-on-login.sh
-```
-
-### How It Handles Different Scenarios
-
-#### Scenario 1: Machine On All Day
-- Cron runs at 8 AM, 12 PM, 4 PM, and 8 PM
-- First successful upload of the day uploads data
-- Subsequent runs skip (no duplicate uploads)
-
-#### Scenario 2: Machine Started After 9 AM
-- If you start your machine at 11 AM, cron will catch it at 12 PM
-- If you start at 2 PM, cron will catch it at 4 PM
-- If you start at 6 PM, cron will catch it at 8 PM
-
-#### Scenario 3: Machine Started After 8 PM
-- Login script detects no upload happened today
-- Runs upload automatically in background when you open terminal
-- Won't delay your login process
-
-#### Scenario 4: Weekend/Irregular Usage
-- System tracks last upload date, not just daily schedule
-- Will upload whenever you next use the machine
-- No data is ever lost due to irregular usage patterns
-
-### Files Created
-
-```
-ccleaderboard/
-├── upload-usage.js           # Main upload script
-├── cron-upload.sh           # Wrapper script for cron with logging
-├── upload-on-login.sh       # Runs upload if missed on login
-└── logs/
-    ├── upload-YYYY-MM.log   # Monthly log files
-    └── last-upload          # Tracks last successful upload date
 ```
 
 ### Setup Automation
@@ -168,172 +216,56 @@ echo "/path/to/project/upload-on-login.sh" >> ~/.bashrc
 source ~/.bashrc  # or source ~/.zshrc
 ```
 
-#### 3. Test Setup
-```bash
-# Test manual upload
-node upload-usage.js
+## API Reference
 
-# Test cron script
-./cron-upload.sh
+All API endpoints require authentication via the `X-API-Key` header.
 
-# Test login script  
-./upload-on-login.sh
-```
-
-### Configuration
-
-#### Environment Variables
+### Authentication
 
 ```bash
-# Custom server URL (default: http://localhost:3000)
-export SERVER_URL=https://your-server.com
-
-# Custom machine ID (default: hostname-randomid)
-export MACHINE_ID=my-custom-machine-id
-
-# Custom Claude data directory (default: ~/.claude)
-export CLAUDE_CONFIG_DIR=/path/to/claude/data
-```
-
-#### Using Custom Configuration
-
-```bash
-# Upload with custom server
-SERVER_URL=https://my-server.com node upload-usage.js
-
-# Upload with custom machine ID
-MACHINE_ID=laptop-work node upload-usage.js
-```
-
-## Management Commands
-
-### View Upload Status
-
-```bash
-# Check current cron jobs
-crontab -l
-
-# View recent upload logs
-cat logs/upload-$(date +%Y-%m).log
-
-# Check last upload date
-cat logs/last-upload
-
-# View all log files
-ls -la logs/
-```
-
-### Manual Operations
-
-```bash
-# Run upload manually
-node upload-usage.js
-
-# Run cron script manually (includes logging)
-./cron-upload.sh
-
-# Test login script
-./upload-on-login.sh
-```
-
-### Troubleshooting
-
-#### Check Upload Logs
-```bash
-# View current month's logs
-tail -f logs/upload-$(date +%Y-%m).log
-
-# View all errors in logs
-grep ERROR logs/upload-*.log
-```
-
-#### Verify Cron Service
-```bash
-# Check if cron is running
-sudo systemctl status cron
-
-# View cron logs
-sudo journalctl -u cron -f
-```
-
-#### Test Upload Manually
-```bash
-# Test if upload script works
-node upload-usage.js
-
-# Test if cron script works
-./cron-upload.sh
-
-# Check server connectivity
-curl http://localhost:3000/api/machines
-```
-
-### Modifying the Schedule
-
-#### Change Cron Frequency
-```bash
-# Edit crontab
-crontab -e
-
-# Examples:
-# Every 2 hours: 0 */2 * * * /path/to/cron-upload.sh
-# Once daily at 9 AM: 0 9 * * * /path/to/cron-upload.sh  
-# Every hour 9-5: 0 9-17 * * * /path/to/cron-upload.sh
-```
-
-#### Disable Login Script
-```bash
-# Comment out or remove this line from your shell profile:
-# /path/to/ccleaderboard/upload-on-login.sh
-```
-
-#### Disable All Automation
-```bash
-# Remove cron job
-crontab -r
-
-# Remove from shell profile (adjust for your shell)
-sed -i '/upload-on-login.sh/d' ~/.bashrc  # Linux
-sed -i '' '/upload-on-login.sh/d' ~/.zshrc  # macOS with zsh
-```
-
-## API Endpoints
-
-### Get Machines
-```bash
-GET /api/machines
-# Returns list of all machines with usage summary
-```
-
-### Get Usage Data
-```bash
-GET /api/usage/aggregate
-GET /api/usage/aggregate?machineId=MACHINE_ID
-GET /api/usage/aggregate?since=2024-01-01&until=2024-12-31
-# Returns aggregated usage data with optional filtering
-```
-
-### Upload Usage Data
-```bash
-POST /api/usage
-Content-Type: application/json
-
+# Create a new user
+POST /api/users
 {
-  "machineId": "machine-identifier",
-  "data": [
-    {
-      "date": "2024-01-01",
-      "inputTokens": 1000,
-      "outputTokens": 2000,
-      "cacheCreationTokens": 100,
-      "cacheReadTokens": 200,
-      "totalTokens": 3300,
-      "totalCost": 1.50,
-      "modelsUsed": ["claude-3-5-sonnet-20241022"],
-      "modelBreakdowns": [...]
-    }
-  ]
+  "email": "user@example.com",
+  "username": "username",
+  "fullName": "Full Name"  // optional
 }
+
+# List all users (requires authentication)
+GET /api/users
+X-API-Key: your_api_key
+```
+
+### Usage Data
+
+```bash
+# Get aggregated usage data
+GET /api/usage/aggregate
+X-API-Key: your_api_key
+
+# Get machines
+GET /api/machines
+X-API-Key: your_api_key
+
+# Get sessions
+GET /api/usage/sessions?limit=50&projectPath=myproject
+X-API-Key: your_api_key
+
+# Get blocks (5-hour billing periods)
+GET /api/usage/blocks?activeOnly=true
+X-API-Key: your_api_key
+```
+
+### Analytics
+
+```bash
+# Usage patterns
+GET /api/usage/analytics/patterns?period=day
+X-API-Key: your_api_key
+
+# Cost breakdown
+GET /api/usage/analytics/costs?groupBy=project
+X-API-Key: your_api_key
 ```
 
 ## Data Sources
@@ -348,12 +280,139 @@ This data includes:
 - Timestamps
 - Cost calculations
 
+## Architecture
+
+### Project Structure
+
+```
+promptpulse/
+├── server.js              # API server with authentication
+├── client/                # Next.js dashboard
+│   ├── src/
+│   │   ├── app/          # Next.js app directory
+│   │   ├── components/   # React components
+│   │   ├── lib/          # API client and utilities
+│   │   └── types/        # TypeScript types
+│   └── package.json
+├── lib/                   # CLI library code
+│   ├── auth.js           # Authentication utilities
+│   ├── collect.js        # Data collection logic
+│   ├── setup.js          # Cron setup
+│   └── user-cli.js       # User management CLI
+├── migrations/           # Database migrations
+└── bin/                  # CLI entry point
+    └── promptpulse.js
+```
+
+### Data Flow
+
+1. **Collection**: CLI reads Claude usage data from `~/.claude/projects/`
+2. **Authentication**: User's API key validates requests
+3. **Storage**: Data stored in SQLite Cloud with user isolation
+4. **API**: RESTful endpoints serve user-specific data
+5. **Dashboard**: React app visualizes usage patterns
+
+## Multi-User Support
+
+### How It Works
+
+- Each user has a unique API key for authentication
+- All usage data is scoped to the authenticated user
+- Multiple users can track their usage independently
+- Machines can be shared or user-specific
+
+### Use Cases
+
+- **Teams**: Each developer tracks their own Claude usage
+- **Freelancers**: Separate usage by client projects
+- **Personal**: Track usage across work and personal machines
+
+## Development
+
+### Prerequisites
+
+- Node.js 18+
+- SQLite Cloud account or local SQLite database
+- Claude Code installed locally
+
+### Local Development
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/promptpulse.git
+cd promptpulse
+
+# Install dependencies
+npm install
+
+# Set up environment
+cp .env.example .env
+# Edit .env with your DATABASE_URL
+
+# Run migrations
+npm run migrate
+
+# Start both server and client simultaneously
+npm run dev
+
+# Or start separately:
+# npm start                    # API server only
+# cd client && npm run dev     # Dashboard only
+
+# For CLI development
+npm link  # Link the CLI globally
+promptpulse --help
+```
+
+### Database Migrations
+
+Create new migrations in the `migrations/` directory:
+
+```sql
+-- migrations/004_your_migration.sql
+CREATE TABLE your_table (
+  id INTEGER PRIMARY KEY,
+  ...
+);
+```
+
+Run migrations:
+
+```bash
+npm run migrate
+```
+
+## Deployment
+
+### API Server
+
+The API server can be deployed to any Node.js hosting platform:
+
+1. Set environment variables (DATABASE_URL)
+2. Run migrations: `npm run migrate`
+3. Start server: `npm start`
+
+### Dashboard
+
+The Next.js dashboard can be deployed to Vercel, Netlify, or any static hosting:
+
+```bash
+cd client
+npm run build
+npm run start  # For production
+```
+
+### Docker Support
+
+Coming soon - Docker images for easy deployment.
+
 ## Security Notes
 
 - Machine IDs are automatically generated (hostname + random suffix)
 - No sensitive data is transmitted (only usage statistics)
 - All communication is over HTTP (configure HTTPS for production)
 - Logs contain no sensitive information
+- API keys are securely generated and stored
 
 ## Dependencies
 
@@ -370,6 +429,7 @@ This data includes:
 2. **Permission denied** - Ensure scripts are executable: `chmod +x *.sh`
 3. **Cron not running** - Check cron service: `sudo systemctl status cron`
 4. **Database errors** - Verify database connection and run migrations
+5. **Authentication failed** - Check your API key with `promptpulse user whoami`
 
 ### Log Locations
 
@@ -377,20 +437,16 @@ This data includes:
 - Last upload tracking: `logs/last-upload`
 - System cron logs: `/var/log/cron` (requires sudo)
 
-## Development
+## Contributing
 
-The original server and migration scripts are still available:
+Contributions are welcome! Please:
 
-```bash
-npm start        # Start the API server
-npm run migrate  # Run database migrations
-```
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-To develop locally:
+## License
 
-1. Clone the repository
-2. Install dependencies: `npm install`
-3. Create a `.env` file with your `DATABASE_URL`
-4. Run migrations: `npm run migrate`
-5. Link the package locally: `npm link`
-6. Test commands: `promptpulse --help`
+MIT License - see LICENSE.md for details

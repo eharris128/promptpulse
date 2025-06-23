@@ -2,14 +2,72 @@ import 'dotenv/config';
 import express from 'express';
 import { Database } from '@sqlitecloud/drivers';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import { runMigrations } from './migrate.js';
 import { authenticateApiKey, createUser, listUsers } from './lib/server-auth.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.json());
+// CORS configuration for production
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // In production, only allow specific domains
+    const allowedOrigins = [
+      'https://your-dashboard.vercel.app',
+      'http://localhost:3001', // For development
+      'http://localhost:3000'  // For development
+    ];
+    
+    // Add custom domain from environment variable
+    if (process.env.PROMPTPULSE_DASHBOARD_URL) {
+      allowedOrigins.push(process.env.PROMPTPULSE_DASHBOARD_URL);
+    }
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '10mb' })); // Limit payload size for cost protection
+
+// Rate limiting for cost protection
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: {
+    error: 'Too many requests from this IP, please try again later.',
+    retryAfter: '15 minutes'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiting to all requests
+app.use(limiter);
+
+// More strict rate limiting for batch uploads (cost protection)
+const batchLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 5, // Only 5 batch uploads per minute per IP
+  message: {
+    error: 'Batch upload rate limit exceeded. Please wait before uploading again.',
+    retryAfter: '1 minute'
+  }
+});
+
+// Apply to batch endpoints
+app.use('/api/usage/*/batch', batchLimiter);
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -19,6 +77,33 @@ if (!DATABASE_URL) {
 }
 
 let db;
+
+// Health check endpoint
+app.get('/health', async (req, res) => {
+  try {
+    // Check database connection
+    if (!db) {
+      db = new Database(DATABASE_URL);
+    }
+    
+    // Simple query to verify database connectivity
+    await db.sql`SELECT 1 as health_check`;
+    
+    res.json({ 
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      version: process.env.npm_package_version || '1.0.0',
+      database: 'connected'
+    });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(503).json({ 
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: 'Database connection failed'
+    });
+  }
+});
 
 // Authentication validation endpoint
 app.get('/api/auth/validate', authenticateApiKey, async (req, res) => {

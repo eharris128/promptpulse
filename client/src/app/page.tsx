@@ -109,7 +109,7 @@ export default function Dashboard() {
               <Card className="col-span-3">
                 <CardHeader>
                   <CardTitle>Your Leaderboard Ranking</CardTitle>
-                  <CardDescription>Today's performance vs other users</CardDescription>
+                  <CardDescription>Today&apos;s performance vs other users</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">

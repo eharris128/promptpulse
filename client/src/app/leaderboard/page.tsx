@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -14,12 +14,7 @@ export default function Leaderboard() {
   const [period, setPeriod] = useState<'daily' | 'weekly'>('daily')
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadLeaderboard()
-  }, [period])
-
-
-  const loadLeaderboard = async () => {
+  const loadLeaderboard = useCallback(async () => {
     try {
       setDataLoading(true)
       setError(null)
@@ -31,7 +26,11 @@ export default function Leaderboard() {
     } finally {
       setDataLoading(false)
     }
-  }
+  }, [period])
+
+  useEffect(() => {
+    loadLeaderboard()
+  }, [loadLeaderboard])
 
 
 
@@ -123,7 +122,7 @@ export default function Leaderboard() {
             <Card>
               <CardHeader>
                 <CardTitle>
-                  {period === 'daily' ? 'Today\'s' : 'This Week\'s'} Top Performers
+                  {period === 'daily' ? 'Today&apos;s' : 'This Week&apos;s'} Top Performers
                 </CardTitle>
                 <CardDescription>
                   {leaderboardData.total_participants} participants • Ranked by total tokens

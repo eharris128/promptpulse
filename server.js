@@ -18,6 +18,7 @@ const corsOptions = {
     // In production, only allow specific domains
     const allowedOrigins = [
       'https://your-dashboard.vercel.app',
+      'https://exciting-patience-production.up.railway.app', // Allow API self-requests
       'http://localhost:3001', // For development
       'http://localhost:3000'  // For development
     ];

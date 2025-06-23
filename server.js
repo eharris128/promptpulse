@@ -17,11 +17,19 @@ const corsOptions = {
     
     // In production, only allow specific domains
     const allowedOrigins = [
-      'https://your-dashboard.vercel.app',
       'https://exciting-patience-production.up.railway.app', // Allow API self-requests
       'http://localhost:3001', // For development
       'http://localhost:3000'  // For development
     ];
+    
+    // Allow all Vercel preview and production domains
+    if (origin && (
+      origin.endsWith('.vercel.app') || 
+      origin.endsWith('.vercel.com') ||
+      origin.includes('promptpulse') // Allow custom domains with promptpulse
+    )) {
+      allowedOrigins.push(origin);
+    }
     
     // Add custom domain from environment variable
     if (process.env.PROMPTPULSE_DASHBOARD_URL) {

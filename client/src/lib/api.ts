@@ -1,6 +1,6 @@
 import { AggregateData, Machine, SessionData, BlockData, ApiResponse, LeaderboardData, LeaderboardSettings } from '@/types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://exciting-patience-production.up.railway.app';
 
 class ApiClient {
   private apiKey: string | null = null;

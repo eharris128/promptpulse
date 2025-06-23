@@ -3,7 +3,7 @@ import express from 'express';
 import { Database } from '@sqlitecloud/drivers';
 import cors from 'cors';
 import { runMigrations } from './migrate.js';
-import { authenticateApiKey, createUser, listUsers } from './lib/auth.js';
+import { authenticateApiKey, createUser, listUsers } from './lib/server-auth.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -19,6 +19,19 @@ if (!DATABASE_URL) {
 }
 
 let db;
+
+// Authentication validation endpoint
+app.get('/api/auth/validate', authenticateApiKey, async (req, res) => {
+  // If we get here, the API key is valid (middleware already validated)
+  res.json({ 
+    user: {
+      id: req.user.id,
+      email: req.user.email,
+      username: req.user.username,
+      full_name: req.user.full_name
+    }
+  });
+});
 
 // User management endpoints
 app.post('/api/users', async (req, res) => {
@@ -292,6 +305,167 @@ app.get('/api/usage/blocks', authenticateApiKey, async (req, res) => {
     res.json(blocks);
   } catch (error) {
     console.error('Error fetching blocks:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Batch upload endpoints for CLI
+app.post('/api/usage/daily/batch', authenticateApiKey, async (req, res) => {
+  const { records } = req.body;
+  const userId = req.user.id;
+  
+  if (!records || !Array.isArray(records)) {
+    return res.status(400).json({ error: 'Records array is required' });
+  }
+  
+  try {
+    let processedCount = 0;
+    
+    for (const record of records) {
+      // Validate user_id matches authenticated user
+      if (record.user_id !== userId) {
+        continue; // Skip records not belonging to this user
+      }
+      
+      await db.sql`
+        INSERT OR REPLACE INTO usage_data (
+          machine_id, user_id, date, input_tokens, output_tokens, 
+          cache_creation_tokens, cache_read_tokens, total_tokens,
+          total_cost, models_used, model_breakdowns
+        ) VALUES (
+          ${record.machine_id},
+          ${record.user_id},
+          ${record.date},
+          ${record.input_tokens},
+          ${record.output_tokens},
+          ${record.cache_creation_tokens},
+          ${record.cache_read_tokens},
+          ${record.total_tokens},
+          ${record.total_cost},
+          ${JSON.stringify(record.models_used)},
+          ${JSON.stringify(record.model_breakdowns)}
+        )
+      `;
+      processedCount++;
+    }
+    
+    res.json({ 
+      message: 'Daily data uploaded successfully',
+      processed: processedCount,
+      total: records.length
+    });
+  } catch (error) {
+    console.error('Error uploading daily data:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.post('/api/usage/sessions/batch', authenticateApiKey, async (req, res) => {
+  const { records } = req.body;
+  const userId = req.user.id;
+  
+  if (!records || !Array.isArray(records)) {
+    return res.status(400).json({ error: 'Records array is required' });
+  }
+  
+  try {
+    let processedCount = 0;
+    
+    for (const record of records) {
+      // Validate user_id matches authenticated user
+      if (record.user_id !== userId) {
+        continue; // Skip records not belonging to this user
+      }
+      
+      await db.sql`
+        INSERT OR REPLACE INTO usage_sessions (
+          machine_id, user_id, session_id, project_path, start_time, end_time,
+          duration_minutes, input_tokens, output_tokens, 
+          cache_creation_tokens, cache_read_tokens, total_tokens,
+          total_cost, models_used, model_breakdowns
+        ) VALUES (
+          ${record.machine_id},
+          ${record.user_id},
+          ${record.session_id},
+          ${record.project_path},
+          ${record.start_time},
+          ${record.end_time},
+          ${record.duration_minutes},
+          ${record.input_tokens},
+          ${record.output_tokens},
+          ${record.cache_creation_tokens},
+          ${record.cache_read_tokens},
+          ${record.total_tokens},
+          ${record.total_cost},
+          ${JSON.stringify(record.models_used)},
+          ${JSON.stringify(record.model_breakdowns)}
+        )
+      `;
+      processedCount++;
+    }
+    
+    res.json({ 
+      message: 'Session data uploaded successfully',
+      processed: processedCount,
+      total: records.length
+    });
+  } catch (error) {
+    console.error('Error uploading session data:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.post('/api/usage/blocks/batch', authenticateApiKey, async (req, res) => {
+  const { records } = req.body;
+  const userId = req.user.id;
+  
+  if (!records || !Array.isArray(records)) {
+    return res.status(400).json({ error: 'Records array is required' });
+  }
+  
+  try {
+    let processedCount = 0;
+    
+    for (const record of records) {
+      // Validate user_id matches authenticated user
+      if (record.user_id !== userId) {
+        continue; // Skip records not belonging to this user
+      }
+      
+      await db.sql`
+        INSERT OR REPLACE INTO usage_blocks (
+          machine_id, user_id, block_id, start_time, end_time, actual_end_time,
+          is_active, entry_count, input_tokens, output_tokens, 
+          cache_creation_tokens, cache_read_tokens, total_tokens,
+          total_cost, models_used
+        ) VALUES (
+          ${record.machine_id},
+          ${record.user_id},
+          ${record.block_id},
+          ${record.start_time},
+          ${record.end_time},
+          ${record.actual_end_time},
+          ${record.is_active},
+          ${record.entry_count},
+          ${record.input_tokens},
+          ${record.output_tokens},
+          ${record.cache_creation_tokens},
+          ${record.cache_read_tokens},
+          ${record.total_tokens},
+          ${record.total_cost},
+          ${JSON.stringify(record.models_used)}
+        )
+      `;
+      processedCount++;
+    }
+    
+    res.json({ 
+      message: 'Block data uploaded successfully',
+      processed: processedCount,
+      total: records.length
+    });
+  } catch (error) {
+    console.error('Error uploading block data:', error);
     res.status(500).json({ error: 'Database error' });
   }
 });

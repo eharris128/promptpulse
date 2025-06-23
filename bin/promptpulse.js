@@ -50,4 +50,55 @@ program
     await userCommand(action, args);
   });
 
+// Dashboard command
+program
+  .command('dashboard')
+  .description('Open the PromptPulse web dashboard in your browser')
+  .action(async () => {
+    const { getDashboardUrl } = await import('../lib/config.js');
+    const { spawn } = await import('child_process');
+    const dashboardUrl = getDashboardUrl();
+    
+    console.log(`🌐 Opening PromptPulse dashboard at ${dashboardUrl}`);
+    console.log('   Use your API key to log in.');
+    console.log('');
+    
+    // Try to open the URL in the default browser
+    const platform = process.platform;
+    let command;
+    
+    if (platform === 'darwin') {
+      command = 'open';
+    } else if (platform === 'win32') {
+      command = 'start';
+    } else {
+      // Linux and others
+      command = 'xdg-open';
+    }
+    
+    try {
+      spawn(command, [dashboardUrl], { detached: true, stdio: 'ignore' }).unref();
+    } catch (error) {
+      console.error('Could not automatically open browser.');
+      console.log(`Please open manually: ${dashboardUrl}`);
+    }
+  });
+
+// Server command (for development/self-hosting)
+program
+  .command('server')
+  .description('Commands for managing the PromptPulse server (advanced users only)')
+  .argument('<action>', 'server action: start')
+  .action(async (action) => {
+    if (action === 'start') {
+      console.log('ℹ️  The PromptPulse server is hosted as a service.');
+      console.log('   CLI users do not need to run their own server.');
+      console.log('');
+      console.log('   If you need to self-host, please see the documentation at:');
+      console.log('   https://github.com/eharris128/promptpulse#self-hosting');
+    } else {
+      console.log('Unknown server action. Available actions: start');
+    }
+  });
+
 program.parse(process.argv);

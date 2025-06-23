@@ -1,0 +1,66 @@
+# Development files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Claude settings
+.claude/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Server files (not needed for CLI users)
+server.js
+lib/server-auth.js
+migrate.js
+migrations/
+
+# Client dashboard (separate package or optional)
+client/
+
+# Scripts not needed for package users
+cron-upload.sh
+upload-on-login.sh
+upload-usage.js
+create-users.js
+check-db.js
+fix-user-id.js
+scripts/
+
+# Git files
+.git/
+.gitignore
+
+# Documentation source files
+*.md
+!README.md
+!LICENSE.md
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+test/
+tests/
+*.test.js
+*.spec.js
+
+# Build artifacts
+dist/
+build/
+*.tgz
+
+# Node modules (will be installed via dependencies)
+node_modules/

@@ -5,8 +5,8 @@
   "type": "module",
   "main": "lib/index.js",
   "bin": {
-    "promptpulse": "./bin/promptpulse.js",
-    "ppulse": "./bin/promptpulse.js"
+    "promptpulse": "bin/promptpulse.js",
+    "ppulse": "bin/promptpulse.js"
   },
   "scripts": {
     "start": "node server.js",
@@ -14,8 +14,7 @@
     "server:dev": "node --watch server.js",
     "client:dev": "cd client && npm run dev",
     "migrate": "node migrate.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "prepublishOnly": "npm run test",
+    "test": "echo \"No tests specified\"",
     "postinstall": "node -e \"console.log('\\n✨ PromptPulse installed successfully!\\n\\nGet started:\\n  promptpulse user init\\n  promptpulse collect\\n')\""
   },
   "keywords": [
@@ -32,7 +31,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/eharris128/promptpulse.git"
+    "url": "git+https://github.com/eharris128/promptpulse.git"
   },
   "bugs": {
     "url": "https://github.com/eharris128/promptpulse/issues"

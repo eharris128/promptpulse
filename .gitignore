@@ -2,5 +2,6 @@ node_modules/
 package-lock.json
 .env
 logs/
-./claude
-/client/.next
+.claude/
+client/.next/
+*.tgz

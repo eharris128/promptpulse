@@ -60,7 +60,7 @@ export function SideNav({ className }: SideNavProps) {
       {/* Footer Links */}
       <div className="px-3 py-4 border-t border-border">
         <a
-          href="https://github.com/eharris128"
+          href="https://github.com/eharris128/promptpulse/discussions"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"

@@ -54,6 +54,11 @@ class ApiClient {
     return response.json();
   }
 
+  // Generic GET method
+  async get<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint);
+  }
+
   // Authentication
   async createUser(userData: { email: string; username: string; fullName?: string }) {
     return this.request<ApiResponse>('/api/users', {

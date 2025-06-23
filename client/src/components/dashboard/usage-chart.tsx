@@ -96,7 +96,7 @@ export function UsageChart({ data, type }: UsageChartProps) {
               <Line 
                 type="monotone" 
                 dataKey="cost" 
-                stroke="#8884d8" 
+                stroke="hsl(var(--chart-1))" 
                 strokeWidth={2}
                 dot={{ r: 4 }}
                 activeDot={{ r: 6 }}
@@ -128,7 +128,7 @@ export function UsageChart({ data, type }: UsageChartProps) {
               tickFormatter={formatChartTokens}
             />
             <Tooltip 
-              labelFormatter={(label, payload) => {
+              labelFormatter={(label, payload: any) => {
                 const data = payload?.[0]?.payload
                 return data ? format(parseISO(data.date), 'MMMM dd, yyyy') : label
               }}
@@ -137,8 +137,8 @@ export function UsageChart({ data, type }: UsageChartProps) {
                 name === 'inputTokens' ? 'Input Tokens' : 'Output Tokens'
               ]}
             />
-            <Bar dataKey="inputTokens" stackId="a" fill="#8884d8" name="inputTokens" />
-            <Bar dataKey="outputTokens" stackId="a" fill="#82ca9d" name="outputTokens" />
+            <Bar dataKey="inputTokens" stackId="a" fill="hsl(var(--chart-1))" name="inputTokens" />
+            <Bar dataKey="outputTokens" stackId="a" fill="hsl(var(--chart-2))" name="outputTokens" />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

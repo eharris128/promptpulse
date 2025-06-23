@@ -1,20 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { LoginForm } from '@/components/auth/login-form'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { UsageChart } from '@/components/dashboard/usage-chart'
 import { MachinesTable } from '@/components/dashboard/machines-table'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Navigation } from '@/components/navigation'
 import { formatTokens } from '@/lib/utils'
 import { apiClient } from '@/lib/api'
 import { AggregateData, Machine, LeaderboardData } from '@/types'
 
 export default function Dashboard() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [loading, setLoading] = useState(true)
   const [dataLoading, setDataLoading] = useState(false)
   const [usageData, setUsageData] = useState<AggregateData | null>(null)
   const [machines, setMachines] = useState<Machine[]>([])
@@ -22,23 +18,9 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    checkAuth()
+    loadDashboardData()
   }, [])
 
-  const checkAuth = async () => {
-    const apiKey = apiClient.getApiKey()
-    if (apiKey) {
-      try {
-        await apiClient.getMachines()
-        setIsAuthenticated(true)
-        await loadDashboardData()
-      } catch (err) {
-        console.error('Auth check failed:', err)
-        apiClient.clearApiKey()
-      }
-    }
-    setLoading(false)
-  }
 
   const loadDashboardData = async () => {
     try {
@@ -70,18 +52,6 @@ export default function Dashboard() {
     }
   }
 
-  const handleLogin = async () => {
-    setIsAuthenticated(true)
-    await loadDashboardData()
-  }
-
-  const handleLogout = () => {
-    apiClient.clearApiKey()
-    setIsAuthenticated(false)
-    setUsageData(null)
-    setMachines([])
-    setLeaderboardData(null)
-  }
 
   const generateSampleData = async () => {
     try {
@@ -97,22 +67,7 @@ export default function Dashboard() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">Loading...</div>
-      </div>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return <LoginForm onLogin={handleLogin} />
-  }
-
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation onLogout={handleLogout} />
-      
       <div className="flex-1 space-y-4 p-8 pt-6">
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
@@ -202,6 +157,5 @@ export default function Dashboard() {
         </div>
       )}
       </div>
-    </div>
   )
 }

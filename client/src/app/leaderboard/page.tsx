@@ -7,39 +7,17 @@ import { Badge } from '@/components/ui/badge'
 import { formatCost, formatTokens, getAverageLabel } from '@/lib/utils'
 import { apiClient } from '@/lib/api'
 import { LeaderboardData, LeaderboardEntry } from '@/types'
-import { Navigation } from '@/components/navigation'
 
 export default function Leaderboard() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [loading, setLoading] = useState(true)
   const [dataLoading, setDataLoading] = useState(false)
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null)
   const [period, setPeriod] = useState<'daily' | 'weekly'>('daily')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    checkAuth()
-  }, [])
+    loadLeaderboard()
+  }, [period])
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadLeaderboard()
-    }
-  }, [isAuthenticated, period])
-
-  const checkAuth = async () => {
-    const apiKey = apiClient.getApiKey()
-    if (apiKey) {
-      try {
-        await apiClient.getMachines()
-        setIsAuthenticated(true)
-      } catch (err) {
-        console.error('Auth check failed:', err)
-        apiClient.clearApiKey()
-      }
-    }
-    setLoading(false)
-  }
 
   const loadLeaderboard = async () => {
     try {
@@ -55,17 +33,12 @@ export default function Leaderboard() {
     }
   }
 
-  const handleLogout = () => {
-    apiClient.clearApiKey()
-    setIsAuthenticated(false)
-    setLeaderboardData(null)
-  }
 
 
   const getRankColor = (rank: number) => {
-    if (rank === 1) return 'text-yellow-600'
-    if (rank === 2) return 'text-gray-500'
-    if (rank === 3) return 'text-amber-600'
+    if (rank === 1) return 'text-yellow-600 dark:text-yellow-400'
+    if (rank === 2) return 'text-slate-600 dark:text-slate-400'
+    if (rank === 3) return 'text-amber-600 dark:text-amber-400'
     return 'text-muted-foreground'
   }
 
@@ -84,23 +57,8 @@ export default function Leaderboard() {
     )
   }
 
-  if (!isAuthenticated) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-4">
-          <p className="text-lg">Please log in to view the leaderboard</p>
-          <Button onClick={() => window.location.href = '/'}>
-            Go to Dashboard
-          </Button>
-        </div>
-      </div>
-    )
-  }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation onLogout={handleLogout} />
-      
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -233,6 +191,5 @@ export default function Leaderboard() {
           </div>
         )}
       </div>
-    </div>
   )
 }

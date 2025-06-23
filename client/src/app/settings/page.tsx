@@ -9,11 +9,8 @@ import { Switch } from '@/components/ui/switch'
 import { sanitizeDisplayName } from '@/lib/utils'
 import { apiClient } from '@/lib/api'
 import { LeaderboardSettings } from '@/types'
-import { Navigation } from '@/components/navigation'
 
 export default function Settings() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [settings, setSettings] = useState<LeaderboardSettings>({
     leaderboard_enabled: false,
@@ -23,28 +20,10 @@ export default function Settings() {
   const [success, setSuccess] = useState<string | null>(null)
 
   useEffect(() => {
-    checkAuth()
+    loadSettings()
   }, [])
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadSettings()
-    }
-  }, [isAuthenticated])
 
-  const checkAuth = async () => {
-    const apiKey = apiClient.getApiKey()
-    if (apiKey) {
-      try {
-        await apiClient.getMachines()
-        setIsAuthenticated(true)
-      } catch (err) {
-        console.error('Auth check failed:', err)
-        apiClient.clearApiKey()
-      }
-    }
-    setLoading(false)
-  }
 
   const loadSettings = async () => {
     try {
@@ -82,37 +61,8 @@ export default function Settings() {
     }
   }
 
-  const handleLogout = () => {
-    apiClient.clearApiKey()
-    setIsAuthenticated(false)
-    setSettings({ leaderboard_enabled: false, display_name: '' })
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">Loading...</div>
-      </div>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-4">
-          <p className="text-lg">Please log in to access settings</p>
-          <Button onClick={() => window.location.href = '/'}>
-            Go to Dashboard
-          </Button>
-        </div>
-      </div>
-    )
-  }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation onLogout={handleLogout} />
-      
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
@@ -128,7 +78,7 @@ export default function Settings() {
         )}
 
         {success && (
-          <div className="bg-green-50 border border-green-200 text-green-700 rounded-md p-4 mb-6">
+          <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-md p-4 mb-6">
             <p>{success}</p>
           </div>
         )}
@@ -219,6 +169,5 @@ export default function Settings() {
           </div>
         </div>
       </div>
-    </div>
   )
 }

@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { ThemeProvider } from '@/components/theme-provider'
+import { AuthProvider } from '@/contexts/auth-context'
+import { AppLayoutWrapper } from '@/components/layout/app-layout-wrapper'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -15,11 +18,20 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <main className="min-h-screen bg-background">
-          {children}
-        </main>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            <AppLayoutWrapper>
+              {children}
+            </AppLayoutWrapper>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

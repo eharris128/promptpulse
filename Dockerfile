@@ -7,8 +7,12 @@ WORKDIR /app
 # Copy package files first for better caching
 COPY package*.json ./
 
-# Install production dependencies only
-RUN npm ci --only=production
+# Install dependencies with fallback
+RUN if [ -f package-lock.json ]; then \
+      npm ci --only=production; \
+    else \
+      npm install --only=production; \
+    fi
 
 # Copy application code
 COPY . .
@@ -22,11 +26,11 @@ RUN chown -R promptpulse:nodejs /app
 USER promptpulse
 
 # Expose port (Railway will set PORT environment variable)
-EXPOSE 3000
+EXPOSE $PORT
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "fetch('http://localhost:' + (process.env.PORT || 3000) + '/health').then(() => process.exit(0)).catch(() => process.exit(1))"
 
 # Start the server
-CMD ["npm", "start"]
+CMD ["node", "server.js"]

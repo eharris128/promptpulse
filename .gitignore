@@ -1,7 +1,9 @@
 node_modules/
-package-lock.json
 .env
 logs/
 .claude/
 client/.next/
 *.tgz
+
+# Only ignore client's package-lock for now
+client/package-lock.json

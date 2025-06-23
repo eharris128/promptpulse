@@ -25,7 +25,7 @@ export function ContactModal({ isOpen, onClose }: ContactModalProps) {
       />
       
       {/* Modal */}
-      <div className="relative bg-popover rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+      <div className="relative rounded-lg shadow-xl p-6 w-full max-w-md mx-4 bg-background border border-border">
         {/* Close button */}
         <button
           onClick={onClose}
@@ -40,7 +40,7 @@ export function ContactModal({ isOpen, onClose }: ContactModalProps) {
             <Mail className="mx-auto h-12 w-12 text-primary" />
           </div>
           
-          <h2 className="text-xl font-semibold mb-2 text-popover-foreground">Get in Touch</h2>
+          <h2 className="text-xl font-semibold mb-2 text-foreground">Get in Touch</h2>
           <p className="text-muted-foreground mb-6">
             Have questions or feedback about PromptPulse? I'd love to hear from you!
           </p>

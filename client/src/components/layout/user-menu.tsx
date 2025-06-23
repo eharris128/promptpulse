@@ -44,7 +44,7 @@ export function UserMenu({ onLogout }: UserMenuProps) {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-popover rounded-md shadow-lg border border-border py-1 z-[60]">
+        <div className="absolute right-0 mt-2 w-56 rounded-md shadow-lg border border-border bg-background py-1 z-[60]">
           {/* User Info */}
           <div className="px-4 py-3 border-b border-border">
             <div className="flex items-center space-x-3">
@@ -52,10 +52,10 @@ export function UserMenu({ onLogout }: UserMenuProps) {
                 {getInitials()}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-popover-foreground truncate">
+                <div className="text-sm font-medium truncate text-foreground">
                   User
                 </div>
-                <div className="text-xs text-muted-foreground truncate">
+                <div className="text-xs truncate text-muted-foreground">
                   Authenticated
                 </div>
               </div>
@@ -65,7 +65,7 @@ export function UserMenu({ onLogout }: UserMenuProps) {
           {/* Menu Items */}
           <button
             onClick={handleLogout}
-            className="w-full px-4 py-2 text-left text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground flex items-center space-x-2"
+            className="w-full px-4 py-2 text-left text-sm flex items-center space-x-2 hover:bg-accent text-foreground"
           >
             <LogOut size={16} />
             <span>Sign out</span>

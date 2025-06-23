@@ -33,7 +33,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const apiKey = apiClient.getApiKey()
     if (apiKey) {
       try {
-        const response = await apiClient.get('/api/health')
+        await apiClient.getMachines()
         setIsAuthenticated(true)
       } catch (error) {
         console.error('Auth check failed:', error)
@@ -49,7 +49,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = async (apiKey: string): Promise<boolean> => {
     try {
       apiClient.setApiKey(apiKey)
-      const response = await apiClient.get('/api/health')
+      await apiClient.getMachines()
       setIsAuthenticated(true)
       return true
     } catch (error) {

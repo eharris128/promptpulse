@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { apiClient } from '@/lib/api'
 
 interface LoginFormProps {
-  onLogin: () => void
+  onLogin: (apiKey: string) => Promise<boolean>
 }
 
 export function LoginForm({ onLogin }: LoginFormProps) {
@@ -21,11 +21,12 @@ export function LoginForm({ onLogin }: LoginFormProps) {
     setLoading(true)
 
     try {
-      // Set the API key and test it by fetching machines
-      apiClient.setApiKey(apiKey)
-      await apiClient.getMachines()
+      // Use the auth context's login method instead of manually setting API key
+      const success = await onLogin(apiKey)
       
-      onLogin()
+      if (!success) {
+        throw new Error('Login failed')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid API key')
       apiClient.clearApiKey()

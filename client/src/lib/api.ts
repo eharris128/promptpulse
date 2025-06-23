@@ -16,7 +16,9 @@ class ApiClient {
     if (this.apiKey) return this.apiKey;
     
     if (typeof window !== 'undefined') {
-      this.apiKey = localStorage.getItem('promptpulse_api_key');
+      const stored = localStorage.getItem('promptpulse_api_key');
+      // Handle case where localStorage returns "undefined" as a string
+      this.apiKey = (stored && stored !== 'undefined') ? stored : null;
     }
     
     return this.apiKey;

@@ -15,7 +15,7 @@
     "client:dev": "cd client && npm run dev",
     "migrate": "node migrate.js",
     "test": "echo \"No tests specified\"",
-    "postinstall": "node -e \"console.log('\\n✨ PromptPulse installed successfully!\\n\\nGet started:\\n  promptpulse user init\\n  promptpulse collect\\n')\"",
+    "postinstall": "node -e \"console.log('\\nPromptPulse installed successfully!\\n\\nGet started:\\n  promptpulse user init\\n  promptpulse collect\\n')\"",
     "version:patch": "npm version patch",
     "version:minor": "npm version minor",
     "version:major": "npm version major",

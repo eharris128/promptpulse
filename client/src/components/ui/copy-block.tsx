@@ -24,22 +24,20 @@ export function CopyBlock({ children, value, className = '' }: CopyBlockProps) {
   }
 
   return (
-    <div className={`relative group ${className}`}>
-      <div className="bg-muted rounded-md p-3 pr-12 font-mono text-sm">
+    <div 
+      className={`relative group cursor-pointer ${className}`}
+      onClick={handleCopy}
+    >
+      <div className="bg-muted rounded-md p-3 pr-12 font-mono text-sm hover:bg-muted/80 transition-colors">
         {children}
       </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="absolute right-1 top-1 h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-        onClick={handleCopy}
-      >
+      <div className="absolute right-1 top-1 h-8 w-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
         {copied ? (
-          <Check className="h-3 w-3 text-green-600" />
+          <Check className="h-4 w-4 text-green-600" />
         ) : (
           <Copy className="h-3 w-3" />
         )}
-      </Button>
+      </div>
     </div>
   )
 }

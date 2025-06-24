@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { CopyBlock } from '@/components/ui/copy-block'
 import { apiClient } from '@/lib/api'
 import { sanitizeApiKey } from '@/lib/utils'
 
@@ -74,10 +75,22 @@ export function LoginForm({ onLogin }: LoginFormProps) {
               {loading ? 'Connecting...' : 'Connect'}
             </Button>
             
-            <div className="text-sm text-muted-foreground text-center">
+            <div className="text-sm text-muted-foreground text-center space-y-3">
               <p>Need an API key?</p>
-              <p className="mt-1">1. Install: <code className="bg-muted px-1 rounded">npm i -g promptpulse</code></p>
-              <p className="mt-1">2. Run: <code className="bg-muted px-1 rounded">promptpulse user init</code></p>
+              <div className="space-y-2">
+                <div>
+                  <p className="mb-1">1. Install:</p>
+                  <CopyBlock value="npm i -g promptpulse">
+                    npm i -g promptpulse
+                  </CopyBlock>
+                </div>
+                <div>
+                  <p className="mb-1">2. Run:</p>
+                  <CopyBlock value="promptpulse user init">
+                    promptpulse user init
+                  </CopyBlock>
+                </div>
+              </div>
             </div>
           </form>
         </CardContent>

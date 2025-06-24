@@ -1,6 +1,6 @@
 {
   "name": "promptpulse",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Track and analyze your Claude Code usage across multiple machines",
   "type": "module",
   "main": "lib/index.js",

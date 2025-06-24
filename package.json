@@ -15,7 +15,14 @@
     "client:dev": "cd client && npm run dev",
     "migrate": "node migrate.js",
     "test": "echo \"No tests specified\"",
-    "postinstall": "node -e \"console.log('\\n✨ PromptPulse installed successfully!\\n\\nGet started:\\n  promptpulse user init\\n  promptpulse collect\\n')\""
+    "postinstall": "node -e \"console.log('\\n✨ PromptPulse installed successfully!\\n\\nGet started:\\n  promptpulse user init\\n  promptpulse collect\\n')\"",
+    "version:patch": "npm version patch",
+    "version:minor": "npm version minor",
+    "version:major": "npm version major",
+    "prerelease": "npm run test && npm run build:check",
+    "build:check": "cd client && npm run build",
+    "release": "npm run prerelease && npm publish && git push && git push --tags",
+    "prepublishOnly": "echo \"Publishing PromptPulse v$npm_package_version to npm...\""
   },
   "keywords": [
     "claude",

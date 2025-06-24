@@ -59,7 +59,7 @@ program
     const { spawn } = await import('child_process');
     const dashboardUrl = getDashboardUrl();
     
-    console.log(`🌐 Opening PromptPulse dashboard at ${dashboardUrl}`);
+    console.log(`Opening PromptPulse dashboard at ${dashboardUrl}`);
     console.log('   Use your API key to log in.');
     console.log('');
     
@@ -91,7 +91,7 @@ program
   .argument('<action>', 'server action: start')
   .action(async (action) => {
     if (action === 'start') {
-      console.log('ℹ️  The PromptPulse server is hosted as a service.');
+      console.log('The PromptPulse server is hosted as a service.');
       console.log('   CLI users do not need to run their own server.');
       console.log('');
       console.log('   If you need to self-host, please see the documentation at:');

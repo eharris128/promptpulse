@@ -1,0 +1,50 @@
+# Node modules (will be installed during build)
+node_modules/
+client/node_modules/
+
+# Client-side code (not needed for API)
+client/
+
+# Development & Configuration files
+.env*
+.claude/
+logs/
+*.log
+npm-debug.log*
+
+# Build artifacts
+dist/
+build/
+*.tgz
+client/.next/
+
+# Documentation & Repository files
+*.md
+!README.md
+.git/
+.gitignore
+llms.txt
+CLAUDE.md
+CONTRIBUTING.md
+DEPLOYMENT.md
+SECURITY.md
+
+# Development tools
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+test/
+tests/
+*.test.js
+*.spec.js
+
+# Scripts (not needed for production API)
+scripts/

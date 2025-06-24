@@ -363,24 +363,28 @@ app.get('/api/usage/aggregate', authenticateApiKey, async (req, res) => {
 
 app.get('/api/machines', authenticateApiKey, async (req, res) => {
   const userId = req.user.id;
+  const queryContext = logDatabaseQuery('fetch_machines', userId);
   
   try {
-    const machines = await db.sql`
-      SELECT 
-        machine_id,
-        COUNT(*) as days_tracked,
-        MIN(date) as first_date,
-        MAX(date) as last_date,
-        SUM(total_cost) as total_cost
-      FROM usage_data 
-      WHERE user_id = ${userId}
-      GROUP BY machine_id
-      ORDER BY last_date DESC
-    `;
+    const machines = await dbManager.executeQuery(async (db) => {
+      return await db.sql`
+        SELECT 
+          machine_id,
+          COUNT(*) as days_tracked,
+          MIN(date) as first_date,
+          MAX(date) as last_date,
+          SUM(total_cost) as total_cost
+        FROM usage_data 
+        WHERE user_id = ${userId}
+        GROUP BY machine_id
+        ORDER BY last_date DESC
+      `;
+    }, { ...queryContext, operation: 'fetch_user_machines' });
     
     res.json(machines);
+    log.performance('fetch_machines', Date.now() - queryContext.startTime, { userId, machineCount: machines.length });
   } catch (error) {
-    console.error('Error fetching machines:', error);
+    logError(error, { context: 'fetch_machines', userId, queryContext });
     res.status(500).json({ error: 'Database error' });
   }
 });
@@ -389,35 +393,38 @@ app.get('/api/machines', authenticateApiKey, async (req, res) => {
 app.get('/api/usage/sessions', authenticateApiKey, async (req, res) => {
   const { machineId, projectPath, since, until, limit = 50 } = req.query;
   const userId = req.user.id;
+  const queryContext = logDatabaseQuery('fetch_sessions', userId);
   
   try {
-    // Build query dynamically with SQLite Cloud syntax
-    let conditions = [`user_id = ${userId}`];
-    
-    if (machineId) {
-      conditions.push(`machine_id = '${machineId}'`);
-    }
-    
-    if (projectPath) {
-      conditions.push(`project_path LIKE '%${projectPath}%'`);
-    }
-    
-    if (since) {
-      conditions.push(`start_time >= '${since}'`);
-    }
-    
-    if (until) {
-      conditions.push(`start_time <= '${until}'`);
-    }
-    
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    
-    const sessions = await db.sql`
-      SELECT * FROM usage_sessions 
-      ${whereClause}
-      ORDER BY start_time DESC 
-      LIMIT ${parseInt(limit)}
-    `;
+    const sessions = await dbManager.executeQuery(async (db) => {
+      // Build query dynamically with SQLite Cloud syntax
+      let conditions = [`user_id = ${userId}`];
+      
+      if (machineId) {
+        conditions.push(`machine_id = '${machineId}'`);
+      }
+      
+      if (projectPath) {
+        conditions.push(`project_path LIKE '%${projectPath}%'`);
+      }
+      
+      if (since) {
+        conditions.push(`start_time >= '${since}'`);
+      }
+      
+      if (until) {
+        conditions.push(`start_time <= '${until}'`);
+      }
+      
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+      
+      return await db.sql`
+        SELECT * FROM usage_sessions 
+        ${whereClause}
+        ORDER BY start_time DESC 
+        LIMIT ${parseInt(limit)}
+      `;
+    }, { ...queryContext, operation: 'fetch_user_sessions' });
     
     // Parse JSON fields
     sessions.forEach(session => {
@@ -426,8 +433,9 @@ app.get('/api/usage/sessions', authenticateApiKey, async (req, res) => {
     });
     
     res.json(sessions);
+    log.performance('fetch_sessions', Date.now() - queryContext.startTime, { userId, sessionCount: sessions.length });
   } catch (error) {
-    console.error('Error fetching sessions:', error);
+    logError(error, { context: 'fetch_sessions', userId, queryContext });
     res.status(500).json({ error: 'Database error' });
   }
 });
@@ -694,6 +702,7 @@ app.get('/api/usage/analytics/patterns', authenticateApiKey, async (req, res) =>
 app.get('/api/leaderboard/:period', authenticateApiKey, async (req, res) => {
   const { period } = req.params; // 'daily' or 'weekly'
   const userId = req.user.id;
+  const queryContext = logDatabaseQuery('fetch_leaderboard', userId);
   
   try {
     let dateFilter = '';
@@ -705,29 +714,32 @@ app.get('/api/leaderboard/:period', authenticateApiKey, async (req, res) => {
       return res.status(400).json({ error: 'Invalid period. Use daily or weekly.' });
     }
     
-    // Get leaderboard data for users who opted in
-    const leaderboardQuery = `
-      SELECT 
-        u.id as user_id,
-        u.username,
-        u.display_name,
-        SUM(ud.total_tokens) as total_tokens,
-        SUM(ud.total_cost) as total_cost,
-        ROUND(AVG(ud.total_tokens), 0) as daily_average,
-        ROW_NUMBER() OVER (ORDER BY SUM(ud.total_tokens) DESC) as rank
-      FROM users u
-      JOIN usage_data ud ON u.id = ud.user_id
-      WHERE u.leaderboard_enabled = 1 AND ${dateFilter}
-      GROUP BY u.id, u.username, u.display_name
-      ORDER BY total_tokens DESC
-      LIMIT 100
-    `;
+    const leaderboardData = await dbManager.executeQuery(async (db) => {
+      // Get leaderboard data for users who opted in
+      const leaderboardQuery = `
+        SELECT 
+          u.id as user_id,
+          u.username,
+          u.display_name,
+          SUM(ud.total_tokens) as total_tokens,
+          SUM(ud.total_cost) as total_cost,
+          ROUND(AVG(ud.total_tokens), 0) as daily_average,
+          ROW_NUMBER() OVER (ORDER BY SUM(ud.total_tokens) DESC) as rank
+        FROM users u
+        JOIN usage_data ud ON u.id = ud.user_id
+        WHERE u.leaderboard_enabled = 1 AND ${dateFilter}
+        GROUP BY u.id, u.username, u.display_name
+        ORDER BY total_tokens DESC
+        LIMIT 100
+      `;
+      
+      return await db.sql(leaderboardQuery);
+    }, { ...queryContext, operation: 'fetch_leaderboard_data', period });
     
-    const entries = await db.sql(leaderboardQuery);
-    const totalParticipants = entries.length;
+    const totalParticipants = leaderboardData.length;
     
     // Add percentiles
-    const entriesWithPercentiles = entries.map((entry, index) => ({
+    const entriesWithPercentiles = leaderboardData.map((entry, index) => ({
       ...entry,
       percentile: Math.round(((totalParticipants - index) / totalParticipants) * 100)
     }));
@@ -742,21 +754,28 @@ app.get('/api/leaderboard/:period', authenticateApiKey, async (req, res) => {
       total_participants: totalParticipants
     });
     
+    log.performance('fetch_leaderboard', Date.now() - queryContext.startTime, { 
+      userId, period, participantCount: totalParticipants 
+    });
+    
   } catch (error) {
-    console.error('Error fetching leaderboard:', error);
+    logError(error, { context: 'fetch_leaderboard', userId, period, queryContext });
     res.status(500).json({ error: 'Database error' });
   }
 });
 
 app.get('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) => {
   const userId = req.user.id;
+  const queryContext = logDatabaseQuery('get_leaderboard_settings', userId);
   
   try {
-    const user = await db.sql`
-      SELECT leaderboard_enabled, display_name 
-      FROM users 
-      WHERE id = ${userId}
-    `;
+    const user = await dbManager.executeQuery(async (db) => {
+      return await db.sql`
+        SELECT leaderboard_enabled, display_name 
+        FROM users 
+        WHERE id = ${userId}
+      `;
+    }, { ...queryContext, operation: 'get_user_leaderboard_settings' });
     
     if (user.length === 0) {
       return res.status(404).json({ error: 'User not found' });
@@ -767,8 +786,10 @@ app.get('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) =
       display_name: user[0].display_name
     });
     
+    log.performance('get_leaderboard_settings', Date.now() - queryContext.startTime, { userId });
+    
   } catch (error) {
-    console.error('Error fetching leaderboard settings:', error);
+    logError(error, { context: 'get_leaderboard_settings', userId, queryContext });
     res.status(500).json({ error: 'Database error' });
   }
 });
@@ -787,18 +808,21 @@ function sanitizeDisplayName(input) {
 app.put('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) => {
   const userId = req.user.id;
   const { leaderboard_enabled, display_name } = req.body;
+  const queryContext = logDatabaseQuery('update_leaderboard_settings', userId);
   
   const sanitizedDisplayName = sanitizeDisplayName(display_name);
   
   try {
-    await db.sql`
-      UPDATE users 
-      SET 
-        leaderboard_enabled = ${leaderboard_enabled ? 1 : 0},
-        display_name = ${sanitizedDisplayName},
-        leaderboard_updated_at = CURRENT_TIMESTAMP
-      WHERE id = ${userId}
-    `;
+    await dbManager.executeQuery(async (db) => {
+      return await db.sql`
+        UPDATE users 
+        SET 
+          leaderboard_enabled = ${leaderboard_enabled ? 1 : 0},
+          display_name = ${sanitizedDisplayName},
+          leaderboard_updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${userId}
+      `;
+    }, { ...queryContext, operation: 'update_user_leaderboard_settings' });
     
     res.json({ 
       message: 'Leaderboard settings updated successfully',
@@ -806,8 +830,12 @@ app.put('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) =
       display_name: sanitizedDisplayName
     });
     
+    log.performance('update_leaderboard_settings', Date.now() - queryContext.startTime, { 
+      userId, leaderboard_enabled, display_name: !!sanitizedDisplayName 
+    });
+    
   } catch (error) {
-    console.error('Error updating leaderboard settings:', error);
+    logError(error, { context: 'update_leaderboard_settings', userId, queryContext });
     res.status(500).json({ error: 'Database error' });
   }
 });

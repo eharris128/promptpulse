@@ -1,6 +1,6 @@
 # CLI and server files - not needed for dashboard
 bin/
-lib/
+/lib/
 server.js
 migrate.js
 

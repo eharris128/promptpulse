@@ -146,12 +146,6 @@ class ApiClient {
     return this.request(`/api/usage/analytics/costs${query ? `?${query}` : ''}`);
   }
 
-  async generateSampleData(machineId?: string): Promise<ApiResponse> {
-    return this.request<ApiResponse>('/api/usage/sample', {
-      method: 'POST',
-      body: JSON.stringify({ machineId }),
-    });
-  }
 
   // Leaderboard methods
   async getLeaderboard(period: 'daily' | 'weekly'): Promise<LeaderboardData> {

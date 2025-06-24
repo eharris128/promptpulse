@@ -6,7 +6,6 @@ import { UsageChart } from '@/components/dashboard/usage-chart'
 import { MachinesTable } from '@/components/dashboard/machines-table'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatTokens } from '@/lib/utils'
 import { apiClient } from '@/lib/api'
 import { AggregateData, Machine, LeaderboardData } from '@/types'
 

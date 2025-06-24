@@ -49,6 +49,25 @@ export function sanitizeDisplayName(input: string): string {
   return sanitized
 }
 
+export function sanitizeApiKey(input: string): string {
+  if (!input) return ''
+  
+  // Trim whitespace from start and end
+  let sanitized = input.trim()
+  
+  // Remove HTML tags and dangerous characters
+  sanitized = sanitized.replace(/<[^>]*>/g, '')
+  sanitized = sanitized.replace(/[<>'"&]/g, '')
+  
+  // Only allow alphanumeric, underscores, hyphens, and dots (common in API keys)
+  sanitized = sanitized.replace(/[^a-zA-Z0-9_\-\.]/g, '')
+  
+  // Limit to reasonable API key length
+  sanitized = sanitized.slice(0, 100)
+  
+  return sanitized
+}
+
 // Smart labeling for time periods
 export function getTokenLabel(period: 'daily' | 'weekly', tokens: number): string {
   if (period === 'daily') {

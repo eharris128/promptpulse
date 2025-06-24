@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { apiClient } from '@/lib/api'
+import { sanitizeApiKey } from '@/lib/utils'
 
 interface AuthContextType {
   isAuthenticated: boolean
@@ -48,7 +49,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const login = async (apiKey: string): Promise<boolean> => {
     try {
-      apiClient.setApiKey(apiKey)
+      // Sanitize API key before setting it
+      const sanitizedApiKey = sanitizeApiKey(apiKey)
+      apiClient.setApiKey(sanitizedApiKey)
       await apiClient.getMachines()
       setIsAuthenticated(true)
       return true

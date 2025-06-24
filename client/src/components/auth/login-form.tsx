@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { apiClient } from '@/lib/api'
+import { sanitizeApiKey } from '@/lib/utils'
 
 interface LoginFormProps {
   onLogin: (apiKey: string) => Promise<boolean>
@@ -55,7 +56,10 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                 type="password"
                 placeholder="pk_xxxxxxxxxxxxxxxxxx..."
                 value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
+                onChange={(e) => {
+                  const sanitized = sanitizeApiKey(e.target.value)
+                  setApiKey(sanitized)
+                }}
                 required
               />
             </div>

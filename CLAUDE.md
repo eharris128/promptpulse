@@ -130,9 +130,19 @@ promptpulse user whoami                 # Verify authentication
 ### Required
 - `DATABASE_URL` - SQLite Cloud connection string
 
-### Optional
+### Optional Server Configuration
 - `MACHINE_ID` - Custom machine identifier (defaults to hostname)
 - `PORT` - API server port (defaults to 3000)
+- `NODE_ENV` - Environment mode (development/production)
+
+### Database Connection Pool
+- `DB_MAX_CONNECTIONS` - Maximum database connections (default: 10)
+- `DB_IDLE_TIMEOUT` - Connection idle timeout in ms (default: 30000)
+- `DB_RETRY_ATTEMPTS` - Database retry attempts on failure (default: 3)
+- `DB_RETRY_DELAY` - Base retry delay in ms (default: 1000)
+
+### Logging Configuration
+- `LOG_LEVEL` - Logging level: error, warn, info, debug (default: info in production, debug in development)
 
 ## Common Tasks
 

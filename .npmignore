@@ -12,6 +12,8 @@
 logs/
 *.log
 npm-debug.log*
+error.log
+combined.log
 
 # Server files (not needed for CLI users)
 server.js

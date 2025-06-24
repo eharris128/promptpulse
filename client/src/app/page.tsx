@@ -11,6 +11,7 @@ import { AggregateData, Machine, LeaderboardData } from '@/types'
 
 export default function Dashboard() {
   const [dataLoading, setDataLoading] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [usageData, setUsageData] = useState<AggregateData | null>(null)
   const [machines, setMachines] = useState<Machine[]>([])
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null)
@@ -21,9 +22,13 @@ export default function Dashboard() {
   }, [])
 
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = async (isRefresh = false) => {
     try {
-      setDataLoading(true)
+      if (isRefresh) {
+        setIsRefreshing(true)
+      } else {
+        setDataLoading(true)
+      }
       setError(null)
       const [usageResponse, machinesResponse] = await Promise.all([
         apiClient.getUsageAggregate(),
@@ -43,7 +48,11 @@ export default function Dashboard() {
       console.error('Failed to load dashboard data:', err)
       setError(err instanceof Error ? err.message : 'Failed to load data')
     } finally {
-      setDataLoading(false)
+      if (isRefresh) {
+        setIsRefreshing(false)
+      } else {
+        setDataLoading(false)
+      }
     }
   }
 
@@ -53,8 +62,12 @@ export default function Dashboard() {
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
           <div className="flex items-center space-x-2">
-            <Button variant="outline" onClick={loadDashboardData} disabled={dataLoading}>
-              {dataLoading ? 'Loading...' : 'Refresh'}
+            <Button 
+              variant="outline" 
+              onClick={() => loadDashboardData(true)} 
+              disabled={dataLoading || isRefreshing}
+            >
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
             </Button>
           </div>
         </div>
@@ -62,13 +75,13 @@ export default function Dashboard() {
       {error && (
         <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-md p-4">
           <p>Error: {error}</p>
-          <Button variant="outline" size="sm" onClick={loadDashboardData} className="mt-2">
+          <Button variant="outline" size="sm" onClick={() => loadDashboardData()} className="mt-2">
             Retry
           </Button>
         </div>
       )}
 
-      {dataLoading && (
+      {dataLoading && !usageData && (
         <div className="flex items-center justify-center py-8">
           <div className="text-lg">Loading dashboard data...</div>
         </div>
@@ -128,7 +141,7 @@ export default function Dashboard() {
             <p className="text-muted-foreground">
               Run <code className="bg-muted px-1 rounded">promptpulse collect</code> to upload your usage data
             </p>
-            <Button onClick={loadDashboardData}>Check Again</Button>
+            <Button onClick={() => loadDashboardData()}>Check Again</Button>
           </div>
         </div>
       )}

@@ -39,11 +39,21 @@ program
     await collect(options);
   });
 
+// Login command (shortcut for common case)
+program
+  .command('login')
+  .description('Login with your API key from another machine')
+  .argument('<api-key>', 'your API key (starts with pk_)')
+  .action(async (apiKey) => {
+    const { userCommand } = await import('../lib/user-cli.js');
+    await userCommand('login', [apiKey]);
+  });
+
 // User management commands
 program
   .command('user')
   .description('Manage user accounts and authentication')
-  .argument('<action>', 'user action: init, create, list, config, whoami')
+  .argument('<action>', 'user action: init, create, login, list, config, whoami')
   .argument('[email]', 'email for create command')
   .argument('[username]', 'username for create command')
   .action(async (action, email, username) => {

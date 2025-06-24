@@ -1,9 +1,10 @@
 import 'dotenv/config';
 import express from 'express';
-import { Database } from '@sqlitecloud/drivers';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { authenticateApiKey, createUser, listUsers } from './lib/server-auth.js';
+import { initializeDbManager, getDbManager } from './lib/db-manager.js';
+import { logger, requestLogger, logDatabaseQuery, logError, log } from './lib/logger.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -48,6 +49,9 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
 
+// Add request logging middleware first
+app.use(requestLogger());
+
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' })); // Limit payload size for cost protection
 
@@ -82,36 +86,74 @@ app.use('/api/usage/*/batch', batchLimiter);
 const DATABASE_URL = process.env.DATABASE_URL;
 
 if (!DATABASE_URL) {
-  console.error('DATABASE_URL environment variable is required');
+  logger.error('DATABASE_URL environment variable is required');
   process.exit(1);
 }
 
-let db;
+let dbManager;
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
+  const queryContext = logDatabaseQuery('health_check', null);
+  
   try {
-    // Check database connection
-    if (!db) {
-      db = new Database(DATABASE_URL);
-    }
-    
-    // Simple query to verify database connectivity
-    await db.sql`SELECT 1 as health_check`;
+    await dbManager.executeQuery(async (db) => {
+      return await db.sql`SELECT 1 as health_check`;
+    }, queryContext);
     
     res.json({ 
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      version: process.env.npm_package_version || '1.0.0',
+      version: process.env.npm_package_version || '1.0.2',
       database: 'connected'
     });
+    
+    log.performance('health_check', Date.now() - queryContext.startTime);
   } catch (error) {
-    console.error('Health check failed:', error);
+    logError(error, { context: 'health_check', queryContext });
     res.status(503).json({ 
       status: 'unhealthy',
       timestamp: new Date().toISOString(),
       error: 'Database connection failed'
     });
+  }
+});
+
+// Database health check endpoint
+app.get('/api/health/db', async (req, res) => {
+  try {
+    const healthStatus = await dbManager.healthCheck();
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      database: healthStatus
+    });
+  } catch (error) {
+    logError(error, { context: 'db_health_check' });
+    res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
+});
+
+// Database metrics endpoint
+app.get('/api/metrics', async (req, res) => {
+  try {
+    const metrics = dbManager.getMetrics();
+    res.json({
+      timestamp: new Date().toISOString(),
+      database: metrics,
+      server: {
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        pid: process.pid
+      }
+    });
+  } catch (error) {
+    logError(error, { context: 'metrics' });
+    res.status(500).json({ error: 'Failed to get metrics' });
   }
 });
 
@@ -229,82 +271,92 @@ app.post('/api/usage', authenticateApiKey, async (req, res) => {
 app.get('/api/usage/aggregate', authenticateApiKey, async (req, res) => {
   const { since, until, machineId } = req.query;
   const userId = req.user.id;
+  const queryContext = logDatabaseQuery('usage_aggregate', userId);
   
-  console.log('=== Aggregate API called ===');
-  console.log('User ID:', userId);
-  console.log('Query params:', { since, until, machineId });
+  log.apiCall('/api/usage/aggregate', 'GET', userId);
+  logger.debug('Aggregate API called', {
+    userId,
+    queryParams: { since, until, machineId },
+    requestId: req.requestId
+  });
   
   try {
     
-    // Execute queries with template literal syntax (SQLite Cloud compatible)
-    let dailyQuery = `
-      SELECT 
-        machine_id,
-        date,
-        SUM(input_tokens) as input_tokens,
-        SUM(output_tokens) as output_tokens,
-        SUM(cache_creation_tokens) as cache_creation_tokens,
-        SUM(cache_read_tokens) as cache_read_tokens,
-        SUM(total_tokens) as total_tokens,
-        SUM(total_cost) as total_cost
-      FROM usage_data
-      WHERE user_id = ${userId}
-    `;
+    const results = await dbManager.executeQuery(async (db) => {
+      // Build daily query
+      let dailyQuery = `
+        SELECT 
+          machine_id,
+          date,
+          SUM(input_tokens) as input_tokens,
+          SUM(output_tokens) as output_tokens,
+          SUM(cache_creation_tokens) as cache_creation_tokens,
+          SUM(cache_read_tokens) as cache_read_tokens,
+          SUM(total_tokens) as total_tokens,
+          SUM(total_cost) as total_cost
+        FROM usage_data
+        WHERE user_id = ${userId}
+      `;
+      
+      if (since) dailyQuery += ` AND date >= '${since}'`;
+      if (until) dailyQuery += ` AND date <= '${until}'`;
+      if (machineId) dailyQuery += ` AND machine_id = '${machineId}'`;
+      
+      dailyQuery += ' GROUP BY machine_id, date ORDER BY date DESC, machine_id';
+      
+      // Build total query
+      let totalQuery = `
+        SELECT 
+          COUNT(DISTINCT machine_id) as total_machines,
+          SUM(input_tokens) as total_input_tokens,
+          SUM(output_tokens) as total_output_tokens,
+          SUM(cache_creation_tokens) as total_cache_creation_tokens,
+          SUM(cache_read_tokens) as total_cache_read_tokens,
+          SUM(total_tokens) as total_tokens,
+          SUM(total_cost) as total_cost
+        FROM usage_data
+        WHERE user_id = ${userId}
+      `;
+      
+      if (since) totalQuery += ` AND date >= '${since}'`;
+      if (until) totalQuery += ` AND date <= '${until}'`;
+      if (machineId) totalQuery += ` AND machine_id = '${machineId}'`;
+      
+      // Execute both queries
+      const [daily, totals] = await Promise.all([
+        db.sql(dailyQuery),
+        db.sql(totalQuery)
+      ]);
+      
+      // Debug logging
+      const debugCount = await db.sql`SELECT COUNT(*) as count FROM usage_data WHERE user_id = ${userId}`;
+      logger.debug('Usage data debug info', {
+        userId,
+        userRecordCount: debugCount[0]?.count,
+        dailyResultsCount: daily.length,
+        requestId: req.requestId
+      });
+      
+      return { daily, totals: totals[0] };
+    }, { ...queryContext, operation: 'aggregate_usage_data' });
     
-    if (since) dailyQuery += ` AND date >= '${since}'`;
-    if (until) dailyQuery += ` AND date <= '${until}'`;
-    if (machineId) dailyQuery += ` AND machine_id = '${machineId}'`;
-    
-    dailyQuery += ' GROUP BY machine_id, date ORDER BY date DESC, machine_id';
-    
-    const daily = await db.sql(dailyQuery);
-    
-    // Debug: Check what data exists in the table
-    const debugCount = await db.sql('SELECT COUNT(*) as count FROM usage_data WHERE user_id = ?', [userId]);
-    console.log('Total records for user:', debugCount[0]?.count);
-    
-    const debugCountAll = await db.sql('SELECT COUNT(*) as count FROM usage_data');
-    console.log('Total records in table:', debugCountAll[0]?.count);
-    
-    const debugUsers = await db.sql('SELECT DISTINCT user_id FROM usage_data');
-    console.log('User IDs in usage_data:', debugUsers);
-    
-    const debugSample = await db.sql('SELECT * FROM usage_data WHERE user_id = ? LIMIT 3', [userId]);
-    console.log('Sample records:', debugSample);
-    
-    // Try without parameter binding
-    const debugDirect = await db.sql`SELECT COUNT(*) as count FROM usage_data WHERE user_id = ${userId}`;
-    console.log('Direct query count:', debugDirect[0]?.count);
-    
-    let totalQuery = `
-      SELECT 
-        COUNT(DISTINCT machine_id) as total_machines,
-        SUM(input_tokens) as total_input_tokens,
-        SUM(output_tokens) as total_output_tokens,
-        SUM(cache_creation_tokens) as total_cache_creation_tokens,
-        SUM(cache_read_tokens) as total_cache_read_tokens,
-        SUM(total_tokens) as total_tokens,
-        SUM(total_cost) as total_cost
-      FROM usage_data
-      WHERE user_id = ${userId}
-    `;
-    
-    if (since) totalQuery += ` AND date >= '${since}'`;
-    if (until) totalQuery += ` AND date <= '${until}'`;
-    if (machineId) totalQuery += ` AND machine_id = '${machineId}'`;
-    
-    const totals = await db.sql(totalQuery);
-    
-    console.log('Aggregate API - Daily results:', daily);
-    console.log('Aggregate API - Totals results:', totals[0]);
-    
-    res.json({
-      daily: daily,
-      totals: totals[0] || {}
+    logger.debug('Aggregate API results', {
+      userId,
+      dailyResultsCount: results.daily.length,
+      totals: results.totals,
+      requestId: req.requestId
     });
     
+    res.json({
+      daily: results.daily,
+      totals: results.totals || {}
+    });
+    
+    log.performance('aggregate_usage_data', Date.now() - queryContext.startTime, { userId });
+    
   } catch (error) {
-    console.error('Error fetching aggregate data:', error);
+    logError(error, { context: 'aggregate_usage_data', userId, queryContext });
+    log.apiError('/api/usage/aggregate', error, 500);
     res.status(500).json({ error: 'Database error' });
   }
 });
@@ -830,23 +882,54 @@ app.get('/api/usage/analytics/costs', authenticateApiKey, async (req, res) => {
 
 async function initializeServer() {
   try {
-    db = new Database(DATABASE_URL);
+    // Initialize database manager
+    dbManager = initializeDbManager(DATABASE_URL, {
+      maxConnections: parseInt(process.env.DB_MAX_CONNECTIONS) || 10,
+      idleTimeout: parseInt(process.env.DB_IDLE_TIMEOUT) || 30000,
+      retryAttempts: parseInt(process.env.DB_RETRY_ATTEMPTS) || 3,
+      retryDelay: parseInt(process.env.DB_RETRY_DELAY) || 1000
+    });
+    
+    logger.info('Database manager initialized', {
+      maxConnections: dbManager.options.maxConnections,
+      idleTimeout: dbManager.options.idleTimeout,
+      retryAttempts: dbManager.options.retryAttempts
+    });
     
     app.listen(PORT, () => {
-      console.log(`PromptPulse running on port ${PORT}`);
+      logger.info(`PromptPulse server started`, {
+        port: PORT,
+        environment: process.env.NODE_ENV || 'development',
+        logLevel: logger.level
+      });
     });
   } catch (error) {
-    console.error('Failed to initialize server:', error);
+    logger.error('Failed to initialize server', { error: error.message, stack: error.stack });
     process.exit(1);
   }
 }
 
 initializeServer();
 
+// Graceful shutdown handling
 process.on('SIGINT', async () => {
-  if (db) {
-    await db.close();
-    console.log('Database connection closed.');
+  logger.info('Received SIGINT, shutting down gracefully');
+  
+  if (dbManager) {
+    await dbManager.shutdown();
+    logger.info('Database manager shut down');
   }
+  
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  logger.info('Received SIGTERM, shutting down gracefully');
+  
+  if (dbManager) {
+    await dbManager.shutdown();
+    logger.info('Database manager shut down');
+  }
+  
   process.exit(0);
 });

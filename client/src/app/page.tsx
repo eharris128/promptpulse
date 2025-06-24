@@ -53,20 +53,6 @@ export default function Dashboard() {
   }
 
 
-  const generateSampleData = async () => {
-    try {
-      setDataLoading(true)
-      setError(null)
-      await apiClient.generateSampleData()
-      await loadDashboardData()
-    } catch (err) {
-      console.error('Failed to generate sample data:', err)
-      setError(err instanceof Error ? err.message : 'Failed to generate sample data')
-    } finally {
-      setDataLoading(false)
-    }
-  }
-
   return (
       <div className="flex-1 space-y-4 p-8 pt-6">
         <div className="flex items-center justify-between space-y-2">
@@ -74,9 +60,6 @@ export default function Dashboard() {
           <div className="flex items-center space-x-2">
             <Button variant="outline" onClick={loadDashboardData} disabled={dataLoading}>
               {dataLoading ? 'Loading...' : 'Refresh'}
-            </Button>
-            <Button variant="outline" onClick={generateSampleData} disabled={dataLoading}>
-              {dataLoading ? 'Generating...' : 'Generate Sample Data'}
             </Button>
           </div>
         </div>
@@ -147,12 +130,9 @@ export default function Dashboard() {
           <div className="text-center space-y-4">
             <p className="text-lg">No usage data found</p>
             <p className="text-muted-foreground">
-              Run <code className="bg-muted px-1 rounded">promptpulse collect</code> to upload your usage data, or generate sample data for testing
+              Run <code className="bg-muted px-1 rounded">promptpulse collect</code> to upload your usage data
             </p>
-            <div className="flex gap-2 justify-center">
-              <Button onClick={loadDashboardData}>Check Again</Button>
-              <Button variant="outline" onClick={generateSampleData}>Generate Sample Data</Button>
-            </div>
+            <Button onClick={loadDashboardData}>Check Again</Button>
           </div>
         </div>
       )}

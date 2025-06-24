@@ -32,7 +32,7 @@ async function runMigrations() {
     const executed = executedMigrations.map(row => row.filename);
     
     // Read migration files
-    const migrationsPath = path.join(__dirname, 'migrations');
+    const migrationsPath = path.join(__dirname, '..', 'migrations');
     const migrationFiles = fs.readdirSync(migrationsPath)
       .filter(file => file.endsWith('.sql'))
       .sort();

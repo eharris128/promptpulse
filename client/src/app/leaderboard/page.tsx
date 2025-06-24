@@ -112,7 +112,7 @@ export default function Leaderboard() {
                     </Badge>
                   </CardTitle>
                   <CardDescription>
-                    You're in the top{' '}
+                    You&apos;re in the top{' '}
                     {Math.round(((leaderboardData.total_participants - leaderboardData.user_rank + 1) / leaderboardData.total_participants) * 100)}%
                   </CardDescription>
                 </CardHeader>

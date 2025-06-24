@@ -151,20 +151,11 @@ This includes:
 - Each user has a unique API key for authentication
 - All data is completely isolated between users
 - Multiple team members can track usage independently
-- Machines can be shared or user-specific
 
 ### Use Cases
 - **Teams** - Each developer tracks their own Claude usage
 - **Freelancers** - Separate usage by client projects
 - **Personal** - Track usage across work and personal machines
-
-## Security & Privacy
-
-- API keys provide secure authentication
-- All data is isolated per user account
-- Hosted service - no local database required
-- Logs contain no sensitive information
-- No personal data beyond usage statistics
 
 ## CLI Commands Reference
 

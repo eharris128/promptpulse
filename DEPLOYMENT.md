@@ -1,6 +1,6 @@
 # PromptPulse Deployment Guide
 
-This guide walks you through deploying PromptPulse to Railway with cost protection.
+This guide walks you through deploying PromptPulse to Railway.
 
 ## Prerequisites
 
@@ -28,14 +28,6 @@ RAILWAY_ENVIRONMENT=production
 PORT=3000
 ```
 
-### 1.3 Set Up Cost Protection (CRITICAL)
-
-1. Go to your project Settings → Usage Limits
-2. Set a hard limit: **$15/month** (recommended starting point)
-3. Configure email alerts:
-   - Alert at $5 (50% of budget)
-   - Alert at $10 (75% of budget)
-   - Hard limit at $15 (app shuts down to prevent overcharges)
 
 ## Step 2: Update Configuration
 
@@ -140,26 +132,6 @@ npm version patch  # or minor/major
 npm publish
 ```
 
-## Cost Monitoring
-
-### Expected Costs
-
-- **Light usage** (< 100 API calls/day): $3-7/month
-- **Medium usage** (< 1000 API calls/day): $7-12/month
-- **Heavy usage**: App shuts down at $15/month limit
-
-### Monitoring Tools
-
-1. **Railway Dashboard**: Real-time usage and cost tracking
-2. **Usage Alerts**: Email notifications at 50%, 75%, 90% of limit
-3. **Hard Limit**: Automatic shutdown at $15 to prevent overcharges
-
-### Cost Optimization Tips
-
-1. Monitor the Railway metrics dashboard weekly
-2. Adjust usage limits based on actual patterns
-3. Consider increasing limits only after 2-3 months of stable usage
-4. Use the health endpoint for uptime monitoring
 
 ## Security Notes
 
@@ -176,11 +148,11 @@ npm publish
 - Verify all environment variables are set
 - Ensure DATABASE_URL is correctly formatted
 
-### App Shuts Down
+### App Not Responding
 
-- Check if you hit your usage limit
-- Review Railway usage dashboard
-- Increase limit if needed or optimize code
+- Review Railway deployment logs
+- Check if service is running in Railway dashboard
+- Verify all environment variables are set
 
 ### CORS Errors
 
@@ -196,4 +168,4 @@ For deployment issues:
 3. Test health endpoint first
 4. Verify environment variables
 
-Your PromptPulse service is now ready for production use with cost protection!
+Your PromptPulse service is now ready for production use!

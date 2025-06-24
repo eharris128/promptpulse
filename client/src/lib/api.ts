@@ -34,13 +34,13 @@ class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const apiKey = this.getApiKey();
     
-    const headers: HeadersInit = {
+    const headers = new Headers({
       'Content-Type': 'application/json',
       ...options.headers,
-    };
+    });
 
     if (apiKey) {
-      headers['X-API-Key'] = apiKey;
+      headers.set('X-API-Key', apiKey);
     }
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {

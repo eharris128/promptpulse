@@ -64,3 +64,5 @@ build/
 
 # Node modules (will be installed via dependencies)
 node_modules/
+
+llms.txt

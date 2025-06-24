@@ -39,7 +39,7 @@ promptpulse collect
 
 ### 3. View Your Dashboard
 
-Visit your personalized dashboard at: [https://promptpulse-git-master-evan-harris-projects.vercel.app](https://promptpulse-git-master-evan-harris-projects.vercel.app)
+Visit your personalized dashboard at: [https://www.promptpulse.dev](https://www.promptpulse.dev)
 
 Enter your API key to access your private analytics and insights.
 

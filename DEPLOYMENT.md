@@ -50,7 +50,7 @@ Edit `lib/config.js` and replace the placeholder URLs:
 ```javascript
 // Update these lines
 const PRODUCTION_API_URL = process.env.PROMPTPULSE_API_ENDPOINT || 'https://your-actual-app.railway.app';
-const PRODUCTION_DASHBOARD_URL = process.env.PROMPTPULSE_DASHBOARD_URL || 'https://your-dashboard.vercel.app';
+const PRODUCTION_DASHBOARD_URL = process.env.PROMPTPULSE_DASHBOARD_URL || 'https://www.promptpulse.dev';
 ```
 
 ### 2.3 Update CORS Settings
@@ -59,7 +59,7 @@ Edit `server.js` and update the allowed origins:
 
 ```javascript
 const allowedOrigins = [
-  'https://your-actual-dashboard.vercel.app', // Update this
+  'https://www.promptpulse.dev', // Update this
   'http://localhost:3001', // Keep for development
   'http://localhost:3000'  // Keep for development
 ];
@@ -93,7 +93,7 @@ npm run migrate
 
 Update your Railway environment variables:
 ```bash
-PROMPTPULSE_DASHBOARD_URL=https://your-dashboard.vercel.app
+PROMPTPULSE_DASHBOARD_URL=https://www.promptpulse.dev
 ```
 
 ## Step 5: Test Your Deployment

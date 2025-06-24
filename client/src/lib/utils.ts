@@ -44,7 +44,7 @@ export function sanitizeDisplayName(input: string): string {
   
   // Remove HTML tags and dangerous characters
   sanitized = sanitized.replace(/<[^>]*>/g, '')
-  sanitized = sanitized.replace(/[<>'"&]/g, '')
+  sanitized = sanitized.replace(/[<>'\"&]/g, '')
   
   return sanitized
 }
@@ -57,10 +57,10 @@ export function sanitizeApiKey(input: string): string {
   
   // Remove HTML tags and dangerous characters
   sanitized = sanitized.replace(/<[^>]*>/g, '')
-  sanitized = sanitized.replace(/[<>'"&]/g, '')
+  sanitized = sanitized.replace(/[<>'\"&]/g, '')
   
   // Only allow alphanumeric, underscores, hyphens, and dots (common in API keys)
-  sanitized = sanitized.replace(/[^a-zA-Z0-9_\-\.]/g, '')
+  sanitized = sanitized.replace(/[^a-zA-Z0-9_\-.]/g, '')
   
   // Limit to reasonable API key length
   sanitized = sanitized.slice(0, 100)

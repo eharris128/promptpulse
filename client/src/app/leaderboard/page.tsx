@@ -58,8 +58,8 @@ export default function Leaderboard() {
 
 
   return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1>
             <p className="text-muted-foreground">
@@ -100,95 +100,96 @@ export default function Leaderboard() {
           </div>
         )}
 
-        {!dataLoading && leaderboardData && (
-          <div className="space-y-6">
-            {leaderboardData.user_rank && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    Your Ranking
-                    <Badge variant="secondary">
-                      #{leaderboardData.user_rank} of {leaderboardData.total_participants}
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription>
-                    You&apos;re in the top{' '}
-                    {Math.round(((leaderboardData.total_participants - leaderboardData.user_rank + 1) / leaderboardData.total_participants) * 100)}%
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            )}
-
+      {!dataLoading && leaderboardData && (
+        <div className="space-y-6">
+          {leaderboardData.user_rank && (
             <Card>
               <CardHeader>
-                <CardTitle>
-                  {period === 'daily' ? 'Today&apos;s' : 'This Week&apos;s'} Top Performers
+                <CardTitle className="flex items-center gap-2">
+                  Your Ranking
+                  <Badge variant="secondary">
+                    #{leaderboardData.user_rank} of {leaderboardData.total_participants}
+                  </Badge>
                 </CardTitle>
                 <CardDescription>
-                  {leaderboardData.total_participants} participants • Ranked by total tokens
+                  You are in the top{' '}
+                  {Math.round(((leaderboardData.total_participants - leaderboardData.user_rank + 1) / leaderboardData.total_participants) * 100)}%
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                {leaderboardData.entries.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No leaderboard data available for this period.</p>
-                    <p className="text-sm mt-2">
-                      Users must opt-in to leaderboard participation in their settings.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {leaderboardData.entries.map((entry) => (
-                      <div
-                        key={entry.user_id}
-                        className="flex items-center justify-between p-4 border rounded-lg"
-                      >
-                        <div className="flex items-center space-x-4">
-                          <div className={`text-2xl font-bold ${getRankColor(entry.rank)}`}>
-                            {getRankIcon(entry.rank)}
-                          </div>
-                          <div>
-                            <p className="font-medium">
-                              {entry.display_name || entry.username}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              Top {entry.percentile}%
-                            </p>
-                          </div>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {/* eslint-disable-next-line */}
+                {period === 'daily' ? 'Today\'s' : 'This Week\'s'} Top Performers
+              </CardTitle>
+              <CardDescription>
+                {leaderboardData.total_participants} participants • Ranked by total tokens
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {leaderboardData.entries.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No leaderboard data available for this period.</p>
+                  <p className="text-sm mt-2">
+                    Users must opt-in to leaderboard participation in their settings.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {leaderboardData.entries.map((entry) => (
+                    <div
+                      key={entry.user_id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div className={`text-2xl font-bold ${getRankColor(entry.rank)}`}>
+                          {getRankIcon(entry.rank)}
                         </div>
-                        
-                        <div className="text-right">
-                          <p className="font-semibold">
-                            {formatTokens(entry.total_tokens)} tokens
+                        <div>
+                          <p className="font-medium">
+                            {entry.display_name || entry.username}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {formatCost(entry.total_cost)} • {getAverageLabel(period, entry.daily_average)}
+                            Top {entry.percentile}%
                           </p>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+                      
+                      <div className="text-right">
+                        <p className="font-semibold">
+                          {formatTokens(entry.total_tokens)} tokens
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatCost(entry.total_cost)} • {getAverageLabel(period, entry.daily_average)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {leaderboardData.entries.length === 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Want to join the leaderboard?</CardTitle>
+                <CardDescription>
+                  Enable leaderboard participation in your settings to compete with other users.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={() => window.location.href = '/settings'}>
+                  Go to Settings
+                </Button>
               </CardContent>
             </Card>
-
-            {leaderboardData.entries.length === 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Want to join the leaderboard?</CardTitle>
-                  <CardDescription>
-                    Enable leaderboard participation in your settings to compete with other users.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button onClick={() => window.location.href = '/settings'}>
-                    Go to Settings
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
+    </div>
   )
 }

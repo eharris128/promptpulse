@@ -1,8 +1,8 @@
 export interface User {
   id: number;
-  email: string;
+  ksuid?: string;
+  email?: string;
   username: string;
-  full_name?: string;
   created_at: string;
   leaderboard_enabled?: boolean;
   display_name?: string;
@@ -81,6 +81,7 @@ export interface AggregateData {
 
 export interface LeaderboardEntry {
   user_id: number;
+  ksuid?: string;
   username: string;
   display_name?: string;
   total_tokens: number;

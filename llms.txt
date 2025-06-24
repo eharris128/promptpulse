@@ -27,11 +27,7 @@ Multi-user platform for tracking and analyzing Claude Code usage across multiple
 ### API Server
 - `server.js` - Express.js API server with authentication
 - `migrations/` - Database schema migrations
-  - `001_create_usage_data_table.sql`
-  - `002_add_granular_usage_tables.sql`
-  - `003_add_users_and_user_relationships.sql`
-  - `004_update_session_block_tables_for_users.sql`
-  - `005_add_leaderboard_settings.sql`
+  - `001_initial_schema.sql` - Consolidated database schema with KSUID users, secure API keys
 
 ### Web Dashboard
 - `client/` - Next.js dashboard application
@@ -61,8 +57,8 @@ Multi-user platform for tracking and analyzing Claude Code usage across multiple
 
 ### User Management
 - `promptpulse user init` - Create first user account and save API key
-- `promptpulse user create <email> <username> [fullName]` - Create new user
-- `promptpulse user list` - List all users
+- `promptpulse user create <username>` - Create new user (email optional)
+- `promptpulse user create <email> <username>` - Create new user with email
 - `promptpulse user whoami` - Show current user
 - `promptpulse user config set api-key <key>` - Configure API key
 - `promptpulse user config get api-key` - Get API key
@@ -124,15 +120,13 @@ All endpoints require `X-API-Key` header with valid API key.
 5. Dashboard: React app visualizes usage patterns
 
 ## Automation Scripts
-- `cron-upload.sh` - Cron job script for automatic uploads
-- `upload-on-login.sh` - Login script for missed uploads
-- `upload-usage.js` - Node.js upload script
+- Built-in cron configuration via `promptpulse setup` command
+- Automatic collection scheduling through CLI
 
 ## Key Files
 - `package.json` - NPM package configuration with CLI binaries
 - `README.md` - Comprehensive documentation
-- `migrate.js` - Database migration runner
-- `check-db.js` - Database connectivity checker
+- `scripts/migrate.js` - Database migration runner
 - `.npmignore` - Files excluded from NPM package
 - `railway.json` - Railway deployment configuration
 - `Dockerfile` - Container configuration

@@ -30,18 +30,14 @@ export default function Dashboard() {
         apiClient.getMachines()
       ])
       
-      console.log('Usage data received:', usageResponse)
-      console.log('Machines data received:', machinesResponse)
-      
       setUsageData(usageResponse)
       setMachines(machinesResponse)
       
-      // Load leaderboard data for quick access
       try {
         const leaderboard = await apiClient.getLeaderboard('daily')
         setLeaderboardData(leaderboard)
       } catch (err) {
-        console.log('Leaderboard not available or user not opted in')
+        console.log('Leaderboard not available or user not opted in', err)
       }
     } catch (err) {
       console.error('Failed to load dashboard data:', err)
@@ -91,7 +87,8 @@ export default function Dashboard() {
               <Card className="col-span-3">
                 <CardHeader>
                   <CardTitle>Your Leaderboard Ranking</CardTitle>
-                  <CardDescription>Today&apos;s performance vs other users</CardDescription>
+                  {/* eslint-disable-next-line */}
+                  <CardDescription>Today\'s performance vs other users</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">

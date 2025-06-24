@@ -1,11 +1,14 @@
--- Users table (foundation for all data relationships)
-CREATE TABLE IF NOT EXISTS users (
+-- Initial database schema with KSUID support and secure API key storage
+-- This creates all necessary tables, indexes, and triggers
+
+-- Users table with KSUID and secure API key storage
+CREATE TABLE users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  email TEXT UNIQUE NOT NULL,
+  ksuid TEXT UNIQUE NOT NULL,
+  email TEXT UNIQUE,
   username TEXT UNIQUE NOT NULL,
-  api_key TEXT UNIQUE NOT NULL,
-  full_name TEXT,
-  display_name TEXT, -- For leaderboard privacy
+  api_key_hash TEXT UNIQUE NOT NULL,
+  display_name TEXT,
   timezone TEXT DEFAULT 'UTC',
   country TEXT,
   leaderboard_enabled BOOLEAN DEFAULT 0,
@@ -18,7 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- Daily usage aggregates
-CREATE TABLE IF NOT EXISTS usage_data (
+CREATE TABLE usage_data (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   machine_id TEXT NOT NULL,
@@ -29,15 +32,15 @@ CREATE TABLE IF NOT EXISTS usage_data (
   cache_read_tokens INTEGER DEFAULT 0,
   total_tokens INTEGER DEFAULT 0,
   total_cost REAL DEFAULT 0,
-  models_used TEXT, -- JSON array of models
-  model_breakdowns TEXT, -- JSON object with per-model stats
+  models_used TEXT,
+  model_breakdowns TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, machine_id, date)
 );
 
 -- Session-level usage data
-CREATE TABLE IF NOT EXISTS usage_sessions (
+CREATE TABLE usage_sessions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   machine_id TEXT NOT NULL,
@@ -52,15 +55,15 @@ CREATE TABLE IF NOT EXISTS usage_sessions (
   cache_read_tokens INTEGER DEFAULT 0,
   total_tokens INTEGER DEFAULT 0,
   total_cost REAL DEFAULT 0,
-  models_used TEXT, -- JSON array
-  model_breakdowns TEXT, -- JSON object
+  models_used TEXT,
+  model_breakdowns TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, machine_id, session_id)
 );
 
 -- Block-level usage data (5-hour billing periods)
-CREATE TABLE IF NOT EXISTS usage_blocks (
+CREATE TABLE usage_blocks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   machine_id TEXT NOT NULL,
@@ -76,32 +79,31 @@ CREATE TABLE IF NOT EXISTS usage_blocks (
   cache_read_tokens INTEGER DEFAULT 0,
   total_tokens INTEGER DEFAULT 0,
   total_cost REAL DEFAULT 0,
-  models_used TEXT, -- JSON array
+  models_used TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, machine_id, block_id)
 );
 
--- Upload tracking table (new addition for better sync management)
-CREATE TABLE IF NOT EXISTS upload_history (
+-- Upload tracking table
+CREATE TABLE upload_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   machine_id TEXT NOT NULL,
-  upload_type TEXT NOT NULL, -- 'daily', 'session', 'block'
-  identifier TEXT NOT NULL, -- date, session_id, or block_id
+  upload_type TEXT NOT NULL,
+  identifier TEXT NOT NULL,
   uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, machine_id, upload_type, identifier)
 );
 
--- Optimized indexes for common query patterns
-
--- Users indexes
-CREATE INDEX idx_users_api_key ON users(api_key) WHERE is_deleted = 0;
+-- Users table indexes
+CREATE INDEX idx_users_api_key_hash ON users(api_key_hash) WHERE is_deleted = 0;
+CREATE INDEX idx_users_ksuid ON users(ksuid) WHERE is_deleted = 0;
 CREATE INDEX idx_users_email ON users(email) WHERE is_deleted = 0;
 CREATE INDEX idx_users_username ON users(username) WHERE is_deleted = 0;
 CREATE INDEX idx_users_leaderboard ON users(leaderboard_enabled, leaderboard_updated_at) WHERE is_deleted = 0;
 
--- Usage data indexes (composite for efficient querying)
+-- Usage data indexes
 CREATE INDEX idx_usage_data_user_date ON usage_data(user_id, date DESC);
 CREATE INDEX idx_usage_data_user_machine_date ON usage_data(user_id, machine_id, date DESC);
 
@@ -118,23 +120,23 @@ CREATE INDEX idx_blocks_user_machine_time ON usage_blocks(user_id, machine_id, s
 -- Upload history indexes
 CREATE INDEX idx_upload_history_user_machine ON upload_history(user_id, machine_id, upload_type, uploaded_at DESC);
 
--- Create update triggers for updated_at columns
+-- Update timestamp triggers
 CREATE TRIGGER update_users_timestamp AFTER UPDATE ON users
-  BEGIN
-    UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-  END;
+BEGIN
+  UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
 
 CREATE TRIGGER update_usage_data_timestamp AFTER UPDATE ON usage_data
-  BEGIN
-    UPDATE usage_data SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-  END;
+BEGIN
+  UPDATE usage_data SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
 
 CREATE TRIGGER update_usage_sessions_timestamp AFTER UPDATE ON usage_sessions
-  BEGIN
-    UPDATE usage_sessions SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-  END;
+BEGIN
+  UPDATE usage_sessions SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
 
 CREATE TRIGGER update_usage_blocks_timestamp AFTER UPDATE ON usage_blocks
-  BEGIN
-    UPDATE usage_blocks SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-  END;
+BEGIN
+  UPDATE usage_blocks SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;

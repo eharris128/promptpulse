@@ -130,27 +130,47 @@ app.get('/api/auth/validate', authenticateApiKey, async (req, res) => {
 
 // User management endpoints
 app.post('/api/users', async (req, res) => {
-  const { email, username, fullName } = req.body;
+  const { email, username } = req.body;
   
   if (!username) {
     return res.status(400).json({ error: 'Username is required' });
   }
 
   try {
-    const user = await createUser({ email, username, fullName });
+    const user = await createUser({ email, username });
     res.json({ 
       message: 'User created successfully',
       user: {
         id: user.id,
+        ksuid: user.ksuid,
         email: user.email,
         username: user.username,
-        fullName: user.full_name,
         apiKey: user.api_key
       }
     });
   } catch (error) {
     console.error('Error creating user:', error);
     res.status(400).json({ error: error.message });
+  }
+});
+
+// API key validation endpoint
+app.get('/api/auth/validate', authenticateApiKey, async (req, res) => {
+  try {
+    // If we reach here, authentication was successful
+    res.json({
+      message: 'API key is valid',
+      user: {
+        id: req.user.id,
+        ksuid: req.user.ksuid,
+        email: req.user.email,
+        username: req.user.username,
+        created_at: req.user.created_at
+      }
+    });
+  } catch (error) {
+    console.error('Error in auth validation:', error);
+    res.status(500).json({ error: 'Validation failed' });
   }
 });
 

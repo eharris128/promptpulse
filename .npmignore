@@ -31,6 +31,13 @@ check-db.js
 fix-user-id.js
 scripts/
 
+# Migration and test scripts (development only)
+*migration*.js
+migrate*.js
+reset*.js
+test*.js
+*test*.js
+
 # Git files
 .git/
 .gitignore

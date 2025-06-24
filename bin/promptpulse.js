@@ -43,10 +43,12 @@ program
 program
   .command('user')
   .description('Manage user accounts and authentication')
-  .argument('<action>', 'user action: init, create, list, config')
-  .argument('[...args]', 'additional arguments')
-  .action(async (action, args) => {
+  .argument('<action>', 'user action: init, create, list, config, whoami')
+  .argument('[email]', 'email for create command')
+  .argument('[username]', 'username for create command')
+  .action(async (action, email, username) => {
     const { userCommand } = await import('../lib/user-cli.js');
+    const args = [email, username].filter(Boolean);
     await userCommand(action, args);
   });
 

@@ -62,7 +62,7 @@ class ApiClient {
   }
 
   // Authentication
-  async createUser(userData: { email: string; username: string; fullName?: string }) {
+  async createUser(userData: { email: string; username: string }) {
     return this.request<ApiResponse>('/api/users', {
       method: 'POST',
       body: JSON.stringify(userData),

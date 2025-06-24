@@ -3,7 +3,6 @@ import express from 'express';
 import { Database } from '@sqlitecloud/drivers';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import { runMigrations } from './migrate.js';
 import { authenticateApiKey, createUser, listUsers } from './lib/server-auth.js';
 
 const app = express();
@@ -17,9 +16,11 @@ const corsOptions = {
     
     // In production, only allow specific domains
     const allowedOrigins = [
-      'https://exciting-patience-production.up.railway.app', // Allow API self-requests
-      'http://localhost:3001', // For development
-      'http://localhost:3000'  // For development
+      'https://exciting-patience-production.up.railway.app',
+      'https://www.promptpulse.dev',
+      'https://promptpulse.dev',
+      'http://localhost:3001',
+      'http://localhost:3000'
     ];
     
     // Allow all Vercel preview and production domains
@@ -131,8 +132,8 @@ app.get('/api/auth/validate', authenticateApiKey, async (req, res) => {
 app.post('/api/users', async (req, res) => {
   const { email, username, fullName } = req.body;
   
-  if (!email || !username) {
-    return res.status(400).json({ error: 'Email and username are required' });
+  if (!username) {
+    return res.status(400).json({ error: 'Username is required' });
   }
 
   try {
@@ -616,222 +617,6 @@ app.get('/api/usage/analytics/patterns', authenticateApiKey, async (req, res) =>
   }
 });
 
-// Sample data generation endpoint for testing
-app.post('/api/usage/sample', authenticateApiKey, async (req, res) => {
-  const userId = req.user.id;
-  const machineId = req.body.machineId || `${req.user.username}-machine`;
-  
-  console.log('=== Sample data generation ===');
-  console.log('User ID:', userId);
-  console.log('Machine ID:', machineId);
-  
-  try {
-    const sampleData = [];
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 30);
-    
-    for (let i = 0; i < 30; i++) {
-      const date = new Date(startDate);
-      date.setDate(date.getDate() + i);
-      
-      const dayOfWeek = date.getDay();
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-      
-      const baseTokens = isWeekend ? 5000 + Math.random() * 2000 : 8000 + Math.random() * 5000;
-      const inputTokens = Math.floor(baseTokens * 0.7);
-      const outputTokens = Math.floor(baseTokens * 0.3);
-      const totalTokens = inputTokens + outputTokens;
-      
-      const costPerToken = 0.000003; // Rough Claude pricing
-      const totalCost = totalTokens * costPerToken;
-      
-      sampleData.push({
-        machine_id: machineId,
-        user_id: userId,
-        date: date.toISOString().split('T')[0],
-        input_tokens: inputTokens,
-        output_tokens: outputTokens,
-        cache_creation_tokens: Math.floor(Math.random() * 1000),
-        cache_read_tokens: Math.floor(Math.random() * 500),
-        total_tokens: totalTokens,
-        total_cost: totalCost,
-        models_used: JSON.stringify(['claude-3-5-sonnet-20241022']),
-        model_breakdowns: JSON.stringify({
-          'claude-3-5-sonnet-20241022': {
-            input_tokens: inputTokens,
-            output_tokens: outputTokens,
-            cost: totalCost
-          }
-        })
-      });
-    }
-    
-    console.log('Generated sample data entries:', sampleData.length);
-    console.log('Sample entry:', sampleData[0]);
-    
-    for (const dayData of sampleData) {
-      console.log('Inserting:', dayData.date, dayData.total_cost);
-      await db.sql`
-        INSERT OR REPLACE INTO usage_data (
-          machine_id, user_id, date, input_tokens, output_tokens, 
-          cache_creation_tokens, cache_read_tokens, total_tokens,
-          total_cost, models_used, model_breakdowns
-        ) VALUES (
-          ${dayData.machine_id},
-          ${dayData.user_id},
-          ${dayData.date},
-          ${dayData.input_tokens},
-          ${dayData.output_tokens},
-          ${dayData.cache_creation_tokens},
-          ${dayData.cache_read_tokens},
-          ${dayData.total_tokens},
-          ${dayData.total_cost},
-          ${dayData.models_used},
-          ${dayData.model_breakdowns}
-        )
-      `;
-    }
-    
-    console.log('All sample data inserted successfully');
-    
-    res.json({ 
-      message: 'Sample data generated successfully',
-      recordsCreated: sampleData.length,
-      machineId: machineId
-    });
-    
-  } catch (error) {
-    console.error('Error generating sample data:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-// Admin endpoint to enable leaderboard for any user
-app.post('/api/admin/enable-leaderboard', authenticateApiKey, async (req, res) => {
-  const { userId, displayName } = req.body;
-  
-  try {
-    await db.sql`
-      UPDATE users 
-      SET 
-        leaderboard_enabled = 1,
-        display_name = ${displayName || null},
-        leaderboard_updated_at = CURRENT_TIMESTAMP
-      WHERE id = ${userId}
-    `;
-    
-    res.json({ 
-      message: `Leaderboard enabled for user ${userId}`,
-      userId,
-      displayName: displayName || null
-    });
-    
-  } catch (error) {
-    console.error('Error enabling leaderboard:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-// Admin endpoint to fix missing columns
-app.post('/api/admin/fix-schema', authenticateApiKey, async (req, res) => {
-  try {
-    console.log('Adding missing leaderboard columns...');
-    
-    // Add leaderboard_enabled column
-    await db.sql`ALTER TABLE users ADD COLUMN leaderboard_enabled BOOLEAN DEFAULT 0`;
-    console.log('Added leaderboard_enabled column');
-    
-    // Add leaderboard_updated_at column
-    await db.sql`ALTER TABLE users ADD COLUMN leaderboard_updated_at DATETIME`;
-    console.log('Added leaderboard_updated_at column');
-    
-    // Update existing users with default timestamp
-    await db.sql`UPDATE users SET leaderboard_updated_at = CURRENT_TIMESTAMP WHERE leaderboard_updated_at IS NULL`;
-    console.log('Updated existing users with timestamps');
-    
-    res.json({ message: 'Schema fixed successfully' });
-  } catch (error) {
-    console.error('Error fixing schema:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Admin endpoint to check database schema
-app.get('/api/admin/schema', authenticateApiKey, async (req, res) => {
-  try {
-    const usersSchema = await db.sql`PRAGMA table_info(users)`;
-    const usageDataSchema = await db.sql`PRAGMA table_info(usage_data)`;
-    
-    res.json({ 
-      users: usersSchema,
-      usage_data: usageDataSchema
-    });
-  } catch (error) {
-    console.error('Error getting schema:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-// Admin endpoint to check user data distribution
-app.get('/api/admin/user-stats', authenticateApiKey, async (req, res) => {
-  try {
-    const userStats = await db.sql`
-      SELECT 
-        user_id,
-        COUNT(*) as record_count,
-        COUNT(DISTINCT machine_id) as machine_count,
-        MIN(date) as earliest_date,
-        MAX(date) as latest_date
-      FROM usage_data 
-      GROUP BY user_id 
-      ORDER BY user_id
-    `;
-    
-    const machineStats = await db.sql`
-      SELECT 
-        user_id,
-        machine_id,
-        COUNT(*) as record_count
-      FROM usage_data 
-      GROUP BY user_id, machine_id 
-      ORDER BY user_id, machine_id
-    `;
-    
-    res.json({ userStats, machineStats });
-  } catch (error) {
-    console.error('Error getting user stats:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-// Admin endpoint to update machine ownership
-app.post('/api/admin/update-machines', authenticateApiKey, async (req, res) => {
-  const { machines, targetUserId } = req.body;
-  
-  console.log('=== Admin update machines ===');
-  console.log('Machines to update:', machines);
-  console.log('Target user ID:', targetUserId);
-  
-  try {
-    for (const machineId of machines) {
-      const result = await db.sql`
-        UPDATE usage_data 
-        SET user_id = ${targetUserId} 
-        WHERE machine_id = ${machineId}
-      `;
-      console.log(`Updated ${machineId} to user ${targetUserId}`);
-    }
-    
-    res.json({ 
-      message: 'Machines updated successfully',
-      machinesUpdated: machines.length
-    });
-    
-  } catch (error) {
-    console.error('Error updating machines:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
 
 // Leaderboard endpoints
 app.get('/api/leaderboard/:period', authenticateApiKey, async (req, res) => {
@@ -891,7 +676,6 @@ app.get('/api/leaderboard/:period', authenticateApiKey, async (req, res) => {
   }
 });
 
-// User leaderboard settings endpoints
 app.get('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) => {
   const userId = req.user.id;
   
@@ -917,14 +701,11 @@ app.get('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) =
   }
 });
 
-// Input sanitization function
 function sanitizeDisplayName(input) {
   if (!input || typeof input !== 'string') return null;
   
-  // Trim whitespace and limit length
   let sanitized = input.trim().slice(0, 50);
   
-  // Remove HTML tags and dangerous characters
   sanitized = sanitized.replace(/<[^>]*>/g, '');
   sanitized = sanitized.replace(/[<>'"&]/g, '');
   
@@ -935,7 +716,6 @@ app.put('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) =
   const userId = req.user.id;
   const { leaderboard_enabled, display_name } = req.body;
   
-  // Sanitize display name
   const sanitizedDisplayName = sanitizeDisplayName(display_name);
   
   try {
@@ -960,14 +740,12 @@ app.put('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) =
   }
 });
 
-// Analytics endpoint - cost breakdown
 app.get('/api/usage/analytics/costs', authenticateApiKey, async (req, res) => {
   const { machineId, groupBy = 'day' } = req.query;
   const userId = req.user.id;
   
   try {
     let query;
-    const params = [];
     
     switch (groupBy) {
       case 'session':
@@ -1033,10 +811,9 @@ app.get('/api/usage/analytics/costs', authenticateApiKey, async (req, res) => {
 async function initializeServer() {
   try {
     db = new Database(DATABASE_URL);
-    await runMigrations();
     
     app.listen(PORT, () => {
-      console.log(`Claude Code Usage Server running on port ${PORT}`);
+      console.log(`PromptPulse running on port ${PORT}`);
     });
   } catch (error) {
     console.error('Failed to initialize server:', error);

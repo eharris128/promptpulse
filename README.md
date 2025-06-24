@@ -4,19 +4,19 @@ Track and analyze your Claude Code usage with beautiful dashboards and competiti
 
 ## Features
 
-- 🔐 **Secure API key authentication** for private data access
-- 📊 **Beautiful hosted dashboard** built with Next.js and Recharts
-- 🖥️ **Multi-machine tracking** - aggregate usage across all your devices
-- 🏆 **Competitive leaderboards** - compare your usage with other users (opt-in)
-- 📈 **Detailed analytics** - daily costs, token usage, session tracking
-- 🏷️ **Project-based insights** - see usage by project
-- 💰 **Cost tracking** - monitor your Claude API spending
-- ⚡ **Simple CLI** - easy setup and data collection
+- **Secure API key authentication** for private data access
+- **Beautiful hosted dashboard** built with Next.js and Recharts
+- **Multi-machine tracking** - aggregate usage across all your devices
+- **Competitive leaderboards** - compare your usage with other users (opt-in)
+- **Detailed analytics** - daily costs, token usage, session tracking
+- **Project-based insights** - see usage by project
+- **Cost tracking** - monitor your Claude API spending
+- **Simple CLI** - easy setup and data collection
 
 ## Installation
 
 ```bash
-npm install -g @eharris128/promptpulse
+npm install -g promptpulse
 ```
 
 ## Quick Start
@@ -160,11 +160,11 @@ This includes:
 
 ## Security & Privacy
 
-- 🔐 API keys provide secure authentication
-- 🏠 All data is isolated per user account
-- 🌐 Hosted service - no local database required
-- 📝 Logs contain no sensitive information
-- 🚫 No personal data beyond usage statistics
+- API keys provide secure authentication
+- All data is isolated per user account
+- Hosted service - no local database required
+- Logs contain no sensitive information
+- No personal data beyond usage statistics
 
 ## CLI Commands Reference
 

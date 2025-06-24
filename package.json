@@ -1,5 +1,5 @@
 {
-  "name": "@eharris128/promptpulse",
+  "name": "promptpulse",
   "version": "1.0.0",
   "description": "Track and analyze your Claude Code usage across multiple machines",
   "type": "module",

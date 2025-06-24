@@ -76,7 +76,8 @@ export function LoginForm({ onLogin }: LoginFormProps) {
             
             <div className="text-sm text-muted-foreground text-center">
               <p>Need an API key?</p>
-              <p className="mt-1">Run: <code className="bg-muted px-1 rounded">promptpulse user init</code></p>
+              <p className="mt-1">1. Install: <code className="bg-muted px-1 rounded">npm i -g promptpulse</code></p>
+              <p className="mt-1">2. Run: <code className="bg-muted px-1 rounded">promptpulse user init</code></p>
             </div>
           </form>
         </CardContent>

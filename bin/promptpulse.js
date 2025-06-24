@@ -39,26 +39,42 @@ program
     await collect(options);
   });
 
-// Login command (shortcut for common case)
+// Login command (API key authentication or interactive account creation)
 program
   .command('login')
-  .description('Login with your API key from another machine')
-  .argument('<api-key>', 'your API key (starts with pk_)')
+  .description('Login with API key or create new account interactively')
+  .argument('[api-key]', 'API key for existing account (starts with pk_...), or omit for interactive account creation')
   .action(async (apiKey) => {
-    const { userCommand } = await import('../lib/user-cli.js');
-    await userCommand('login', [apiKey]);
+    const { smartLogin } = await import('../lib/auth-cli.js');
+    await smartLogin(apiKey);
   });
 
-// User management commands
+// Logout command
+program
+  .command('logout')
+  .description('Clear authentication and log out')
+  .action(async () => {
+    const { logout } = await import('../lib/auth-cli.js');
+    await logout();
+  });
+
+// Who am I command
+program
+  .command('whoami')
+  .description('Show current authentication status')
+  .action(async () => {
+    const { whoami } = await import('../lib/auth-cli.js');
+    await whoami();
+  });
+
+// User management commands (deprecated - kept for config debugging only)
 program
   .command('user')
-  .description('Manage user accounts and authentication')
-  .argument('<action>', 'user action: init, create, login, list, config, whoami')
-  .argument('[email]', 'email for create command')
-  .argument('[username]', 'username for create command')
-  .action(async (action, email, username) => {
+  .description('Advanced user configuration (debugging only - use login/logout/whoami instead)')
+  .argument('<action>', 'user action: config')
+  .argument('[...args]', 'additional arguments for the action')
+  .action(async (action, args) => {
     const { userCommand } = await import('../lib/user-cli.js');
-    const args = [email, username].filter(Boolean);
     await userCommand(action, args);
   });
 

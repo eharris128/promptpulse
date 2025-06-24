@@ -1,4 +1,4 @@
-import { AggregateData, Machine, SessionData, BlockData, ApiResponse, LeaderboardData, LeaderboardSettings } from '@/types';
+import { AggregateData, Machine, SessionData, BlockData, ApiResponse, LeaderboardData, LeaderboardSettings, EmailPreferences } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://exciting-patience-production.up.railway.app';
 
@@ -160,6 +160,24 @@ class ApiClient {
     return this.request<ApiResponse>('/api/user/leaderboard-settings', {
       method: 'PUT',
       body: JSON.stringify(settings),
+    });
+  }
+
+  // Email preferences methods
+  async getEmailPreferences(): Promise<EmailPreferences> {
+    return this.request<EmailPreferences>('/api/user/email-preferences');
+  }
+
+  async updateEmailPreferences(preferences: Partial<EmailPreferences>): Promise<ApiResponse> {
+    return this.request<ApiResponse>('/api/user/email-preferences', {
+      method: 'PUT',
+      body: JSON.stringify(preferences),
+    });
+  }
+
+  async sendTestEmail(): Promise<ApiResponse> {
+    return this.request<ApiResponse>('/api/user/test-email', {
+      method: 'POST',
     });
   }
 }

@@ -66,7 +66,7 @@ The dashboard will be available at `http://localhost:3001`
 
 ## Authentication
 
-1. Get your API key by running: `promptpulse user init`
+1. Get your API key by running: `promptpulse login`
 2. Open the dashboard and enter your API key
 3. Start exploring your Claude Code usage data!
 

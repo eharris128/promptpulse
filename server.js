@@ -5,6 +5,8 @@ import rateLimit from 'express-rate-limit';
 import { authenticateApiKey, createUser, listUsers } from './lib/server-auth.js';
 import { initializeDbManager, getDbManager } from './lib/db-manager.js';
 import { logger, requestLogger, logDatabaseQuery, logError, log } from './lib/logger.js';
+import emailService from './lib/email-service.js';
+import reportGenerator from './lib/report-generator.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -170,6 +172,45 @@ app.get('/api/auth/validate', authenticateApiKey, async (req, res) => {
   });
 });
 
+// Username lookup endpoint (public - returns limited user info)
+app.get('/api/users/by-username/:username', async (req, res) => {
+  const { username: rawUsername } = req.params;
+  const username = decodeURIComponent(rawUsername);
+  const queryContext = logDatabaseQuery('lookup_user_by_username', null);
+  
+  if (!username) {
+    return res.status(400).json({ error: 'Username is required' });
+  }
+  
+  try {
+    logger.debug('Looking up username', { username, rawUsername: req.params.username });
+    
+    const user = await dbManager.executeQuery(async (db) => {
+      return await db.sql`SELECT * FROM users WHERE username = ${username} LIMIT 1`;
+    }, { ...queryContext, operation: 'find_user_by_username' });
+    
+    if (user.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({
+      user: {
+        id: user[0].id,
+        username: user[0].username,
+        email: user[0].email,
+        created_at: user[0].created_at,
+        api_key_preview: user[0].api_key.substring(0, 8) + '...'
+      }
+    });
+    
+    log.performance('lookup_user_by_username', Date.now() - queryContext.startTime, { username });
+    
+  } catch (error) {
+    logError(error, { context: 'lookup_user_by_username', username, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // User management endpoints
 app.post('/api/users', async (req, res) => {
   const { email, username } = req.body;
@@ -235,27 +276,29 @@ app.post('/api/usage', authenticateApiKey, async (req, res) => {
   }
 
   try {
-    for (const dayData of data) {
-      await db.sql`
-        INSERT OR REPLACE INTO usage_data (
-          machine_id, user_id, date, input_tokens, output_tokens, 
-          cache_creation_tokens, cache_read_tokens, total_tokens,
-          total_cost, models_used, model_breakdowns
-        ) VALUES (
-          ${machineId},
-          ${userId},
-          ${dayData.date},
-          ${dayData.inputTokens},
-          ${dayData.outputTokens},
-          ${dayData.cacheCreationTokens},
-          ${dayData.cacheReadTokens},
-          ${dayData.totalTokens},
-          ${dayData.totalCost},
-          ${JSON.stringify(dayData.modelsUsed)},
-          ${JSON.stringify(dayData.modelBreakdowns)}
-        )
-      `;
-    }
+    await dbManager.executeQuery(async (db) => {
+      for (const dayData of data) {
+        await db.sql`
+          INSERT OR REPLACE INTO usage_data (
+            machine_id, user_id, date, input_tokens, output_tokens, 
+            cache_creation_tokens, cache_read_tokens, total_tokens,
+            total_cost, models_used, model_breakdowns
+          ) VALUES (
+            ${machineId},
+            ${userId},
+            ${dayData.date},
+            ${dayData.inputTokens},
+            ${dayData.outputTokens},
+            ${dayData.cacheCreationTokens},
+            ${dayData.cacheReadTokens},
+            ${dayData.totalTokens},
+            ${dayData.totalCost},
+            ${JSON.stringify(dayData.modelsUsed)},
+            ${JSON.stringify(dayData.modelBreakdowns)}
+          )
+        `;
+      }
+    }, { operation: 'upload_usage_data', user_id: userId, machine_id: machineId });
     
     res.json({ 
       message: 'Usage data uploaded successfully',
@@ -446,31 +489,33 @@ app.get('/api/usage/blocks', authenticateApiKey, async (req, res) => {
   const userId = req.user.id;
   
   try {
-    let conditions = [`user_id = ${userId}`];
-    
-    if (machineId) {
-      conditions.push(`machine_id = '${machineId}'`);
-    }
-    
-    if (since) {
-      conditions.push(`start_time >= '${since}'`);
-    }
-    
-    if (until) {
-      conditions.push(`start_time <= '${until}'`);
-    }
-    
-    if (activeOnly === 'true') {
-      conditions.push('is_active = 1');
-    }
-    
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    
-    const blocks = await db.sql`
-      SELECT * FROM usage_blocks 
-      ${whereClause}
-      ORDER BY start_time DESC
-    `;
+    const blocks = await dbManager.executeQuery(async (db) => {
+      let conditions = [`user_id = ${userId}`];
+      
+      if (machineId) {
+        conditions.push(`machine_id = '${machineId}'`);
+      }
+      
+      if (since) {
+        conditions.push(`start_time >= '${since}'`);
+      }
+      
+      if (until) {
+        conditions.push(`start_time <= '${until}'`);
+      }
+      
+      if (activeOnly === 'true') {
+        conditions.push('is_active = 1');
+      }
+      
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+      
+      return await db.sql`
+        SELECT * FROM usage_blocks 
+        ${whereClause}
+        ORDER BY start_time DESC
+      `;
+    }, { operation: 'fetch_usage_blocks', user_id: userId });
     
     // Parse JSON fields
     blocks.forEach(block => {
@@ -488,6 +533,7 @@ app.get('/api/usage/blocks', authenticateApiKey, async (req, res) => {
 app.post('/api/usage/daily/batch', authenticateApiKey, async (req, res) => {
   const { records } = req.body;
   const userId = req.user.id;
+  const queryContext = logDatabaseQuery('upload_daily_batch', userId);
   
   if (!records || !Array.isArray(records)) {
     return res.status(400).json({ error: 'Records array is required' });
@@ -496,41 +542,48 @@ app.post('/api/usage/daily/batch', authenticateApiKey, async (req, res) => {
   try {
     let processedCount = 0;
     
-    for (const record of records) {
-      // Validate user_id matches authenticated user
-      if (record.user_id !== userId) {
-        continue; // Skip records not belonging to this user
+    await dbManager.executeQuery(async (db) => {
+      for (const record of records) {
+        // Validate user_id matches authenticated user
+        if (record.user_id !== userId) {
+          continue; // Skip records not belonging to this user
+        }
+        
+        await db.sql`
+          INSERT OR REPLACE INTO usage_data (
+            machine_id, user_id, date, input_tokens, output_tokens, 
+            cache_creation_tokens, cache_read_tokens, total_tokens,
+            total_cost, models_used, model_breakdowns
+          ) VALUES (
+            ${record.machine_id},
+            ${record.user_id},
+            ${record.date},
+            ${record.input_tokens},
+            ${record.output_tokens},
+            ${record.cache_creation_tokens},
+            ${record.cache_read_tokens},
+            ${record.total_tokens},
+            ${record.total_cost},
+            ${JSON.stringify(record.models_used)},
+            ${JSON.stringify(record.model_breakdowns)}
+          )
+        `;
+        processedCount++;
       }
-      
-      await db.sql`
-        INSERT OR REPLACE INTO usage_data (
-          machine_id, user_id, date, input_tokens, output_tokens, 
-          cache_creation_tokens, cache_read_tokens, total_tokens,
-          total_cost, models_used, model_breakdowns
-        ) VALUES (
-          ${record.machine_id},
-          ${record.user_id},
-          ${record.date},
-          ${record.input_tokens},
-          ${record.output_tokens},
-          ${record.cache_creation_tokens},
-          ${record.cache_read_tokens},
-          ${record.total_tokens},
-          ${record.total_cost},
-          ${JSON.stringify(record.models_used)},
-          ${JSON.stringify(record.model_breakdowns)}
-        )
-      `;
-      processedCount++;
-    }
+    }, { ...queryContext, operation: 'batch_upload_daily_data' });
     
     res.json({ 
       message: 'Daily data uploaded successfully',
       processed: processedCount,
       total: records.length
     });
+    
+    log.performance('upload_daily_batch', Date.now() - queryContext.startTime, { 
+      userId, processed: processedCount, total: records.length 
+    });
+    
   } catch (error) {
-    console.error('Error uploading daily data:', error);
+    logError(error, { context: 'upload_daily_batch', userId, queryContext });
     res.status(500).json({ error: 'Database error' });
   }
 });
@@ -538,6 +591,7 @@ app.post('/api/usage/daily/batch', authenticateApiKey, async (req, res) => {
 app.post('/api/usage/sessions/batch', authenticateApiKey, async (req, res) => {
   const { records } = req.body;
   const userId = req.user.id;
+  const queryContext = logDatabaseQuery('upload_sessions_batch', userId);
   
   if (!records || !Array.isArray(records)) {
     return res.status(400).json({ error: 'Records array is required' });
@@ -546,46 +600,53 @@ app.post('/api/usage/sessions/batch', authenticateApiKey, async (req, res) => {
   try {
     let processedCount = 0;
     
-    for (const record of records) {
-      // Validate user_id matches authenticated user
-      if (record.user_id !== userId) {
-        continue; // Skip records not belonging to this user
+    await dbManager.executeQuery(async (db) => {
+      for (const record of records) {
+        // Validate user_id matches authenticated user
+        if (record.user_id !== userId) {
+          continue; // Skip records not belonging to this user
+        }
+        
+        await db.sql`
+          INSERT OR REPLACE INTO usage_sessions (
+            machine_id, user_id, session_id, project_path, start_time, end_time,
+            duration_minutes, input_tokens, output_tokens, 
+            cache_creation_tokens, cache_read_tokens, total_tokens,
+            total_cost, models_used, model_breakdowns
+          ) VALUES (
+            ${record.machine_id},
+            ${record.user_id},
+            ${record.session_id},
+            ${record.project_path},
+            ${record.start_time},
+            ${record.end_time},
+            ${record.duration_minutes},
+            ${record.input_tokens},
+            ${record.output_tokens},
+            ${record.cache_creation_tokens},
+            ${record.cache_read_tokens},
+            ${record.total_tokens},
+            ${record.total_cost},
+            ${JSON.stringify(record.models_used)},
+            ${JSON.stringify(record.model_breakdowns)}
+          )
+        `;
+        processedCount++;
       }
-      
-      await db.sql`
-        INSERT OR REPLACE INTO usage_sessions (
-          machine_id, user_id, session_id, project_path, start_time, end_time,
-          duration_minutes, input_tokens, output_tokens, 
-          cache_creation_tokens, cache_read_tokens, total_tokens,
-          total_cost, models_used, model_breakdowns
-        ) VALUES (
-          ${record.machine_id},
-          ${record.user_id},
-          ${record.session_id},
-          ${record.project_path},
-          ${record.start_time},
-          ${record.end_time},
-          ${record.duration_minutes},
-          ${record.input_tokens},
-          ${record.output_tokens},
-          ${record.cache_creation_tokens},
-          ${record.cache_read_tokens},
-          ${record.total_tokens},
-          ${record.total_cost},
-          ${JSON.stringify(record.models_used)},
-          ${JSON.stringify(record.model_breakdowns)}
-        )
-      `;
-      processedCount++;
-    }
+    }, { ...queryContext, operation: 'batch_upload_session_data' });
     
     res.json({ 
       message: 'Session data uploaded successfully',
       processed: processedCount,
       total: records.length
     });
+    
+    log.performance('upload_sessions_batch', Date.now() - queryContext.startTime, { 
+      userId, processed: processedCount, total: records.length 
+    });
+    
   } catch (error) {
-    console.error('Error uploading session data:', error);
+    logError(error, { context: 'upload_sessions_batch', userId, queryContext });
     res.status(500).json({ error: 'Database error' });
   }
 });
@@ -593,6 +654,7 @@ app.post('/api/usage/sessions/batch', authenticateApiKey, async (req, res) => {
 app.post('/api/usage/blocks/batch', authenticateApiKey, async (req, res) => {
   const { records } = req.body;
   const userId = req.user.id;
+  const queryContext = logDatabaseQuery('upload_blocks_batch', userId);
   
   if (!records || !Array.isArray(records)) {
     return res.status(400).json({ error: 'Records array is required' });
@@ -601,46 +663,53 @@ app.post('/api/usage/blocks/batch', authenticateApiKey, async (req, res) => {
   try {
     let processedCount = 0;
     
-    for (const record of records) {
-      // Validate user_id matches authenticated user
-      if (record.user_id !== userId) {
-        continue; // Skip records not belonging to this user
+    await dbManager.executeQuery(async (db) => {
+      for (const record of records) {
+        // Validate user_id matches authenticated user
+        if (record.user_id !== userId) {
+          continue; // Skip records not belonging to this user
+        }
+        
+        await db.sql`
+          INSERT OR REPLACE INTO usage_blocks (
+            machine_id, user_id, block_id, start_time, end_time, actual_end_time,
+            is_active, entry_count, input_tokens, output_tokens, 
+            cache_creation_tokens, cache_read_tokens, total_tokens,
+            total_cost, models_used
+          ) VALUES (
+            ${record.machine_id},
+            ${record.user_id},
+            ${record.block_id},
+            ${record.start_time},
+            ${record.end_time},
+            ${record.actual_end_time},
+            ${record.is_active},
+            ${record.entry_count},
+            ${record.input_tokens},
+            ${record.output_tokens},
+            ${record.cache_creation_tokens},
+            ${record.cache_read_tokens},
+            ${record.total_tokens},
+            ${record.total_cost},
+            ${JSON.stringify(record.models_used)}
+          )
+        `;
+        processedCount++;
       }
-      
-      await db.sql`
-        INSERT OR REPLACE INTO usage_blocks (
-          machine_id, user_id, block_id, start_time, end_time, actual_end_time,
-          is_active, entry_count, input_tokens, output_tokens, 
-          cache_creation_tokens, cache_read_tokens, total_tokens,
-          total_cost, models_used
-        ) VALUES (
-          ${record.machine_id},
-          ${record.user_id},
-          ${record.block_id},
-          ${record.start_time},
-          ${record.end_time},
-          ${record.actual_end_time},
-          ${record.is_active},
-          ${record.entry_count},
-          ${record.input_tokens},
-          ${record.output_tokens},
-          ${record.cache_creation_tokens},
-          ${record.cache_read_tokens},
-          ${record.total_tokens},
-          ${record.total_cost},
-          ${JSON.stringify(record.models_used)}
-        )
-      `;
-      processedCount++;
-    }
+    }, { ...queryContext, operation: 'batch_upload_block_data' });
     
     res.json({ 
       message: 'Block data uploaded successfully',
       processed: processedCount,
       total: records.length
     });
+    
+    log.performance('upload_blocks_batch', Date.now() - queryContext.startTime, { 
+      userId, processed: processedCount, total: records.length 
+    });
+    
   } catch (error) {
-    console.error('Error uploading block data:', error);
+    logError(error, { context: 'upload_blocks_batch', userId, queryContext });
     res.status(500).json({ error: 'Database error' });
   }
 });
@@ -651,44 +720,46 @@ app.get('/api/usage/analytics/patterns', authenticateApiKey, async (req, res) =>
   const userId = req.user.id;
   
   try {
-    let groupBy, dateFormat;
-    
-    switch (period) {
-      case 'hour':
-        groupBy = "strftime('%H', start_time)";
-        dateFormat = 'hour';
-        break;
-      case 'day':
-        groupBy = "strftime('%w', start_time)";
-        dateFormat = 'day_of_week';
-        break;
-      case 'week':
-        groupBy = "strftime('%W', start_time)";
-        dateFormat = 'week';
-        break;
-      default:
-        groupBy = "date(start_time)";
-        dateFormat = 'date';
-    }
-    
-    let query = `
-      SELECT 
-        ${groupBy} as period,
-        COUNT(*) as session_count,
-        SUM(total_tokens) as total_tokens,
-        SUM(total_cost) as total_cost,
-        AVG(duration_minutes) as avg_duration_minutes
-      FROM usage_sessions
-      WHERE user_id = ${userId}
-    `;
-    
-    if (machineId) {
-      query += ` AND machine_id = '${machineId}'`;
-    }
-    
-    query += ` GROUP BY ${groupBy} ORDER BY period`;
-    
-    const patterns = await db.sql`${query}`;
+    const patterns = await dbManager.executeQuery(async (db) => {
+      let groupBy, dateFormat;
+      
+      switch (period) {
+        case 'hour':
+          groupBy = "strftime('%H', start_time)";
+          dateFormat = 'hour';
+          break;
+        case 'day':
+          groupBy = "strftime('%w', start_time)";
+          dateFormat = 'day_of_week';
+          break;
+        case 'week':
+          groupBy = "strftime('%W', start_time)";
+          dateFormat = 'week';
+          break;
+        default:
+          groupBy = "date(start_time)";
+          dateFormat = 'date';
+      }
+      
+      let query = `
+        SELECT 
+          ${groupBy} as period,
+          COUNT(*) as session_count,
+          SUM(total_tokens) as total_tokens,
+          SUM(total_cost) as total_cost,
+          AVG(duration_minutes) as avg_duration_minutes
+        FROM usage_sessions
+        WHERE user_id = ${userId}
+      `;
+      
+      if (machineId) {
+        query += ` AND machine_id = '${machineId}'`;
+      }
+      
+      query += ` GROUP BY ${groupBy} ORDER BY period`;
+      
+      return await db.sql`${query}`;
+    }, { operation: 'fetch_usage_patterns', user_id: userId });
     
     res.json({ period, patterns });
   } catch (error) {
@@ -840,66 +911,229 @@ app.put('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) =
   }
 });
 
+// Email preferences endpoints
+app.get('/api/user/email-preferences', authenticateApiKey, async (req, res) => {
+  const userId = req.user.id;
+  const queryContext = logDatabaseQuery('get_email_preferences', userId);
+  
+  try {
+    const preferences = await dbManager.executeQuery(async (db) => {
+      // Get user email and preferences
+      const userResult = await db.sql`
+        SELECT email, timezone FROM users WHERE id = ${userId}
+      `;
+      
+      const preferencesResult = await db.sql`
+        SELECT * FROM user_email_preferences WHERE user_id = ${userId}
+      `;
+      
+      return { user: userResult[0], preferences: preferencesResult[0] };
+    }, { ...queryContext, operation: 'get_user_email_preferences' });
+    
+    if (!preferences.user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Default values if no preferences exist yet
+    const defaultPrefs = {
+      email_reports_enabled: false,
+      report_frequency: 'weekly',
+      preferred_time: '09:00',
+      timezone: preferences.user.timezone || 'UTC'
+    };
+    
+    const userPrefs = preferences.preferences ? {
+      email_reports_enabled: Boolean(preferences.preferences.email_reports_enabled),
+      report_frequency: preferences.preferences.report_frequency,
+      preferred_time: preferences.preferences.preferred_time,
+      timezone: preferences.preferences.timezone
+    } : defaultPrefs;
+    
+    res.json({
+      email: preferences.user.email,
+      ...userPrefs
+    });
+    
+    log.performance('get_email_preferences', Date.now() - queryContext.startTime, { userId });
+    
+  } catch (error) {
+    logError(error, { context: 'get_email_preferences', userId, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.put('/api/user/email-preferences', authenticateApiKey, async (req, res) => {
+  const userId = req.user.id;
+  const { email_reports_enabled, report_frequency, preferred_time, timezone } = req.body;
+  const queryContext = logDatabaseQuery('update_email_preferences', userId);
+  
+  // Validate inputs
+  const validFrequencies = ['daily', 'weekly', 'monthly'];
+  if (report_frequency && !validFrequencies.includes(report_frequency)) {
+    return res.status(400).json({ error: 'Invalid report frequency. Must be daily, weekly, or monthly.' });
+  }
+  
+  if (preferred_time && !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(preferred_time)) {
+    return res.status(400).json({ error: 'Invalid time format. Use HH:MM format.' });
+  }
+  
+  try {
+    await dbManager.executeQuery(async (db) => {
+      // Insert or update preferences
+      return await db.sql`
+        INSERT OR REPLACE INTO user_email_preferences (
+          user_id, email_reports_enabled, report_frequency, preferred_time, timezone
+        ) VALUES (
+          ${userId},
+          ${email_reports_enabled ? 1 : 0},
+          ${report_frequency || 'weekly'},
+          ${preferred_time || '09:00'},
+          ${timezone || 'UTC'}
+        )
+      `;
+    }, { ...queryContext, operation: 'update_user_email_preferences' });
+    
+    res.json({ 
+      message: 'Email preferences updated successfully',
+      email_reports_enabled: Boolean(email_reports_enabled),
+      report_frequency: report_frequency || 'weekly',
+      preferred_time: preferred_time || '09:00',
+      timezone: timezone || 'UTC'
+    });
+    
+    log.performance('update_email_preferences', Date.now() - queryContext.startTime, { 
+      userId, email_reports_enabled: Boolean(email_reports_enabled) 
+    });
+    
+  } catch (error) {
+    logError(error, { context: 'update_email_preferences', userId, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.post('/api/user/test-email', authenticateApiKey, async (req, res) => {
+  const userId = req.user.id;
+  const queryContext = logDatabaseQuery('send_test_email', userId);
+  
+  try {
+    // Get user info
+    const user = await dbManager.executeQuery(async (db) => {
+      return await db.sql`
+        SELECT email, username, display_name FROM users WHERE id = ${userId}
+      `;
+    }, { ...queryContext, operation: 'get_user_for_test_email' });
+    
+    if (!user[0] || !user[0].email) {
+      return res.status(400).json({ 
+        error: 'No email address found for your account. Please add an email address to your profile first.' 
+      });
+    }
+    
+    if (!emailService.isEnabled()) {
+      return res.status(503).json({ 
+        error: 'Email service is not configured. Please contact support.' 
+      });
+    }
+    
+    // Send test email
+    const result = await emailService.sendTestEmail(user[0].email, user[0].username);
+    
+    // Log the email send attempt
+    await dbManager.executeQuery(async (db) => {
+      return await db.sql`
+        INSERT INTO email_send_log (
+          user_id, email_type, email_address, status, error_message, resend_email_id
+        ) VALUES (
+          ${userId}, 'test', ${user[0].email}, ${result.success ? 'sent' : 'failed'}, 
+          ${result.error || null}, ${result.emailId || null}
+        )
+      `;
+    }, { operation: 'log_test_email_send' });
+    
+    if (result.success) {
+      res.json({ 
+        message: 'Test email sent successfully!',
+        email: user[0].email
+      });
+    } else {
+      res.status(500).json({ 
+        error: 'Failed to send test email. Please try again later.',
+        details: result.error
+      });
+    }
+    
+    log.performance('send_test_email', Date.now() - queryContext.startTime, { 
+      userId, success: result.success 
+    });
+    
+  } catch (error) {
+    logError(error, { context: 'send_test_email', userId, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 app.get('/api/usage/analytics/costs', authenticateApiKey, async (req, res) => {
   const { machineId, groupBy = 'day' } = req.query;
   const userId = req.user.id;
   
   try {
-    let query;
-    
-    switch (groupBy) {
-      case 'session':
-        query = `
-          SELECT 
-            session_id,
-            project_path,
-            start_time,
-            duration_minutes,
-            total_cost,
-            total_tokens
-          FROM usage_sessions
-          WHERE user_id = ${userId}
-        `;
-        if (machineId) {
-          query += ` AND machine_id = '${machineId}'`;
-        }
-        query += ' ORDER BY total_cost DESC LIMIT 100';
-        break;
-        
-      case 'project':
-        query = `
-          SELECT 
-            project_path,
-            COUNT(*) as session_count,
-            SUM(total_cost) as total_cost,
-            SUM(total_tokens) as total_tokens,
-            AVG(duration_minutes) as avg_duration
-          FROM usage_sessions
-          WHERE user_id = ${userId} AND project_path IS NOT NULL
-        `;
-        if (machineId) {
-          query += ` AND machine_id = '${machineId}'`;
-        }
-        query += ' GROUP BY project_path ORDER BY total_cost DESC';
-        break;
-        
-      default: // day
-        query = `
-          SELECT 
-            date(start_time) as date,
-            COUNT(*) as session_count,
-            SUM(total_cost) as total_cost,
-            SUM(total_tokens) as total_tokens
-          FROM usage_sessions
-          WHERE user_id = ${userId}
-        `;
-        if (machineId) {
-          query += ` AND machine_id = '${machineId}'`;
-        }
-        query += ' GROUP BY date(start_time) ORDER BY date DESC';
-    }
-    
-    const costs = await db.sql`${query}`;
+    const costs = await dbManager.executeQuery(async (db) => {
+      let query;
+      
+      switch (groupBy) {
+        case 'session':
+          query = `
+            SELECT 
+              session_id,
+              project_path,
+              start_time,
+              duration_minutes,
+              total_cost,
+              total_tokens
+            FROM usage_sessions
+            WHERE user_id = ${userId}
+          `;
+          if (machineId) {
+            query += ` AND machine_id = '${machineId}'`;
+          }
+          query += ' ORDER BY total_cost DESC LIMIT 100';
+          break;
+          
+        case 'project':
+          query = `
+            SELECT 
+              project_path,
+              COUNT(*) as session_count,
+              SUM(total_cost) as total_cost,
+              SUM(total_tokens) as total_tokens,
+              AVG(duration_minutes) as avg_duration
+            FROM usage_sessions
+            WHERE user_id = ${userId} AND project_path IS NOT NULL
+          `;
+          if (machineId) {
+            query += ` AND machine_id = '${machineId}'`;
+          }
+          query += ' GROUP BY project_path ORDER BY total_cost DESC';
+          break;
+          
+        default: // day
+          query = `
+            SELECT 
+              date(start_time) as date,
+              COUNT(*) as session_count,
+              SUM(total_cost) as total_cost,
+              SUM(total_tokens) as total_tokens
+            FROM usage_sessions
+            WHERE user_id = ${userId}
+          `;
+          if (machineId) {
+            query += ` AND machine_id = '${machineId}'`;
+          }
+          query += ' GROUP BY date(start_time) ORDER BY date DESC';
+      }
+      
+      return await db.sql`${query}`;
+    }, { operation: 'fetch_cost_analytics', user_id: userId });
     
     res.json({ groupBy, costs });
   } catch (error) {

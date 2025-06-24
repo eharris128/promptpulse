@@ -103,6 +103,14 @@ export interface LeaderboardSettings {
   display_name?: string;
 }
 
+export interface EmailPreferences {
+  email?: string;
+  email_reports_enabled: boolean;
+  report_frequency: 'daily' | 'weekly' | 'monthly';
+  preferred_time: string; // HH:MM format
+  timezone: string;
+}
+
 export interface ApiResponse<T = any> {
   data?: T;
   error?: string;

@@ -12,7 +12,7 @@
     "dev": "concurrently --names \"SERVER,CLIENT\" --prefix-colors \"blue,green\" \"npm run server:dev\" \"npm run client:dev\"",
     "server:dev": "node --watch server.js",
     "client:dev": "cd client && npm run dev",
-    "migrate": "node migrate.js",
+    "migrate": "node scripts/migrate.js",
     "test": "echo \"No tests specified\"",
     "postinstall": "node -e \"console.log('\\nPromptPulse installed successfully!\\n\\nGet started:\\n  promptpulse user init\\n  promptpulse collect\\n')\"",
     "version:patch": "npm version patch",
@@ -56,6 +56,7 @@
     "express": "^4.19.2",
     "express-rate-limit": "^7.5.1",
     "ksuid": "^3.0.0",
+    "resend": "^4.6.0",
     "winston": "^3.17.0"
   },
   "devDependencies": {

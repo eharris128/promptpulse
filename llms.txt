@@ -16,13 +16,16 @@ Multi-user platform for tracking and analyzing Claude Code usage across multiple
 ### CLI Interface
 - `bin/promptpulse.js` - Main CLI entry point
 - `lib/` - CLI library code
-  - `lib/auth.js` - Authentication utilities
+  - `lib/auth.js` - Authentication utilities and getUserByApiKey
+  - `lib/auth-cli.js` - CLI authentication commands (login, logout, whoami)
   - `lib/collect.js` - Data collection logic
   - `lib/config.js` - Configuration management
+  - `lib/db-manager.js` - Database connection pooling and retry logic
+  - `lib/logger.js` - Winston-based structured logging system
   - `lib/setup.js` - Cron setup utilities
-  - `lib/user-cli.js` - User management CLI
+  - `lib/user-cli.js` - User management CLI (deprecated commands)
   - `lib/user-management.js` - User management backend
-  - `lib/index.js` - Main library exports
+  - `lib/server-auth.js` - Server-side authentication middleware
 
 ### API Server
 - `server.js` - Express.js API server with authentication
@@ -55,14 +58,12 @@ Multi-user platform for tracking and analyzing Claude Code usage across multiple
 
 ## CLI Commands
 
-### User Management
-- `promptpulse user init` - Create first user account and save API key
-- `promptpulse user create <username>` - Create new user (email optional)
-- `promptpulse user create <email> <username>` - Create new user with email
-- `promptpulse user whoami` - Show current user
-- `promptpulse user config set api-key <key>` - Configure API key
-- `promptpulse user config get api-key` - Get API key
-- `promptpulse user config show` - Show all config
+### Authentication
+- `promptpulse login` - Create new account (interactive)
+- `promptpulse login <api-key>` - Login with existing API key
+- `promptpulse logout` - Clear authentication and log out
+- `promptpulse whoami` - Show current user information
+- `promptpulse user config show` - Show configuration (debugging)
 
 ### Data Collection
 - `promptpulse collect` - Collect and upload Claude Code usage data
@@ -74,7 +75,6 @@ Multi-user platform for tracking and analyzing Claude Code usage across multiple
 ### Setup & Dashboard
 - `promptpulse setup` - Set up cron job for automatic collection
 - `promptpulse dashboard` - Open web dashboard in browser
-- `promptpulse server start` - Information about server hosting
 
 ### Aliases
 - `ppulse` - Short alias for `promptpulse`
@@ -101,9 +101,27 @@ All endpoints require `X-API-Key` header with valid API key.
 ## Configuration
 
 ### Environment Variables
-- `DATABASE_URL` - SQLite Cloud connection string (required)
-- `MACHINE_ID` - Custom machine name (optional, defaults to hostname)
-- `PORT` - API server port (optional, defaults to 3000)
+
+#### Required
+- `DATABASE_URL` - SQLite Cloud connection string
+
+#### Optional Server Configuration
+- `MACHINE_ID` - Custom machine identifier (defaults to hostname)
+- `PORT` - API server port (defaults to 3000)
+- `NODE_ENV` - Environment mode (development/production)
+
+#### Database Connection Pool
+- `DB_MAX_CONNECTIONS` - Maximum database connections (default: 10)
+- `DB_IDLE_TIMEOUT` - Connection idle timeout in ms (default: 30000)
+- `DB_RETRY_ATTEMPTS` - Database retry attempts on failure (default: 3)
+- `DB_RETRY_DELAY` - Base retry delay in ms (default: 1000)
+
+#### Logging Configuration
+- `LOG_LEVEL` - Logging level: error, warn, info, debug (default: info in production, debug in development)
+
+#### Email Service (Optional)
+- `RESEND_API_KEY` - Resend API key for email functionality
+- `RESEND_FROM_EMAIL` - From email address for notifications
 
 ### User Configuration
 - `~/.promptpulse/config.json` - User credentials and settings

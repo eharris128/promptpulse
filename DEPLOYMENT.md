@@ -26,6 +26,19 @@ DATABASE_URL=your_sqlite_cloud_connection_string
 NODE_ENV=production
 RAILWAY_ENVIRONMENT=production
 PORT=3000
+
+# Optional: Email service for reports and notifications
+RESEND_API_KEY=your_resend_api_key
+RESEND_FROM_EMAIL=noreply@yourdomain.com
+
+# Optional: Database connection pool tuning
+DB_MAX_CONNECTIONS=10
+DB_IDLE_TIMEOUT=30000
+DB_RETRY_ATTEMPTS=3
+DB_RETRY_DELAY=1000
+
+# Optional: Logging level
+LOG_LEVEL=info
 ```
 
 
@@ -114,7 +127,7 @@ npm pack
 npm install -g ./promptpulse-1.0.0.tgz
 
 # Test the CLI
-promptpulse user init
+promptpulse login
 promptpulse collect
 ```
 

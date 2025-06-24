@@ -16,8 +16,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## CLI Commands
 
 - `promptpulse` or `ppulse` - Main CLI tool for usage tracking
-- `promptpulse user init` - Initialize user account and API key
-- `promptpulse user whoami` - Show current user information
+- `promptpulse login` - Create new account (interactive) or login with API key
+- `promptpulse logout` - Clear authentication and log out
+- `promptpulse whoami` - Show current user information
 - `promptpulse collect` - Collect and upload Claude Code usage data
 - `promptpulse setup` - Configure automatic data collection
 - `promptpulse dashboard` - Open web dashboard in browser
@@ -117,7 +118,7 @@ node check-db.js    # Test database connectivity
 ### Testing Data Collection
 ```bash
 promptpulse collect --granularity all  # Test full collection
-promptpulse user whoami                 # Verify authentication
+promptpulse whoami                      # Verify authentication
 ```
 
 ### Package Management

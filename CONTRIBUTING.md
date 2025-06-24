@@ -79,7 +79,7 @@ npm link
 
 # Test CLI commands
 promptpulse --help
-promptpulse user init
+promptpulse login
 ```
 
 ## Project Structure
@@ -177,7 +177,7 @@ git commit -m "Add API key sanitization for login form
 promptpulse collect --granularity daily
 
 # Test user management
-promptpulse user whoami
+promptpulse whoami
 promptpulse user config show
 ```
 

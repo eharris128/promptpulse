@@ -25,7 +25,7 @@ npm install -g promptpulse
 
 ```bash
 # Create your user account and get your API key
-promptpulse user init
+promptpulse login
 ```
 
 This creates your secure user account and provides you with a unique API key.
@@ -62,13 +62,16 @@ promptpulse collect --granularity all      # Everything (default)
 
 ```bash
 # Show current user info
-promptpulse user whoami
+promptpulse whoami
 
-# View your API key
+# View your configuration (debugging)
 promptpulse user config show
 
-# Configure a different API key
-promptpulse user config set api-key <your-key>
+# Login with API key
+promptpulse login <your-api-key>
+
+# Create new account
+promptpulse login
 ```
 
 ### Get Help
@@ -104,7 +107,7 @@ Access your personalized dashboard to view:
 ## Dashboard Authentication
 
 1. Open your dashboard URL
-2. Enter your API key (from `promptpulse user init`)
+2. Enter your API key (from `promptpulse login`)
 3. Click "Connect" to access your analytics
 
 Your API key is securely stored for future sessions.
@@ -159,12 +162,13 @@ This includes:
 
 ## CLI Commands Reference
 
-### User Commands
+### Authentication Commands
 ```bash
-promptpulse user init                              # Create account
-promptpulse user whoami                           # Show current user
-promptpulse user config show                      # Show API key
-promptpulse user config set api-key <key>         # Set API key
+promptpulse login                                 # Create new account (interactive)
+promptpulse login <api-key>                       # Login with existing API key
+promptpulse logout                                # Clear authentication
+promptpulse whoami                                # Show current user
+promptpulse user config show                      # Show configuration (debugging)
 ```
 
 ### Data Collection
@@ -181,13 +185,13 @@ You can use `ppulse` as a shorthand for `promptpulse` in all commands.
 ### Common Issues
 
 1. **"No usage data found"** - Ensure you have used Claude Code and data exists in `~/.claude/projects/`
-2. **"Authentication failed"** - Check your API key with `promptpulse user whoami`
+2. **"Authentication failed"** - Check your API key with `promptpulse whoami`
 3. **"Connection error"** - Verify your internet connection and try again
 
 ### Getting Help
 
 - Use `promptpulse --help` for command documentation
-- Check your API key is valid with `promptpulse user whoami`
+- Check your API key is valid with `promptpulse whoami`
 - Ensure you have Claude Code usage data in `~/.claude/projects/`
 
 ## Contributing
@@ -206,4 +210,4 @@ MIT License - see LICENSE.md for details
 
 ---
 
-**Ready to get started?** Run `promptpulse user init` and start tracking your Claude Code usage today!
+**Ready to get started?** Run `promptpulse login` and start tracking your Claude Code usage today!

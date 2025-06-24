@@ -2,7 +2,7 @@
 
 The web dashboard for PromptPulse - track and analyze your Claude Code usage across multiple machines.
 
-## 🚀 Quick Deployment to Vercel
+## Quick Deployment to Vercel
 
 ### 1. Deploy to Vercel
 
@@ -30,7 +30,7 @@ NEXT_PUBLIC_API_URL=https://exciting-patience-production.up.railway.app
 
 Vercel will automatically build and deploy your dashboard.
 
-## 🔧 Local Development
+## Local Development
 
 ### Prerequisites
 
@@ -55,7 +55,7 @@ npm run dev
 
 The dashboard will be available at `http://localhost:3001`
 
-## 🎯 Features
+## Features
 
 - **Authentication**: Secure login with API keys
 - **Usage Analytics**: View token usage, costs, and trends
@@ -64,13 +64,13 @@ The dashboard will be available at `http://localhost:3001`
 - **Real-time Data**: Live updates from your PromptPulse API
 - **Responsive Design**: Works on desktop and mobile
 
-## 🔐 Authentication
+## Authentication
 
 1. Get your API key by running: `promptpulse user init`
 2. Open the dashboard and enter your API key
 3. Start exploring your Claude Code usage data!
 
-## 📊 API Integration
+## API Integration
 
 The dashboard connects to your PromptPulse API server to:
 
@@ -79,7 +79,7 @@ The dashboard connects to your PromptPulse API server to:
 - Show session and project data
 - Generate usage reports
 
-## 🛠️ Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -93,7 +93,7 @@ The dashboard uses:
 - **Recharts** for data visualization
 - **Radix UI** for accessible components
 
-## 🚀 Production Deployment
+## Production Deployment
 
 This dashboard is optimized for deployment on:
 
@@ -102,6 +102,6 @@ This dashboard is optimized for deployment on:
 - **Railway** - Full-stack hosting
 - **AWS Amplify** - AWS integration
 
-## 📄 License
+## License
 
 MIT License - see the main repository for details.

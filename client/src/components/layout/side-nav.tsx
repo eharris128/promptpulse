@@ -2,14 +2,16 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart3, Trophy, Settings, Github } from 'lucide-react'
+import { BarChart3, Trophy, Settings, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface SideNavProps {
   className?: string
+  onClose?: () => void
+  showCloseButton?: boolean
 }
 
-export function SideNav({ className }: SideNavProps) {
+export function SideNav({ className, onClose, showCloseButton }: SideNavProps) {
   const pathname = usePathname()
 
   const navItems = [
@@ -35,6 +37,22 @@ export function SideNav({ className }: SideNavProps) {
 
   return (
     <nav className={cn("w-64 bg-card border-r border-border h-full flex flex-col", className)}>
+      {/* Mobile Header */}
+      {showCloseButton && onClose && (
+        <div className="flex items-center justify-between p-3 border-b border-border">
+          <span className="font-bold text-xl text-foreground">
+            PromptPulse
+          </span>
+          <button
+            onClick={onClose}
+            className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+            aria-label="Close menu"
+          >
+            <X size={20} />
+          </button>
+        </div>
+      )}
+      
       {/* Navigation Items */}
       <div className="flex-1 px-3 py-4 space-y-1">
         {navItems.map((item) => {
@@ -63,9 +81,8 @@ export function SideNav({ className }: SideNavProps) {
           href="https://github.com/eharris128/promptpulse/discussions"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+          className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
         >
-          <Github size={18} />
           <span>Community</span>
         </a>
       </div>

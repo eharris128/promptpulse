@@ -47,7 +47,11 @@ export function AppLayout({ children, onLogout }: AppLayoutProps) {
             
             {/* Mobile Menu */}
             <div className="fixed inset-y-0 left-0 z-50 lg:hidden">
-              <SideNav className="shadow-xl bg-background border-r border-border" />
+              <SideNav 
+                className="shadow-xl bg-background border-r border-border" 
+                onClose={closeMobileMenu}
+                showCloseButton={true}
+              />
             </div>
           </>
         )}

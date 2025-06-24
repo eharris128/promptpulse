@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCost, formatTokens } from '@/lib/utils'
 import { AggregateData } from '@/types'
+import { DollarSign, Zap, ArrowRight, ArrowLeft } from 'lucide-react'
 
 interface StatsCardsProps {
   data: AggregateData
@@ -17,7 +18,7 @@ export function StatsCards({ data }: StatsCardsProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Cost</CardTitle>
-          <span className="text-2xl">💰</span>
+          <DollarSign className="h-5 w-5 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatCost(totals?.total_cost || 0)}</div>
@@ -30,7 +31,7 @@ export function StatsCards({ data }: StatsCardsProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Tokens</CardTitle>
-          <span className="text-2xl">🎯</span>
+          <Zap className="h-5 w-5 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatTokens(totals?.total_tokens || 0)}</div>
@@ -43,7 +44,7 @@ export function StatsCards({ data }: StatsCardsProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Input Tokens</CardTitle>
-          <span className="text-2xl">📝</span>
+          <ArrowRight className="h-5 w-5 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatTokens(totals?.total_input_tokens || 0)}</div>
@@ -56,7 +57,7 @@ export function StatsCards({ data }: StatsCardsProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Output Tokens</CardTitle>
-          <span className="text-2xl">🤖</span>
+          <ArrowLeft className="h-5 w-5 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatTokens(totals?.total_output_tokens || 0)}</div>

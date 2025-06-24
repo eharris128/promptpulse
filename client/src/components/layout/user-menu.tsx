@@ -55,9 +55,6 @@ export function UserMenu({ onLogout }: UserMenuProps) {
                 <div className="text-sm font-medium truncate text-foreground">
                   User
                 </div>
-                <div className="text-xs truncate text-muted-foreground">
-                  Authenticated
-                </div>
               </div>
             </div>
           </div>

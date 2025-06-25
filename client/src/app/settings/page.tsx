@@ -447,7 +447,7 @@ export default function Settings() {
                 </p>
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
                   <li>Your data is completely private and not included in any rankings</li>
-                  <li>You can still view the leaderboard but won&apos;t appear on it</li>
+                  <li>You can still view the leaderboard but won{String.fromCharCode(0x2019)}t appear on it</li>
                   <li>You can re-enable participation at any time</li>
                 </ul>
               </div>

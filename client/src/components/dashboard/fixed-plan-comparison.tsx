@@ -44,16 +44,16 @@ export function FixedPlanComparison({ actualCost, userPlan }: FixedPlanCompariso
                 vs {userPlanROI.planName} {formatCost(userPlanROI.planPrice)}
               </div>
               <div className="text-sm text-blue-600 dark:text-blue-300">
-                {userPlanROI.isOver ? 'Over' : 'Under'} budget
+                {userPlanROI.isOver ? 'Great value!' : 'Light usage'}
               </div>
             </div>
             <div className="text-right">
-              <div className={`text-2xl font-bold ${userPlanROI.isOver ? 'text-red-600' : 'text-green-600'}`}>
+              <div className={`text-2xl font-bold ${userPlanROI.isOver ? 'text-green-600' : 'text-yellow-600'}`}>
                 {formatSavings(userPlanROI.savings, userPlanROI.isOver)}
               </div>
-              <div className={`flex items-center gap-1 text-sm ${userPlanROI.isOver ? 'text-red-600' : 'text-green-600'}`}>
+              <div className={`flex items-center gap-1 text-sm ${userPlanROI.isOver ? 'text-green-600' : 'text-yellow-600'}`}>
                 {userPlanROI.isOver ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                {userPlanROI.isOver ? 'Over' : 'Saved'}
+                {userPlanROI.isOver ? 'Extra Value' : 'Under Budget'}
               </div>
             </div>
           </div>
@@ -68,16 +68,16 @@ export function FixedPlanComparison({ actualCost, userPlan }: FixedPlanCompariso
                 <div>
                   <div className="font-medium">vs {planROI.planName} {formatCost(planROI.planPrice)}</div>
                   <div className="text-sm text-muted-foreground">
-                    {planROI.isOver ? 'Over' : 'Under'} budget
+                    {planROI.isOver ? 'Great value!' : 'Light usage'}
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className={`text-xl font-bold ${planROI.isOver ? 'text-red-600' : 'text-green-600'}`}>
+                  <div className={`text-xl font-bold ${planROI.isOver ? 'text-green-600' : 'text-yellow-600'}`}>
                     {formatSavings(planROI.savings, planROI.isOver)}
                   </div>
-                  <div className={`flex items-center gap-1 text-sm ${planROI.isOver ? 'text-red-600' : 'text-green-600'}`}>
+                  <div className={`flex items-center gap-1 text-sm ${planROI.isOver ? 'text-green-600' : 'text-yellow-600'}`}>
                     {planROI.isOver ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                    {planROI.isOver ? 'Over' : 'Saved'}
+                    {planROI.isOver ? 'Extra Value' : 'Under Budget'}
                   </div>
                 </div>
               </div>
@@ -90,7 +90,7 @@ export function FixedPlanComparison({ actualCost, userPlan }: FixedPlanCompariso
             • Compares your actual usage costs against fixed monthly subscription plans
           </p>
           <p>
-            • Green indicates savings with pay-per-use, red indicates you'd save money with a fixed plan
+            • <span className="text-green-600 font-medium">Green</span>: Getting great value (using more than subscription cost) • <span className="text-yellow-600 font-medium">Yellow</span>: Light usage (could use more)
           </p>
           <p>
             • Update your plan in Settings to see accurate ROI calculations

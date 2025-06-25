@@ -42,7 +42,7 @@ export function ContactModal({ isOpen, onClose }: ContactModalProps) {
           
           <h2 className="text-xl font-semibold mb-2 text-foreground">Get in Touch</h2>
           <p className="text-muted-foreground mb-6">
-            Have questions or feedback about PromptPulse? I&apos;d love to hear from you!
+            Have questions or feedback about PromptPulse? I{String.fromCharCode(0x2019)}d love to hear from you!
           </p>
           
           <div className="space-y-4">

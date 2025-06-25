@@ -120,5 +120,5 @@ export function calculateAllPlanROI(actualCost: number) {
 
 export function formatSavings(savings: number, isOver: boolean): string {
   const formatted = formatCost(savings)
-  return isOver ? `${formatted} Over` : `${formatted} Saved`
+  return isOver ? `+${formatted} Value` : `${formatted} Saved`
 }

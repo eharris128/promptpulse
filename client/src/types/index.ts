@@ -111,6 +111,19 @@ export interface EmailPreferences {
   timezone: string;
 }
 
+export type ClaudePlan = 'pro_17' | 'max_100' | 'max_200';
+
+export interface PlanSettings {
+  claude_plan: ClaudePlan;
+}
+
+export interface PlanPricing {
+  plan: ClaudePlan;
+  name: string;
+  price: number; // Monthly price in USD
+  description: string;
+}
+
 export interface ApiResponse<T = any> {
   data?: T;
   error?: string;

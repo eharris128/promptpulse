@@ -9,7 +9,13 @@ import { Switch } from '@/components/ui/switch'
 import { Select } from '@/components/ui/select'
 import { sanitizeDisplayName } from '@/lib/utils'
 import { apiClient } from '@/lib/api'
-import { LeaderboardSettings, EmailPreferences } from '@/types'
+import { LeaderboardSettings, EmailPreferences, PlanSettings, ClaudePlan } from '@/types'
+
+const PLAN_OPTIONS = [
+  { value: 'pro_17', label: 'Pro ($17/month)', description: 'Standard Claude usage' },
+  { value: 'max_100', label: 'Max 5x ($100/month)', description: '5x higher usage limits' },
+  { value: 'max_200', label: 'Max 20x ($200/month)', description: '20x higher usage limits' }
+] as const
 
 export default function Settings() {
   const [saving, setSaving] = useState(false)
@@ -23,9 +29,15 @@ export default function Settings() {
     preferred_time: '09:00',
     timezone: 'UTC'
   })
+  const [planSettings, setPlanSettings] = useState<PlanSettings>({
+    claude_plan: 'max_100'
+  })
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [testEmailLoading, setTestEmailLoading] = useState(false)
+  const [newEmail, setNewEmail] = useState('')
+  const [isEditingEmail, setIsEditingEmail] = useState(false)
+  const [savingEmail, setSavingEmail] = useState(false)
 
   useEffect(() => {
     loadSettings()
@@ -35,12 +47,14 @@ export default function Settings() {
 
   const loadSettings = async () => {
     try {
-      const [leaderboardData, emailData] = await Promise.all([
+      const [leaderboardData, emailData, planData] = await Promise.all([
         apiClient.getLeaderboardSettings(),
-        apiClient.getEmailPreferences()
+        apiClient.getEmailPreferences(),
+        apiClient.getPlanSettings()
       ])
       setSettings(leaderboardData)
       setEmailPreferences(emailData)
+      setPlanSettings(planData)
     } catch (err) {
       console.error('Failed to load settings:', err)
       setError('Failed to load settings')
@@ -59,10 +73,11 @@ export default function Settings() {
         display_name: sanitizeDisplayName(settings.display_name || '')
       }
       
-      // Save both leaderboard settings and email preferences
+      // Save leaderboard settings, email preferences, and plan settings
       await Promise.all([
         apiClient.updateLeaderboardSettings(sanitizedSettings),
-        apiClient.updateEmailPreferences(emailPreferences)
+        apiClient.updateEmailPreferences(emailPreferences),
+        apiClient.updatePlanSettings(planSettings)
       ])
       
       setSettings(sanitizedSettings) // Update local state with sanitized version
@@ -94,6 +109,30 @@ export default function Settings() {
       setError(err instanceof Error ? err.message : 'Failed to send test email')
     } finally {
       setTestEmailLoading(false)
+    }
+  }
+
+  const handleUpdateEmail = async () => {
+    try {
+      setSavingEmail(true)
+      setError(null)
+      setSuccess(null)
+      
+      const response = await apiClient.updateUserEmail(newEmail)
+      
+      // Update email preferences with new email
+      setEmailPreferences(prev => ({ ...prev, email: response.email }))
+      setIsEditingEmail(false)
+      setNewEmail('')
+      setSuccess('Email updated successfully!')
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      console.error('Failed to update email:', err)
+      setError(err instanceof Error ? err.message : 'Failed to update email')
+    } finally {
+      setSavingEmail(false)
     }
   }
 
@@ -169,7 +208,7 @@ export default function Settings() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Email Reports (Coming Soon)</CardTitle>
+              <CardTitle>Email Reports</CardTitle>
               <CardDescription>
                 Configure automatic email reports about your Claude Code usage
               </CardDescription>
@@ -193,19 +232,70 @@ export default function Settings() {
                 />
               </div>
 
-              {emailPreferences.email && (
-                <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-md p-3">
+              {emailPreferences.email && !isEditingEmail && (
+                <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-md p-3 flex items-center justify-between">
                   <p className="text-sm">
                     <strong>Email:</strong> {emailPreferences.email}
                   </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setIsEditingEmail(true)
+                      setNewEmail(emailPreferences.email || '')
+                    }}
+                  >
+                    Change Email
+                  </Button>
                 </div>
               )}
 
-              {!emailPreferences.email && (
-                <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 rounded-md p-3">
-                  <p className="text-sm">
-                    No email address found. Please add an email to your account to receive reports.
-                  </p>
+              {(!emailPreferences.email || isEditingEmail) && (
+                <div className="space-y-3">
+                  {!emailPreferences.email && !isEditingEmail && (
+                    <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 rounded-md p-3">
+                      <p className="text-sm">
+                        No email address found. Please add an email to your account to receive reports.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {(!emailPreferences.email || isEditingEmail) && (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email Address</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="your.email@example.com"
+                          value={newEmail}
+                          onChange={(e) => setNewEmail(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleUpdateEmail}
+                          disabled={savingEmail || !newEmail}
+                          size="sm"
+                        >
+                          {savingEmail ? 'Saving...' : 'Save Email'}
+                        </Button>
+                        {isEditingEmail && (
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setIsEditingEmail(false)
+                              setNewEmail('')
+                              setError(null)
+                            }}
+                            size="sm"
+                          >
+                            Cancel
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -293,6 +383,43 @@ export default function Settings() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Claude Plan</CardTitle>
+              <CardDescription>
+                Configure which Claude subscription plan you're on for accurate ROI calculations
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="claude-plan">Your Claude Plan</Label>
+                <select
+                  id="claude-plan"
+                  value={planSettings.claude_plan}
+                  onChange={(e) => 
+                    setPlanSettings(prev => ({ ...prev, claude_plan: e.target.value as ClaudePlan }))
+                  }
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                >
+                  {PLAN_OPTIONS.map((plan) => (
+                    <option key={plan.value} value={plan.value}>
+                      {plan.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-sm text-muted-foreground">
+                  {PLAN_OPTIONS.find(p => p.value === planSettings.claude_plan)?.description}
+                </p>
+              </div>
+              
+              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-md p-3">
+                <p className="text-sm">
+                  <strong>Why this matters:</strong> Setting your correct plan helps calculate your ROI by comparing your actual usage costs against your fixed monthly subscription fee. This shows you how much you're saving (or overspending) with your current plan.
+                </p>
+              </div>
             </CardContent>
           </Card>
 

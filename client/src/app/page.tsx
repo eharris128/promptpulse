@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { UsageChart } from '@/components/dashboard/usage-chart'
 import { MachinesTable } from '@/components/dashboard/machines-table'
+import { FixedPlanComparison } from '@/components/dashboard/fixed-plan-comparison'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { apiClient } from '@/lib/api'
-import { AggregateData, Machine, LeaderboardData } from '@/types'
+import { AggregateData, Machine, LeaderboardData, PlanSettings } from '@/types'
 
 export default function Dashboard() {
   const [dataLoading, setDataLoading] = useState(false)
@@ -15,6 +16,7 @@ export default function Dashboard() {
   const [usageData, setUsageData] = useState<AggregateData | null>(null)
   const [machines, setMachines] = useState<Machine[]>([])
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null)
+  const [planSettings, setPlanSettings] = useState<PlanSettings | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -30,13 +32,15 @@ export default function Dashboard() {
         setDataLoading(true)
       }
       setError(null)
-      const [usageResponse, machinesResponse] = await Promise.all([
+      const [usageResponse, machinesResponse, planResponse] = await Promise.all([
         apiClient.getUsageAggregate(),
-        apiClient.getMachines()
+        apiClient.getMachines(),
+        apiClient.getPlanSettings()
       ])
       
       setUsageData(usageResponse)
       setMachines(machinesResponse)
+      setPlanSettings(planResponse)
       
       try {
         const leaderboard = await apiClient.getLeaderboard('daily')
@@ -87,9 +91,15 @@ export default function Dashboard() {
         </div>
       )}
 
-      {!dataLoading && usageData && (
+      {!dataLoading && usageData && planSettings && (
         <>
           <StatsCards data={usageData} />
+          <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+            <FixedPlanComparison 
+              actualCost={usageData.totals.total_cost} 
+              userPlan={planSettings.claude_plan} 
+            />
+          </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
             <UsageChart data={usageData} type="cost" />
             <MachinesTable machines={machines} />
@@ -100,8 +110,7 @@ export default function Dashboard() {
               <Card className="col-span-3">
                 <CardHeader>
                   <CardTitle>Your Leaderboard Ranking</CardTitle>
-                  {/* eslint-disable-next-line */}
-                  <CardDescription>Today\'s performance vs other users</CardDescription>
+                  <CardDescription>Today&apos;s performance vs other users</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">

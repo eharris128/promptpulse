@@ -84,3 +84,41 @@ export function getAverageLabel(period: 'daily' | 'weekly', average: number): st
     return `${formatTokens(average)} avg/day`
   }
 }
+
+// Claude plan pricing constants
+export const CLAUDE_PLAN_PRICING = {
+  pro_17: { name: 'Pro', price: 17, description: 'Standard Claude usage' },
+  max_100: { name: 'Max 5x', price: 100, description: '5x higher usage limits' },
+  max_200: { name: 'Max 20x', price: 200, description: '20x higher usage limits' }
+} as const
+
+export type ClaudePlan = keyof typeof CLAUDE_PLAN_PRICING
+
+// ROI calculation utilities
+export function calculatePlanROI(actualCost: number, planType: ClaudePlan) {
+  const planPrice = CLAUDE_PLAN_PRICING[planType].price
+  const savings = planPrice - actualCost
+  const isOver = savings < 0
+  
+  return {
+    planName: CLAUDE_PLAN_PRICING[planType].name,
+    planPrice,
+    actualCost,
+    savings: Math.abs(savings),
+    isOver,
+    percentSavings: planPrice > 0 ? (savings / planPrice) * 100 : 0
+  }
+}
+
+export function calculateAllPlanROI(actualCost: number) {
+  return {
+    pro_17: calculatePlanROI(actualCost, 'pro_17'),
+    max_100: calculatePlanROI(actualCost, 'max_100'),
+    max_200: calculatePlanROI(actualCost, 'max_200')
+  }
+}
+
+export function formatSavings(savings: number, isOver: boolean): string {
+  const formatted = formatCost(savings)
+  return isOver ? `${formatted} Over` : `${formatted} Saved`
+}

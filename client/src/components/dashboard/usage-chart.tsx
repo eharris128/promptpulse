@@ -76,14 +76,14 @@ export function UsageChart({ data, type }: UsageChartProps) {
         <CardContent className="pl-2">
           <ResponsiveContainer width="100%" height={350}>
             <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis 
                 dataKey="formattedDate" 
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
                 interval="preserveStartEnd"
               />
               <YAxis 
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
                 tickFormatter={formatChartCost}
               />
               <Tooltip 
@@ -92,11 +92,17 @@ export function UsageChart({ data, type }: UsageChartProps) {
                   return data ? format(parseISO(data.date), 'MMMM dd, yyyy') : label
                 }}
                 formatter={(value: number) => [formatChartCost(value), 'Cost']}
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--background))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: 'var(--radius)'
+                }}
+                labelStyle={{ color: 'hsl(var(--foreground))' }}
               />
               <Line 
                 type="monotone" 
                 dataKey="cost" 
-                stroke="hsl(var(--chart-1))" 
+                stroke="hsl(var(--chart-3))" 
                 strokeWidth={2}
                 dot={{ r: 4 }}
                 activeDot={{ r: 6 }}
@@ -117,14 +123,14 @@ export function UsageChart({ data, type }: UsageChartProps) {
       <CardContent className="pl-2">
         <ResponsiveContainer width="100%" height={350}>
           <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis 
               dataKey="formattedDate" 
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
               interval="preserveStartEnd"
             />
             <YAxis 
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
               tickFormatter={formatChartTokens}
             />
             <Tooltip 
@@ -136,6 +142,12 @@ export function UsageChart({ data, type }: UsageChartProps) {
                 formatChartTokens(value), 
                 name === 'inputTokens' ? 'Input Tokens' : 'Output Tokens'
               ]}
+              contentStyle={{
+                backgroundColor: 'hsl(var(--background))',
+                border: '1px solid hsl(var(--border))',
+                borderRadius: 'var(--radius)'
+              }}
+              labelStyle={{ color: 'hsl(var(--foreground))' }}
             />
             <Bar dataKey="inputTokens" stackId="a" fill="hsl(var(--chart-1))" name="inputTokens" />
             <Bar dataKey="outputTokens" stackId="a" fill="hsl(var(--chart-2))" name="outputTokens" />

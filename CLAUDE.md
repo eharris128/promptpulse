@@ -145,6 +145,12 @@ promptpulse whoami                      # Verify authentication
 ### Logging Configuration
 - `LOG_LEVEL` - Logging level: error, warn, info, debug (default: info in production, debug in development)
 
+### Email Configuration
+- `RESEND_API_KEY` - Resend API key for email functionality (required for email features)
+- `EMAIL_FROM_DOMAIN` - Domain for sender email addresses (default: mail.promptpulse.dev)
+  - Uses format: `PromptPulse <noreply@{EMAIL_FROM_DOMAIN}>`
+  - Recommended: Set up a Resend subdomain like `mail.promptpulse.dev`
+
 ## Common Tasks
 
 ### Local Development

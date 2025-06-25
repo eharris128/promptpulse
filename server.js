@@ -11,6 +11,9 @@ import reportGenerator from './lib/report-generator.js';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy for Railway deployment (fixes X-Forwarded-For header validation)
+app.set('trust proxy', 1);
+
 // CORS configuration for production
 const corsOptions = {
   origin: function (origin, callback) {
@@ -1011,6 +1014,59 @@ app.put('/api/user/email-preferences', authenticateApiKey, async (req, res) => {
   }
 });
 
+app.put('/api/user/email', authenticateApiKey, async (req, res) => {
+  const userId = req.user.id;
+  const { email } = req.body;
+  const queryContext = logDatabaseQuery('update_user_email', userId);
+  
+  // Validate email
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+  
+  // Basic email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+  
+  try {
+    await dbManager.executeQuery(async (db) => {
+      // Check if email is already in use by another user
+      const existingUser = await db.sql`
+        SELECT id FROM users 
+        WHERE email = ${email} AND id != ${userId}
+        LIMIT 1
+      `;
+      
+      if (existingUser.length > 0) {
+        throw new Error('Email already in use');
+      }
+      
+      // Update user's email
+      return await db.sql`
+        UPDATE users 
+        SET email = ${email}
+        WHERE id = ${userId}
+      `;
+    }, { ...queryContext, operation: 'update_user_email' });
+    
+    res.json({ 
+      message: 'Email updated successfully',
+      email: email
+    });
+    
+    log.performance('update_user_email', Date.now() - queryContext.startTime, { userId });
+    
+  } catch (error) {
+    if (error.message === 'Email already in use') {
+      return res.status(409).json({ error: 'Email already in use' });
+    }
+    logError(error, { context: 'update_user_email', userId, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 app.post('/api/user/test-email', authenticateApiKey, async (req, res) => {
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('send_test_email', userId);
@@ -1068,6 +1124,70 @@ app.post('/api/user/test-email', authenticateApiKey, async (req, res) => {
     
   } catch (error) {
     logError(error, { context: 'send_test_email', userId, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.get('/api/user/plan-settings', authenticateApiKey, async (req, res) => {
+  const userId = req.user.id;
+  const queryContext = logDatabaseQuery('get_plan_settings', userId);
+  
+  try {
+    const user = await dbManager.executeQuery(async (db) => {
+      return await db.sql`
+        SELECT claude_plan FROM users WHERE id = ${userId}
+      `;
+    }, { ...queryContext, operation: 'get_user_plan_settings' });
+    
+    if (!user[0]) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({ 
+      claude_plan: user[0].claude_plan || 'max_100'
+    });
+    
+    log.performance('get_plan_settings', Date.now() - queryContext.startTime, { userId });
+    
+  } catch (error) {
+    logError(error, { context: 'get_plan_settings', userId, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.put('/api/user/plan-settings', authenticateApiKey, async (req, res) => {
+  const userId = req.user.id;
+  const { claude_plan } = req.body;
+  const queryContext = logDatabaseQuery('update_plan_settings', userId);
+  
+  // Validate plan
+  const validPlans = ['pro_17', 'max_100', 'max_200'];
+  if (!claude_plan || !validPlans.includes(claude_plan)) {
+    return res.status(400).json({ 
+      error: 'Invalid Claude plan. Must be one of: pro_17, max_100, max_200' 
+    });
+  }
+  
+  try {
+    await dbManager.executeQuery(async (db) => {
+      return await db.sql`
+        UPDATE users 
+        SET claude_plan = ${claude_plan}
+        WHERE id = ${userId}
+      `;
+    }, { ...queryContext, operation: 'update_user_plan_settings' });
+    
+    res.json({ 
+      message: 'Plan settings updated successfully',
+      claude_plan: claude_plan
+    });
+    
+    log.performance('update_plan_settings', Date.now() - queryContext.startTime, { 
+      userId, claude_plan 
+    });
+    
+  } catch (error) {
+    logError(error, { context: 'update_plan_settings', userId, queryContext });
     res.status(500).json({ error: 'Database error' });
   }
 });
@@ -1158,11 +1278,22 @@ async function initializeServer() {
       retryAttempts: dbManager.options.retryAttempts
     });
     
+    // Log email service status
+    const emailDomain = process.env.EMAIL_FROM_DOMAIN || 'mail.promptpulse.dev';
+    logger.info('Email service status', {
+      enabled: emailService.isEnabled(),
+      resendApiKeyConfigured: !!process.env.RESEND_API_KEY,
+      resendApiKeyLength: process.env.RESEND_API_KEY?.length || 0,
+      emailDomain: emailDomain,
+      fromAddress: `PromptPulse <noreply@${emailDomain}>`
+    });
+    
     app.listen(PORT, () => {
       logger.info(`PromptPulse server started`, {
         port: PORT,
         environment: process.env.NODE_ENV || 'development',
-        logLevel: logger.level
+        logLevel: logger.level,
+        emailServiceEnabled: emailService.isEnabled()
       });
     });
   } catch (error) {

@@ -124,6 +124,74 @@ export interface PlanPricing {
   description: string;
 }
 
+export interface Team {
+  id: number;
+  name: string;
+  description?: string;
+  created_by: number;
+  invite_code: string;
+  is_active: boolean;
+  max_members: number;
+  member_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamWithRole extends Team {
+  role: 'admin' | 'member';
+  joined_at: string;
+}
+
+export interface TeamMember {
+  id: number;
+  team_id: number;
+  user_id: number;
+  username: string;
+  display_name?: string;
+  email?: string;
+  role: 'admin' | 'member';
+  joined_at: string;
+  invited_by?: number;
+}
+
+export interface TeamInvitation {
+  id: number;
+  team_id: number;
+  team_name: string;
+  email: string;
+  invited_by: number;
+  invited_by_username: string;
+  invite_token: string;
+  status: 'pending' | 'accepted' | 'expired' | 'declined';
+  expires_at: string;
+  created_at: string;
+  accepted_at?: string;
+}
+
+export interface TeamSettings {
+  team_leaderboard_enabled: boolean;
+}
+
+export interface TeamLeaderboardEntry {
+  user_id: number;
+  username: string;
+  display_name?: string;
+  total_tokens: number;
+  total_cost: number;
+  daily_average: number;
+  rank: number;
+  percentile: number;
+}
+
+export interface TeamLeaderboardData {
+  team_id: number;
+  team_name: string;
+  period: 'daily' | 'weekly';
+  entries: TeamLeaderboardEntry[];
+  user_rank?: number;
+  total_participants: number;
+}
+
 export interface ApiResponse<T = any> {
   data?: T;
   error?: string;

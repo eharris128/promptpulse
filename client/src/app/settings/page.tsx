@@ -390,7 +390,7 @@ export default function Settings() {
             <CardHeader>
               <CardTitle>Claude Plan</CardTitle>
               <CardDescription>
-                Configure which Claude subscription plan you're on for accurate ROI calculations
+                Configure your Claude subscription plan for accurate ROI calculations
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -417,7 +417,7 @@ export default function Settings() {
               
               <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-md p-3">
                 <p className="text-sm">
-                  <strong>Why this matters:</strong> Setting your correct plan helps calculate your ROI by comparing your actual usage costs against your fixed monthly subscription fee. This shows you how much you're saving (or overspending) with your current plan.
+                  <strong>Why this matters:</strong> Setting your correct plan helps calculate your ROI by comparing your actual usage costs against your fixed monthly subscription fee. This shows how much you are saving (or overspending) with your current plan.
                 </p>
               </div>
             </CardContent>
@@ -447,7 +447,7 @@ export default function Settings() {
                 </p>
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
                   <li>Your data is completely private and not included in any rankings</li>
-                  <li>You can still view the leaderboard but won{String.fromCharCode(0x2019)}t appear on it</li>
+                  <li>You can still view the leaderboard but will not appear on it</li>
                   <li>You can re-enable participation at any time</li>
                 </ul>
               </div>

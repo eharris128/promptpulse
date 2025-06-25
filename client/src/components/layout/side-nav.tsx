@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart3, Trophy, Settings, X } from 'lucide-react'
+import { BarChart3, Trophy, Settings, Users, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface SideNavProps {
@@ -26,6 +26,12 @@ export function SideNav({ className, onClose, showCloseButton }: SideNavProps) {
       label: 'Leaderboard', 
       icon: Trophy,
       active: pathname === '/leaderboard' 
+    },
+    { 
+      href: '/teams', 
+      label: 'Teams', 
+      icon: Users,
+      active: pathname === '/teams' || pathname?.startsWith('/teams/') 
     },
     { 
       href: '/settings', 

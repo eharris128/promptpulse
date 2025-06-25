@@ -1,4 +1,4 @@
-import { AggregateData, Machine, SessionData, BlockData, ApiResponse, LeaderboardData, LeaderboardSettings, EmailPreferences, PlanSettings } from '@/types';
+import { AggregateData, Machine, SessionData, BlockData, ApiResponse, LeaderboardData, LeaderboardSettings, EmailPreferences, PlanSettings, Team, TeamWithRole, TeamMember, TeamInvitation } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://exciting-patience-production.up.railway.app';
 
@@ -196,6 +196,35 @@ class ApiClient {
     return this.request<ApiResponse>('/api/user/plan-settings', {
       method: 'PUT',
       body: JSON.stringify(settings),
+    });
+  }
+
+  // Team management methods
+  async getTeams(): Promise<TeamWithRole[]> {
+    return this.request<TeamWithRole[]>('/api/teams');
+  }
+
+  async createTeam(data: { name: string; description?: string }): Promise<Team> {
+    return this.request<Team>('/api/teams', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getTeamMembers(teamId: number): Promise<TeamMember[]> {
+    return this.request<TeamMember[]>(`/api/teams/${teamId}/members`);
+  }
+
+  async inviteToTeam(teamId: number, email: string): Promise<ApiResponse> {
+    return this.request<ApiResponse>(`/api/teams/${teamId}/invite`, {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async joinTeam(inviteToken: string): Promise<ApiResponse & { teamName: string }> {
+    return this.request<ApiResponse & { teamName: string }>(`/api/teams/join/${inviteToken}`, {
+      method: 'POST',
     });
   }
 }

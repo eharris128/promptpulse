@@ -123,7 +123,7 @@ export default function Leaderboard() {
             <CardHeader>
               <CardTitle>
                 {/* eslint-disable-next-line */}
-                {period === 'daily' ? `Today${String.fromCharCode(0x2019)}s` : `This Week${String.fromCharCode(0x2019)}s`} Top Performers
+                {period === 'daily' ? 'Daily' : 'Weekly'} Top Performers
               </CardTitle>
               <CardDescription>
                 {leaderboardData.total_participants} participants • Ranked by total tokens

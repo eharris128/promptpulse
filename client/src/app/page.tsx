@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { StatsCards } from '@/components/dashboard/stats-cards'
+import { EnvironmentalInfoCard } from '@/components/dashboard/environmental-info-card'
 import { UsageChart } from '@/components/dashboard/usage-chart'
 import { MachinesTable } from '@/components/dashboard/machines-table'
 import { FixedPlanComparison } from '@/components/dashboard/fixed-plan-comparison'
@@ -91,12 +92,13 @@ export default function Dashboard() {
         </div>
       )}
 
-      {!dataLoading && usageData && planSettings && (
+      {!dataLoading && usageData && usageData.totals && planSettings && (
         <>
           <StatsCards data={usageData} />
+          <EnvironmentalInfoCard data={usageData} />
           <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
             <FixedPlanComparison 
-              actualCost={usageData.totals.total_cost} 
+              actualCost={usageData.totals?.total_cost || 0} 
               userPlan={planSettings.claude_plan} 
             />
           </div>

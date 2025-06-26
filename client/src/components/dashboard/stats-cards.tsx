@@ -13,6 +13,15 @@ export function StatsCards({ data }: StatsCardsProps) {
   console.log('StatsCards received data:', data)
   const { totals } = data
 
+  // Ensure totals exists with default values
+  const safeTotal = totals || {
+    total_cost: 0,
+    total_tokens: 0,
+    total_input_tokens: 0,
+    total_output_tokens: 0,
+    total_machines: 0
+  }
+
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
@@ -21,9 +30,9 @@ export function StatsCards({ data }: StatsCardsProps) {
           <DollarSign className="h-5 w-5 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatCost(totals?.total_cost || 0)}</div>
+          <div className="text-2xl font-bold">{formatCost(safeTotal.total_cost)}</div>
           <p className="text-xs text-muted-foreground">
-            Across {totals?.total_machines || 0} machine{(totals?.total_machines || 0) !== 1 ? 's' : ''}
+            Across {safeTotal.total_machines} machine{safeTotal.total_machines !== 1 ? 's' : ''}
           </p>
         </CardContent>
       </Card>
@@ -34,7 +43,7 @@ export function StatsCards({ data }: StatsCardsProps) {
           <Zap className="h-5 w-5 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatTokens(totals?.total_tokens || 0)}</div>
+          <div className="text-2xl font-bold">{formatTokens(safeTotal.total_tokens)}</div>
           <p className="text-xs text-muted-foreground">
             Input + Output + Cache tokens
           </p>
@@ -47,7 +56,7 @@ export function StatsCards({ data }: StatsCardsProps) {
           <ArrowRight className="h-5 w-5 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatTokens(totals?.total_input_tokens || 0)}</div>
+          <div className="text-2xl font-bold">{formatTokens(safeTotal.total_input_tokens)}</div>
           <p className="text-xs text-muted-foreground">
             User prompts and context
           </p>
@@ -60,7 +69,7 @@ export function StatsCards({ data }: StatsCardsProps) {
           <ArrowLeft className="h-5 w-5 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatTokens(totals?.total_output_tokens || 0)}</div>
+          <div className="text-2xl font-bold">{formatTokens(safeTotal.total_output_tokens)}</div>
           <p className="text-xs text-muted-foreground">
             Claude responses
           </p>

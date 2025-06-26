@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { Select } from '@/components/ui/select'
 import { sanitizeDisplayName } from '@/lib/utils'
 import { apiClient } from '@/lib/api'
-import { LeaderboardSettings, EmailPreferences, PlanSettings, ClaudePlan } from '@/types'
+import { LeaderboardSettings, EmailPreferences, PlanSettings, ClaudePlan, EnvironmentalSettings } from '@/types'
 
 const PLAN_OPTIONS = [
   { value: 'pro_17', label: 'Pro ($17/month)', description: 'Standard Claude usage' },
@@ -31,6 +31,12 @@ export default function Settings() {
   })
   const [planSettings, setPlanSettings] = useState<PlanSettings>({
     claude_plan: 'max_100'
+  })
+  const [environmentalSettings, setEnvironmentalSettings] = useState<EnvironmentalSettings>({
+    show_environmental_data: true,
+    preferred_equivalent_display: 'trees',
+    include_in_leaderboards: true,
+    detail_level: 'summary'
   })
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -418,6 +424,82 @@ export default function Settings() {
               <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-md p-3">
                 <p className="text-sm">
                   <strong>Why this matters:</strong> Setting your correct plan helps calculate your ROI by comparing your actual usage costs against your fixed monthly subscription fee. This shows how much you are saving (or overspending) with your current plan.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Environmental Impact Display</CardTitle>
+              <CardDescription>
+                Configure how environmental data is shown in your dashboard
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="show-environmental-data" className="text-base font-medium">
+                    Show Environmental Data
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Display CO2 emissions and tree equivalents in your dashboard
+                  </p>
+                </div>
+                <Switch
+                  id="show-environmental-data"
+                  checked={environmentalSettings.show_environmental_data}
+                  onCheckedChange={(checked) => 
+                    setEnvironmentalSettings(prev => ({ ...prev, show_environmental_data: checked }))
+                  }
+                />
+              </div>
+
+              {environmentalSettings.show_environmental_data && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="preferred-display" className="text-base font-medium">
+                      Preferred Display Format
+                    </Label>
+                    <Select
+                      value={environmentalSettings.preferred_equivalent_display}
+                      onValueChange={(value: 'trees' | 'energy' | 'co2' | 'multiple') => 
+                        setEnvironmentalSettings(prev => ({ ...prev, preferred_equivalent_display: value }))
+                      }
+                    >
+                      <option value="trees">Tree Equivalents (Primary)</option>
+                      <option value="co2">CO2 Emissions (Primary)</option>
+                      <option value="energy">Energy Consumption (Primary)</option>
+                      <option value="multiple">Show All Metrics</option>
+                    </Select>
+                    <p className="text-sm text-muted-foreground">
+                      Choose how environmental impact is primarily displayed
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="include-in-leaderboards" className="text-base font-medium">
+                        Include in Leaderboards
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Show your environmental impact in public leaderboard rankings
+                      </p>
+                    </div>
+                    <Switch
+                      id="include-in-leaderboards"
+                      checked={environmentalSettings.include_in_leaderboards}
+                      onCheckedChange={(checked) => 
+                        setEnvironmentalSettings(prev => ({ ...prev, include_in_leaderboards: checked }))
+                      }
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-md p-3">
+                <p className="text-sm">
+                  <strong>About Environmental Tracking:</strong> Environmental impact is calculated using EcoLogits methodology based on model usage, energy consumption, and regional carbon intensity data. Tree equivalents represent daily CO2 absorption (~50g CO2/tree/day).
                 </p>
               </div>
             </CardContent>

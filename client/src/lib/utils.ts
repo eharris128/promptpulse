@@ -7,6 +7,8 @@ export function cn(...inputs: ClassValue[]) {
 
 // Number formatting utilities
 export function formatTokens(tokens: number): string {
+  // Handle invalid values (null, undefined, NaN)
+  if (tokens == null || isNaN(tokens)) return '0'
   if (tokens === 0) return '0'
   
   if (tokens >= 1000000000) {
@@ -121,4 +123,55 @@ export function calculateAllPlanROI(actualCost: number) {
 export function formatSavings(savings: number, isOver: boolean): string {
   const formatted = formatCost(savings)
   return isOver ? `+${formatted} Value` : `${formatted} Saved`
+}
+
+// Environmental formatting utilities
+export function formatCO2(co2Grams: number): string {
+  // Handle invalid values (null, undefined, NaN)
+  if (!co2Grams || co2Grams === 0 || isNaN(co2Grams)) return '0g CO2'
+  
+  if (co2Grams < 0.01) {
+    return '<0.01g CO2'
+  } else if (co2Grams < 1) {
+    return `${co2Grams.toFixed(2)}g CO2`
+  } else if (co2Grams < 1000) {
+    return `${co2Grams.toFixed(1)}g CO2`
+  } else {
+    return `${(co2Grams / 1000).toFixed(2)}kg CO2`
+  }
+}
+
+export function formatEnergy(energyWh: number): string {
+  // Handle invalid values (null, undefined, NaN) and fix spacing
+  if (!energyWh || energyWh === 0 || isNaN(energyWh)) return '0 Wh'
+  
+  if (energyWh < 0.01) {
+    return '<0.01 Wh'
+  } else if (energyWh < 1) {
+    return `${energyWh.toFixed(2)} Wh`
+  } else if (energyWh < 1000) {
+    return `${energyWh.toFixed(1)} Wh`
+  } else {
+    return `${(energyWh / 1000).toFixed(2)} kWh`
+  }
+}
+
+export function formatTreeEquivalent(treeEquivalent: number): string {
+  // Handle invalid values (null, undefined, NaN)
+  if (!treeEquivalent || treeEquivalent <= 0 || isNaN(treeEquivalent)) {
+    return 'Negligible impact'
+  }
+  
+  if (treeEquivalent < 0.01) {
+    return '<0.01 trees/day'
+  } else if (treeEquivalent < 0.1) {
+    const percent = Math.round(treeEquivalent * 100)
+    return `${percent}% of daily tree absorption`
+  } else if (treeEquivalent < 1) {
+    return `${treeEquivalent.toFixed(1)} tree/day equivalent`
+  } else if (treeEquivalent < 2) {
+    return `${treeEquivalent.toFixed(1)} tree/day equivalent`
+  } else {
+    return `${treeEquivalent.toFixed(1)} trees/day equivalent`
+  }
 }

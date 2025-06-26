@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import crypto from 'crypto';
 import rateLimit from 'express-rate-limit';
 import { authenticateApiKey, createUser, listUsers } from './lib/server-auth.js';
 import { initializeDbManager, getDbManager } from './lib/db-manager.js';
@@ -95,7 +96,13 @@ if (!DATABASE_URL) {
   process.exit(1);
 }
 
-let dbManager;
+// Initialize database manager immediately
+const dbManager = initializeDbManager(DATABASE_URL, {
+  maxConnections: parseInt(process.env.DB_MAX_CONNECTIONS) || 10,
+  idleTimeout: parseInt(process.env.DB_IDLE_TIMEOUT) || 30000,
+  retryAttempts: parseInt(process.env.DB_RETRY_ATTEMPTS) || 3,
+  retryDelay: parseInt(process.env.DB_RETRY_DELAY) || 1000
+});
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
@@ -329,8 +336,27 @@ app.get('/api/usage/aggregate', authenticateApiKey, async (req, res) => {
   try {
     
     const results = await dbManager.executeQuery(async (db) => {
+      // Build WHERE conditions safely
+      let whereConditions = ['user_id = ?'];
+      let params = [userId];
+      
+      if (since) {
+        whereConditions.push('date >= ?');
+        params.push(since);
+      }
+      if (until) {
+        whereConditions.push('date <= ?');
+        params.push(until);
+      }
+      if (machineId) {
+        whereConditions.push('machine_id = ?');
+        params.push(machineId);
+      }
+      
+      const whereClause = `WHERE ${whereConditions.join(' AND ')}`;
+      
       // Build daily query
-      let dailyQuery = `
+      const dailyQuery = `
         SELECT 
           machine_id,
           date,
@@ -339,19 +365,19 @@ app.get('/api/usage/aggregate', authenticateApiKey, async (req, res) => {
           SUM(cache_creation_tokens) as cache_creation_tokens,
           SUM(cache_read_tokens) as cache_read_tokens,
           SUM(total_tokens) as total_tokens,
-          SUM(total_cost) as total_cost
+          SUM(total_cost) as total_cost,
+          SUM(energy_wh) as total_energy_wh,
+          SUM(co2_emissions_g) as total_co2_emissions_g,
+          SUM(tree_equivalent) as total_tree_equivalent,
+          AVG(carbon_intensity_g_kwh) as avg_carbon_intensity_g_kwh
         FROM usage_data
-        WHERE user_id = ${userId}
+        ${whereClause}
+        GROUP BY machine_id, date 
+        ORDER BY date DESC, machine_id
       `;
       
-      if (since) dailyQuery += ` AND date >= '${since}'`;
-      if (until) dailyQuery += ` AND date <= '${until}'`;
-      if (machineId) dailyQuery += ` AND machine_id = '${machineId}'`;
-      
-      dailyQuery += ' GROUP BY machine_id, date ORDER BY date DESC, machine_id';
-      
       // Build total query
-      let totalQuery = `
+      const totalQuery = `
         SELECT 
           COUNT(DISTINCT machine_id) as total_machines,
           SUM(input_tokens) as total_input_tokens,
@@ -359,36 +385,44 @@ app.get('/api/usage/aggregate', authenticateApiKey, async (req, res) => {
           SUM(cache_creation_tokens) as total_cache_creation_tokens,
           SUM(cache_read_tokens) as total_cache_read_tokens,
           SUM(total_tokens) as total_tokens,
-          SUM(total_cost) as total_cost
+          SUM(total_cost) as total_cost,
+          SUM(energy_wh) as total_energy_wh,
+          SUM(co2_emissions_g) as total_co2_emissions_g,
+          SUM(tree_equivalent) as total_tree_equivalent,
+          AVG(carbon_intensity_g_kwh) as avg_carbon_intensity_g_kwh
         FROM usage_data
-        WHERE user_id = ${userId}
+        ${whereClause}
       `;
       
-      if (since) totalQuery += ` AND date >= '${since}'`;
-      if (until) totalQuery += ` AND date <= '${until}'`;
-      if (machineId) totalQuery += ` AND machine_id = '${machineId}'`;
-      
-      // Execute both queries
-      const [daily, totals] = await Promise.all([
-        db.sql(dailyQuery),
-        db.sql(totalQuery)
+      // Execute both queries with bound parameters
+      const [daily, totalsArray] = await Promise.all([
+        db.prepare(dailyQuery).bind(...params).all(),
+        db.prepare(totalQuery).bind(...params).all()
       ]);
+      
+      const totals = totalsArray[0] || {};
+      
+      // Ensure daily is always an array
+      const dailyResults = Array.isArray(daily) ? daily : [];
       
       // Debug logging
       const debugCount = await db.sql`SELECT COUNT(*) as count FROM usage_data WHERE user_id = ${userId}`;
       logger.debug('Usage data debug info', {
         userId,
         userRecordCount: debugCount[0]?.count,
-        dailyResultsCount: daily.length,
+        dailyResultsCount: dailyResults.length,
+        dailyIsArray: Array.isArray(daily),
+        totalsType: typeof totals,
         requestId: req.requestId
       });
       
-      return { daily, totals: totals[0] };
+      return { daily: dailyResults, totals: totals || {} };
     }, { ...queryContext, operation: 'aggregate_usage_data' });
     
     logger.debug('Aggregate API results', {
       userId,
-      dailyResultsCount: results.daily.length,
+      dailyResultsCount: results.daily?.length || 0,
+      dailyIsArray: Array.isArray(results.daily),
       totals: results.totals,
       requestId: req.requestId
     });
@@ -419,7 +453,10 @@ app.get('/api/machines', authenticateApiKey, async (req, res) => {
           COUNT(*) as days_tracked,
           MIN(date) as first_date,
           MAX(date) as last_date,
-          SUM(total_cost) as total_cost
+          SUM(total_cost) as total_cost,
+          SUM(energy_wh) as total_energy_wh,
+          SUM(co2_emissions_g) as total_co2_emissions_g,
+          SUM(tree_equivalent) as total_tree_equivalent
         FROM usage_data 
         WHERE user_id = ${userId}
         GROUP BY machine_id
@@ -431,6 +468,58 @@ app.get('/api/machines', authenticateApiKey, async (req, res) => {
     log.performance('fetch_machines', Date.now() - queryContext.startTime, { userId, machineCount: machines.length });
   } catch (error) {
     logError(error, { context: 'fetch_machines', userId, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Environmental data endpoint
+app.get('/api/environmental/summary', authenticateApiKey, async (req, res) => {
+  const { since, until, machineId } = req.query;
+  const userId = req.user.id;
+  const queryContext = logDatabaseQuery('environmental_summary', userId);
+  
+  try {
+    const summary = await dbManager.executeQuery(async (db) => {
+      // Build WHERE conditions safely using parameterized queries
+      let whereConditions = ['user_id = ?'];
+      let params = [userId];
+      
+      if (since) {
+        whereConditions.push('date >= ?');
+        params.push(since);
+      }
+      if (until) {
+        whereConditions.push('date <= ?');
+        params.push(until);
+      }
+      if (machineId) {
+        whereConditions.push('machine_id = ?');
+        params.push(machineId);
+      }
+      
+      const query = `
+        SELECT 
+          COUNT(*) as total_sessions,
+          SUM(total_tokens) as total_tokens,
+          SUM(total_cost) as total_cost,
+          SUM(energy_wh) as total_energy_wh,
+          SUM(co2_emissions_g) as total_co2_emissions_g,
+          SUM(tree_equivalent) as total_tree_equivalent,
+          AVG(carbon_intensity_g_kwh) as avg_carbon_intensity_g_kwh,
+          COUNT(CASE WHEN energy_wh IS NOT NULL THEN 1 END) as sessions_with_environmental_data
+        FROM usage_data
+        WHERE ${whereConditions.join(' AND ')}
+      `;
+      
+      const results = await db.prepare(query).bind(...params).all();
+      return results[0] || {};
+    }, { ...queryContext, operation: 'fetch_environmental_summary' });
+    
+    res.json(summary || {});
+    log.performance('environmental_summary', Date.now() - queryContext.startTime, { userId });
+    
+  } catch (error) {
+    logError(error, { context: 'environmental_summary', userId, queryContext });
     res.status(500).json({ error: 'Database error' });
   }
 });
@@ -615,7 +704,8 @@ app.post('/api/usage/sessions/batch', authenticateApiKey, async (req, res) => {
             machine_id, user_id, session_id, project_path, start_time, end_time,
             duration_minutes, input_tokens, output_tokens, 
             cache_creation_tokens, cache_read_tokens, total_tokens,
-            total_cost, models_used, model_breakdowns
+            total_cost, models_used, model_breakdowns,
+            energy_wh, co2_emissions_g, carbon_intensity_g_kwh, tree_equivalent, environmental_source
           ) VALUES (
             ${record.machine_id},
             ${record.user_id},
@@ -631,7 +721,12 @@ app.post('/api/usage/sessions/batch', authenticateApiKey, async (req, res) => {
             ${record.total_tokens},
             ${record.total_cost},
             ${JSON.stringify(record.models_used)},
-            ${JSON.stringify(record.model_breakdowns)}
+            ${JSON.stringify(record.model_breakdowns)},
+            ${record.energy_wh},
+            ${record.co2_emissions_g},
+            ${record.carbon_intensity_g_kwh},
+            ${record.tree_equivalent},
+            ${record.environmental_source}
           )
         `;
         processedCount++;
@@ -649,8 +744,15 @@ app.post('/api/usage/sessions/batch', authenticateApiKey, async (req, res) => {
     });
     
   } catch (error) {
-    logError(error, { context: 'upload_sessions_batch', userId, queryContext });
-    res.status(500).json({ error: 'Database error' });
+    logError(error, { 
+      context: 'upload_sessions_batch', 
+      userId, 
+      queryContext,
+      sampleRecord: records[0],
+      recordCount: records.length
+    });
+    console.error('Session batch upload error:', error);
+    res.status(500).json({ error: 'Database error', details: error.message });
   }
 });
 
@@ -678,7 +780,8 @@ app.post('/api/usage/blocks/batch', authenticateApiKey, async (req, res) => {
             machine_id, user_id, block_id, start_time, end_time, actual_end_time,
             is_active, entry_count, input_tokens, output_tokens, 
             cache_creation_tokens, cache_read_tokens, total_tokens,
-            total_cost, models_used
+            total_cost, models_used,
+            energy_wh, co2_emissions_g, carbon_intensity_g_kwh, tree_equivalent, environmental_source
           ) VALUES (
             ${record.machine_id},
             ${record.user_id},
@@ -694,7 +797,12 @@ app.post('/api/usage/blocks/batch', authenticateApiKey, async (req, res) => {
             ${record.cache_read_tokens},
             ${record.total_tokens},
             ${record.total_cost},
-            ${JSON.stringify(record.models_used)}
+            ${JSON.stringify(record.models_used)},
+            ${record.energy_wh},
+            ${record.co2_emissions_g},
+            ${record.carbon_intensity_g_kwh},
+            ${record.tree_equivalent},
+            ${record.environmental_source}
           )
         `;
         processedCount++;
@@ -744,7 +852,16 @@ app.get('/api/usage/analytics/patterns', authenticateApiKey, async (req, res) =>
           dateFormat = 'date';
       }
       
-      let query = `
+      // Build query safely with parameterized queries
+      let whereConditions = ['user_id = ?'];
+      let params = [userId];
+      
+      if (machineId) {
+        whereConditions.push('machine_id = ?');
+        params.push(machineId);
+      }
+      
+      const query = `
         SELECT 
           ${groupBy} as period,
           COUNT(*) as session_count,
@@ -752,16 +869,12 @@ app.get('/api/usage/analytics/patterns', authenticateApiKey, async (req, res) =>
           SUM(total_cost) as total_cost,
           AVG(duration_minutes) as avg_duration_minutes
         FROM usage_sessions
-        WHERE user_id = ${userId}
+        WHERE ${whereConditions.join(' AND ')}
+        GROUP BY ${groupBy} 
+        ORDER BY period
       `;
       
-      if (machineId) {
-        query += ` AND machine_id = '${machineId}'`;
-      }
-      
-      query += ` GROUP BY ${groupBy} ORDER BY period`;
-      
-      return await db.sql`${query}`;
+      return await db.prepare(query).bind(...params).all();
     }, { operation: 'fetch_usage_patterns', user_id: userId });
     
     res.json({ period, patterns });
@@ -1192,6 +1305,329 @@ app.put('/api/user/plan-settings', authenticateApiKey, async (req, res) => {
   }
 });
 
+// Team management endpoints
+
+app.get('/api/teams', authenticateApiKey, async (req, res) => {
+  const userId = req.user.id;
+  const queryContext = logDatabaseQuery('get_user_teams', userId);
+  
+  try {
+    const teams = await dbManager.executeQuery(async (db) => {
+      return await db.sql`
+        SELECT t.*, tm.role, tm.joined_at,
+               (SELECT COUNT(*) FROM team_members WHERE team_id = t.id) as member_count
+        FROM teams t
+        JOIN team_members tm ON t.id = tm.team_id
+        WHERE tm.user_id = ${userId} AND t.is_active = 1
+        ORDER BY tm.joined_at DESC
+      `;
+    }, { ...queryContext, operation: 'get_user_teams' });
+    
+    res.json(teams);
+    
+    log.performance('get_user_teams', Date.now() - queryContext.startTime, { userId });
+    
+  } catch (error) {
+    logError(error, { context: 'get_user_teams', userId, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.post('/api/teams', authenticateApiKey, async (req, res) => {
+  const userId = req.user.id;
+  const { name, description } = req.body;
+  const queryContext = logDatabaseQuery('create_team', userId);
+  
+  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    return res.status(400).json({ error: 'Team name is required' });
+  }
+  
+  if (name.length > 100) {
+    return res.status(400).json({ error: 'Team name must be 100 characters or less' });
+  }
+  
+  try {
+    const result = await dbManager.executeQuery(async (db) => {
+      // Generate unique invite code
+      const inviteCode = crypto.randomBytes(8).toString('hex');
+      
+      // Create team
+      const teamResult = await db.sql`
+        INSERT INTO teams (name, description, created_by, invite_code)
+        VALUES (${name.trim()}, ${description?.trim() || null}, ${userId}, ${inviteCode})
+        RETURNING id
+      `;
+      
+      const teamId = teamResult[0].id;
+      
+      // Add creator as admin
+      await db.sql`
+        INSERT INTO team_members (team_id, user_id, role)
+        VALUES (${teamId}, ${userId}, 'admin')
+      `;
+      
+      // Return created team with member count
+      const team = await db.sql`
+        SELECT t.*, 1 as member_count
+        FROM teams t
+        WHERE t.id = ${teamId}
+      `;
+      
+      return team[0];
+    }, { ...queryContext, operation: 'create_team' });
+    
+    res.status(201).json(result);
+    
+    log.performance('create_team', Date.now() - queryContext.startTime, { 
+      userId, teamName: name 
+    });
+    
+  } catch (error) {
+    logError(error, { context: 'create_team', userId, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.post('/api/teams/:teamId/invite', authenticateApiKey, async (req, res) => {
+  const userId = req.user.id;
+  const teamId = parseInt(req.params.teamId);
+  const { email } = req.body;
+  const queryContext = logDatabaseQuery('invite_to_team', userId);
+  
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+  
+  try {
+    const result = await dbManager.executeQuery(async (db) => {
+      // Check if user is admin of this team
+      const membership = await db.sql`
+        SELECT role FROM team_members 
+        WHERE team_id = ${teamId} AND user_id = ${userId}
+      `;
+      
+      if (!membership[0] || membership[0].role !== 'admin') {
+        throw new Error('Not authorized');
+      }
+      
+      // Check if user is already a member
+      const existingMember = await db.sql`
+        SELECT tm.user_id FROM team_members tm
+        JOIN users u ON tm.user_id = u.id
+        WHERE tm.team_id = ${teamId} AND u.email = ${email}
+      `;
+      
+      if (existingMember.length > 0) {
+        throw new Error('User already in team');
+      }
+      
+      // Check for existing pending invitation
+      const existingInvite = await db.sql`
+        SELECT id FROM team_invitations
+        WHERE team_id = ${teamId} AND email = ${email} AND status = 'pending'
+        AND expires_at > datetime('now')
+      `;
+      
+      if (existingInvite.length > 0) {
+        throw new Error('Invitation already sent');
+      }
+      
+      // Create invitation
+      const inviteToken = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
+      
+      await db.sql`
+        INSERT INTO team_invitations (team_id, email, invited_by, invite_token, expires_at)
+        VALUES (${teamId}, ${email}, ${userId}, ${inviteToken}, ${expiresAt})
+      `;
+      
+      // Get team info for email
+      const team = await db.sql`
+        SELECT name FROM teams WHERE id = ${teamId}
+      `;
+      
+      return { inviteToken, teamName: team[0].name };
+    }, { ...queryContext, operation: 'invite_to_team' });
+    
+    // TODO: Send invitation email
+    
+    res.json({ message: 'Invitation sent successfully' });
+    
+    log.performance('invite_to_team', Date.now() - queryContext.startTime, { 
+      userId, teamId, email 
+    });
+    
+  } catch (error) {
+    if (error.message === 'Not authorized') {
+      return res.status(403).json({ error: 'Not authorized to invite members' });
+    }
+    if (error.message === 'User already in team') {
+      return res.status(409).json({ error: 'User is already a member of this team' });
+    }
+    if (error.message === 'Invitation already sent') {
+      return res.status(409).json({ error: 'Invitation already sent to this email' });
+    }
+    logError(error, { context: 'invite_to_team', userId, teamId, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.get('/api/teams/:teamId/members', authenticateApiKey, async (req, res) => {
+  const userId = req.user.id;
+  const teamId = parseInt(req.params.teamId);
+  const queryContext = logDatabaseQuery('get_team_members', userId);
+  
+  try {
+    const members = await dbManager.executeQuery(async (db) => {
+      // Check if user is a member of this team
+      const membership = await db.sql`
+        SELECT role FROM team_members 
+        WHERE team_id = ${teamId} AND user_id = ${userId}
+      `;
+      
+      if (!membership[0]) {
+        throw new Error('Not authorized');
+      }
+      
+      // Get team members
+      return await db.sql`
+        SELECT tm.*, u.username, u.display_name, u.email
+        FROM team_members tm
+        JOIN users u ON tm.user_id = u.id
+        WHERE tm.team_id = ${teamId}
+        ORDER BY tm.role DESC, tm.joined_at ASC
+      `;
+    }, { ...queryContext, operation: 'get_team_members' });
+    
+    res.json(members);
+    
+    log.performance('get_team_members', Date.now() - queryContext.startTime, { 
+      userId, teamId 
+    });
+    
+  } catch (error) {
+    if (error.message === 'Not authorized') {
+      return res.status(403).json({ error: 'Not authorized to view team members' });
+    }
+    logError(error, { context: 'get_team_members', userId, teamId, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.post('/api/teams/join/:inviteToken', authenticateApiKey, async (req, res) => {
+  const userId = req.user.id;
+  const inviteToken = req.params.inviteToken;
+  const queryContext = logDatabaseQuery('join_team', userId);
+  
+  try {
+    const result = await dbManager.executeQuery(async (db) => {
+      // Get user email
+      const user = await db.sql`
+        SELECT email FROM users WHERE id = ${userId}
+      `;
+      
+      const userEmail = user[0]?.email;
+      let invitation;
+      
+      if (userEmail) {
+        // User has email - try email-based invitation matching
+        invitation = await db.sql`
+          SELECT ti.*, t.name as team_name, t.max_members
+          FROM team_invitations ti
+          JOIN teams t ON ti.team_id = t.id
+          WHERE ti.invite_token = ${inviteToken} 
+          AND ti.email = ${userEmail}
+          AND ti.status = 'pending'
+          AND ti.expires_at > datetime('now')
+        `;
+      }
+      
+      if (!invitation || !invitation[0]) {
+        // No email-based match found, try token-only matching
+        // This allows users without emails to join via valid invite tokens
+        invitation = await db.sql`
+          SELECT ti.*, t.name as team_name, t.max_members
+          FROM team_invitations ti
+          JOIN teams t ON ti.team_id = t.id
+          WHERE ti.invite_token = ${inviteToken} 
+          AND ti.status = 'pending'
+          AND ti.expires_at > datetime('now')
+        `;
+        
+        if (!invitation[0]) {
+          throw new Error('Invalid or expired invitation');
+        }
+        
+        // For users without email, we allow joining but warn that email-specific invites won't work
+        if (!userEmail) {
+          console.log(`User ${userId} joining team without email via token ${inviteToken}`);
+        }
+      }
+      
+      const teamId = invitation[0].team_id;
+      
+      // Check if already a member
+      const existingMember = await db.sql`
+        SELECT id FROM team_members
+        WHERE team_id = ${teamId} AND user_id = ${userId}
+      `;
+      
+      if (existingMember.length > 0) {
+        throw new Error('Already a member');
+      }
+      
+      // Check team capacity
+      const memberCount = await db.sql`
+        SELECT COUNT(*) as count FROM team_members WHERE team_id = ${teamId}
+      `;
+      
+      if (memberCount[0].count >= invitation[0].max_members) {
+        throw new Error('Team is full');
+      }
+      
+      // Add user to team
+      await db.sql`
+        INSERT INTO team_members (team_id, user_id, invited_by)
+        VALUES (${teamId}, ${userId}, ${invitation[0].invited_by})
+      `;
+      
+      // Update invitation status
+      await db.sql`
+        UPDATE team_invitations
+        SET status = 'accepted', accepted_at = datetime('now')
+        WHERE id = ${invitation[0].id}
+      `;
+      
+      return { teamName: invitation[0].team_name };
+    }, { ...queryContext, operation: 'join_team' });
+    
+    res.json({ 
+      message: `Successfully joined ${result.teamName}!`,
+      teamName: result.teamName
+    });
+    
+    log.performance('join_team', Date.now() - queryContext.startTime, { userId });
+    
+  } catch (error) {
+    if (error.message === 'Invalid or expired invitation') {
+      return res.status(404).json({ error: 'Invalid or expired invitation' });
+    }
+    if (error.message === 'Already a member') {
+      return res.status(409).json({ error: 'You are already a member of this team' });
+    }
+    if (error.message === 'Team is full') {
+      return res.status(409).json({ error: 'Team has reached maximum member capacity' });
+    }
+    logError(error, { context: 'join_team', userId, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 app.get('/api/usage/analytics/costs', authenticateApiKey, async (req, res) => {
   const { machineId, groupBy = 'day' } = req.query;
   const userId = req.user.id;
@@ -1199,6 +1635,14 @@ app.get('/api/usage/analytics/costs', authenticateApiKey, async (req, res) => {
   try {
     const costs = await dbManager.executeQuery(async (db) => {
       let query;
+      let params = [userId];
+      
+      // Build WHERE conditions safely
+      let whereConditions = ['user_id = ?'];
+      if (machineId) {
+        whereConditions.push('machine_id = ?');
+        params.push(machineId);
+      }
       
       switch (groupBy) {
         case 'session':
@@ -1211,15 +1655,14 @@ app.get('/api/usage/analytics/costs', authenticateApiKey, async (req, res) => {
               total_cost,
               total_tokens
             FROM usage_sessions
-            WHERE user_id = ${userId}
+            WHERE ${whereConditions.join(' AND ')}
+            ORDER BY total_cost DESC 
+            LIMIT 100
           `;
-          if (machineId) {
-            query += ` AND machine_id = '${machineId}'`;
-          }
-          query += ' ORDER BY total_cost DESC LIMIT 100';
           break;
           
         case 'project':
+          const projectWhereConditions = [...whereConditions, 'project_path IS NOT NULL'];
           query = `
             SELECT 
               project_path,
@@ -1228,12 +1671,10 @@ app.get('/api/usage/analytics/costs', authenticateApiKey, async (req, res) => {
               SUM(total_tokens) as total_tokens,
               AVG(duration_minutes) as avg_duration
             FROM usage_sessions
-            WHERE user_id = ${userId} AND project_path IS NOT NULL
+            WHERE ${projectWhereConditions.join(' AND ')}
+            GROUP BY project_path 
+            ORDER BY total_cost DESC
           `;
-          if (machineId) {
-            query += ` AND machine_id = '${machineId}'`;
-          }
-          query += ' GROUP BY project_path ORDER BY total_cost DESC';
           break;
           
         default: // day
@@ -1244,15 +1685,13 @@ app.get('/api/usage/analytics/costs', authenticateApiKey, async (req, res) => {
               SUM(total_cost) as total_cost,
               SUM(total_tokens) as total_tokens
             FROM usage_sessions
-            WHERE user_id = ${userId}
+            WHERE ${whereConditions.join(' AND ')}
+            GROUP BY date(start_time) 
+            ORDER BY date DESC
           `;
-          if (machineId) {
-            query += ` AND machine_id = '${machineId}'`;
-          }
-          query += ' GROUP BY date(start_time) ORDER BY date DESC';
       }
       
-      return await db.sql`${query}`;
+      return await db.prepare(query).bind(...params).all();
     }, { operation: 'fetch_cost_analytics', user_id: userId });
     
     res.json({ groupBy, costs });
@@ -1264,14 +1703,6 @@ app.get('/api/usage/analytics/costs', authenticateApiKey, async (req, res) => {
 
 async function initializeServer() {
   try {
-    // Initialize database manager
-    dbManager = initializeDbManager(DATABASE_URL, {
-      maxConnections: parseInt(process.env.DB_MAX_CONNECTIONS) || 10,
-      idleTimeout: parseInt(process.env.DB_IDLE_TIMEOUT) || 30000,
-      retryAttempts: parseInt(process.env.DB_RETRY_ATTEMPTS) || 3,
-      retryDelay: parseInt(process.env.DB_RETRY_DELAY) || 1000
-    });
-    
     logger.info('Database manager initialized', {
       maxConnections: dbManager.options.maxConnections,
       idleTimeout: dbManager.options.idleTimeout,
@@ -1283,7 +1714,6 @@ async function initializeServer() {
     logger.info('Email service status', {
       enabled: emailService.isEnabled(),
       resendApiKeyConfigured: !!process.env.RESEND_API_KEY,
-      resendApiKeyLength: process.env.RESEND_API_KEY?.length || 0,
       emailDomain: emailDomain,
       fromAddress: `PromptPulse <noreply@${emailDomain}>`
     });

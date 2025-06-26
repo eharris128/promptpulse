@@ -108,11 +108,11 @@ node check-db.js    # Test database connectivity
 - Environmental impact tracking with CO2 emissions and tree equivalents
 
 ### Environmental Impact Tracking
-- Integrates with EcoLogits for CO2 emissions calculation
+- Custom Python service using EcoLogits-inspired methodology for CO2 emissions calculation
 - Displays environmental impact in relatable terms (tree equivalents)
 - Shows energy consumption and carbon intensity
-- Provides efficiency ratings and environmental insights
-- Falls back to estimated calculations if EcoLogits service unavailable
+- Provides informational environmental insights (no behavioral recommendations)
+- Falls back to estimated calculations if Python service unavailable
 - Supports both real-time and historical environmental analysis
 
 ## Development Workflow
@@ -177,13 +177,16 @@ promptpulse whoami                      # Verify authentication
 ### Environmental Tracking Setup
 1. **Install Python Dependencies**:
    ```bash
-   pip install ecologits[anthropic] flask
+   cd environmental-service
+   uv sync  # or pip install flask python-dotenv requests
    ```
 
-2. **Create Python Environmental Service**:
-   ```python
-   # environmental-service.py - see implementation in repository
-   # Run with: python environmental-service.py
+2. **Run Environmental Service**:
+   ```bash
+   cd environmental-service
+   PYTHONPATH=. uv run python -m src.app
+   # Or: uv run python run.py
+   # Service runs on http://localhost:5000
    ```
 
 3. **Configure Environment Variables**:
@@ -197,6 +200,8 @@ promptpulse whoami                      # Verify authentication
    promptpulse collect --granularity session
    # Should show environmental calculations in output
    ```
+
+**Note**: The environmental service uses a custom implementation inspired by EcoLogits research methodology. It does not require the official EcoLogits package.
 
 ### Deployment
 - API server can be deployed to any Node.js platform

@@ -335,7 +335,7 @@ export default function Teams() {
       {teams.length === 0 && !showCreateForm && (
         <Card>
           <CardContent className="text-center py-8">
-            <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <Users className="mx-auto h-12 w-12 text-muted-foreground mt-4 mb-4" />
             <h3 className="text-lg font-semibold mb-2">No teams yet</h3>
             <p className="text-muted-foreground mb-4">
               Create your first team to start comparing Claude Code usage with colleagues

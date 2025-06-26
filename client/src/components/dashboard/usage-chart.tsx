@@ -15,7 +15,8 @@ export function UsageChart({ data, type }: UsageChartProps) {
   console.log(`UsageChart ${type} received data:`, data)
   console.log(`UsageChart ${type} daily array:`, data.daily)
   
-  if (!data.daily || data.daily.length === 0) {
+  // Robust check for data.daily being a valid array
+  if (!data || !data.daily || !Array.isArray(data.daily) || data.daily.length === 0) {
     return (
       <Card className="col-span-4">
         <CardHeader>

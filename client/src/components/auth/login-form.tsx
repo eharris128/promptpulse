@@ -86,8 +86,8 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                 </div>
                 <div>
                   <p className="mb-1">2. Run:</p>
-                  <CopyBlock value="promptpulse user init">
-                    promptpulse user init
+                  <CopyBlock value="promptpulse login">
+                    promptpulse login
                   </CopyBlock>
                 </div>
               </div>

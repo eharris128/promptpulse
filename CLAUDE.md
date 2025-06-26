@@ -105,6 +105,15 @@ node check-db.js    # Test database connectivity
 - Machine management and session tracking
 - Privacy-controlled leaderboard participation
 - Dark mode support
+- Environmental impact tracking with CO2 emissions and tree equivalents
+
+### Environmental Impact Tracking
+- Integrates with EcoLogits for CO2 emissions calculation
+- Displays environmental impact in relatable terms (tree equivalents)
+- Shows energy consumption and carbon intensity
+- Provides efficiency ratings and environmental insights
+- Falls back to estimated calculations if EcoLogits service unavailable
+- Supports both real-time and historical environmental analysis
 
 ## Development Workflow
 
@@ -151,6 +160,12 @@ promptpulse whoami                      # Verify authentication
   - Uses format: `PromptPulse <noreply@{EMAIL_FROM_DOMAIN}>`
   - Recommended: Set up a Resend subdomain like `mail.promptpulse.dev`
 
+### Environmental Tracking Configuration
+- `ENVIRONMENTAL_TRACKING_ENABLED` - Enable environmental impact tracking (default: true)
+- `ENVIRONMENTAL_SERVICE_URL` - URL for Python EcoLogits service (default: http://localhost:5000)
+  - In production, set to your deployed Python environmental service
+  - Used for calculating CO2 emissions and environmental equivalents
+
 ## Common Tasks
 
 ### Local Development
@@ -158,6 +173,30 @@ promptpulse whoami                      # Verify authentication
 2. Run `npm run migrate` to set up database
 3. Use `npm run dev` for full development environment
 4. Test CLI with `npm link` for global installation
+
+### Environmental Tracking Setup
+1. **Install Python Dependencies**:
+   ```bash
+   pip install ecologits[anthropic] flask
+   ```
+
+2. **Create Python Environmental Service**:
+   ```python
+   # environmental-service.py - see implementation in repository
+   # Run with: python environmental-service.py
+   ```
+
+3. **Configure Environment Variables**:
+   ```bash
+   export ENVIRONMENTAL_TRACKING_ENABLED=true
+   export ENVIRONMENTAL_SERVICE_URL=http://localhost:5000
+   ```
+
+4. **Test Environmental Integration**:
+   ```bash
+   promptpulse collect --granularity session
+   # Should show environmental calculations in output
+   ```
 
 ### Deployment
 - API server can be deployed to any Node.js platform

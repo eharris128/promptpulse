@@ -45,3 +45,13 @@ node_modules/
 *.temp
 
 /scripts
+
+# Python environment files
+environmental-service/
+__pycache__/
+*.py[cod]
+
+# Development files
+Makefile
+docker-compose*.yml
+DEVELOPMENT.md

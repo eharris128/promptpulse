@@ -77,3 +77,10 @@ node_modules/
 llms.txt
 
 scripts/
+
+# Development files
+Makefile
+docker-compose*.yml
+Dockerfile
+environmental-service/
+DEVELOPMENT.md

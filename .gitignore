@@ -7,3 +7,33 @@ client/.next/
 
 # Only ignore client's package-lock for now
 client/package-lock.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Python package manager
+.uv/
+uv.lock
+
+# Temporary fix scripts (not for commit)
+fix-teams-tables.js

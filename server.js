@@ -704,6 +704,16 @@ app.post('/api/usage/blocks/batch', authenticateApiKey, async (req, res) => {
           continue; // Skip records not belonging to this user
         }
         
+        // Validate data types to prevent serialization errors
+        if (typeof record.entry_count !== 'number' && record.entry_count !== null && record.entry_count !== undefined) {
+          logger.warn('Invalid entry_count type in block record', {
+            blockId: record.block_id,
+            entryCountType: typeof record.entry_count,
+            entryCountValue: record.entry_count
+          });
+          record.entry_count = Array.isArray(record.entry_count) ? record.entry_count.length : 0;
+        }
+        
         await db.sql`
           INSERT OR REPLACE INTO usage_blocks (
             machine_id, user_id, block_id, start_time, end_time, actual_end_time,
@@ -725,7 +735,7 @@ app.post('/api/usage/blocks/batch', authenticateApiKey, async (req, res) => {
             ${record.cache_read_tokens},
             ${record.total_tokens},
             ${record.total_cost},
-            ${record.models_used ? JSON.stringify(record.models_used) : '[]'}
+            ${JSON.stringify(record.models_used || [])}
           )
         `;
         processedCount++;
@@ -743,8 +753,15 @@ app.post('/api/usage/blocks/batch', authenticateApiKey, async (req, res) => {
     });
     
   } catch (error) {
-    logError(error, { context: 'upload_blocks_batch', userId, queryContext });
-    res.status(500).json({ error: 'Database error' });
+    logError(error, { 
+      context: 'upload_blocks_batch', 
+      userId, 
+      queryContext,
+      sampleRecord: records[0],
+      recordCount: records.length
+    });
+    console.error('Block batch upload error:', error);
+    res.status(500).json({ error: 'Database error', details: error.message });
   }
 });
 

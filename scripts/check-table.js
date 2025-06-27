@@ -12,18 +12,26 @@ try {
     console.log(`  ${col.name}: ${col.type}`);
   });
   
-  // Check if environmental columns exist
-  const hasEnergyWh = result.some(col => col.name === 'energy_wh');
-  const hasCo2 = result.some(col => col.name === 'co2_emissions_g');
-  const hasTree = result.some(col => col.name === 'tree_equivalent');
+  console.log('\nChecking for any remaining issues...');
   
-  console.log('\nEnvironmental columns status:');
-  console.log(`  energy_wh: ${hasEnergyWh ? '✓ EXISTS' : '✗ MISSING'}`);
-  console.log(`  co2_emissions_g: ${hasCo2 ? '✓ EXISTS' : '✗ MISSING'}`);
-  console.log(`  tree_equivalent: ${hasTree ? '✓ EXISTS' : '✗ MISSING'}`);
+  // Check for basic required columns
+  const requiredColumns = ['machine_id', 'user_id', 'total_tokens', 'total_cost'];
+  const missingColumns = requiredColumns.filter(col => 
+    !result.some(tableCol => tableCol.name === col)
+  );
+  
+  if (missingColumns.length > 0) {
+    console.log('❌ Missing required columns:', missingColumns);
+  } else {
+    console.log('✅ All required columns present');
+  }
+  
+  // Check total record count
+  const countResult = await db.sql`SELECT COUNT(*) as count FROM usage_data`;
+  console.log(`\nTotal records in usage_data: ${countResult[0].count}`);
   
 } catch (error) {
-  console.error('Error:', error.message);
+  console.error('Error checking table:', error);
 } finally {
   await db.close();
 }

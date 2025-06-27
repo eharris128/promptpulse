@@ -234,7 +234,6 @@ app.post('/api/users', async (req, res) => {
       message: 'User created successfully',
       user: {
         id: user.id,
-        ksuid: user.ksuid,
         email: user.email,
         username: user.username,
         apiKey: user.api_key
@@ -254,7 +253,6 @@ app.get('/api/auth/validate', authenticateApiKey, async (req, res) => {
       message: 'API key is valid',
       user: {
         id: req.user.id,
-        ksuid: req.user.ksuid,
         email: req.user.email,
         username: req.user.username,
         created_at: req.user.created_at
@@ -336,7 +334,7 @@ app.get('/api/usage/aggregate', authenticateApiKey, async (req, res) => {
     
     const results = await dbManager.executeQuery(async (db) => {
       // Build WHERE conditions using template literals
-      let whereConditions = [`user_id = ${userId}`];
+      let whereConditions = [`user_id = '${userId}'`];
       
       if (since) {
         whereConditions.push(`date >= '${since}'`);
@@ -468,7 +466,7 @@ app.get('/api/usage/sessions', authenticateApiKey, async (req, res) => {
   try {
     const sessions = await dbManager.executeQuery(async (db) => {
       // Build query dynamically with SQLite Cloud syntax
-      let conditions = [`user_id = ${userId}`];
+      let conditions = [`user_id = '${userId}'`];
       
       if (machineId) {
         conditions.push(`machine_id = '${machineId}'`);
@@ -517,7 +515,7 @@ app.get('/api/usage/blocks', authenticateApiKey, async (req, res) => {
   
   try {
     const blocks = await dbManager.executeQuery(async (db) => {
-      let conditions = [`user_id = ${userId}`];
+      let conditions = [`user_id = '${userId}'`];
       
       if (machineId) {
         conditions.push(`machine_id = '${machineId}'`);

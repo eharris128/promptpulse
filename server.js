@@ -208,8 +208,7 @@ app.get('/api/users/by-username/:username', async (req, res) => {
         id: user[0].id,
         username: user[0].username,
         email: user[0].email,
-        created_at: user[0].created_at,
-        api_key_preview: user[0].api_key.substring(0, 8) + '...'
+        created_at: user[0].created_at
       }
     });
     
@@ -336,26 +335,22 @@ app.get('/api/usage/aggregate', authenticateApiKey, async (req, res) => {
   try {
     
     const results = await dbManager.executeQuery(async (db) => {
-      // Build WHERE conditions safely
-      let whereConditions = ['user_id = ?'];
-      let params = [userId];
+      // Build WHERE conditions using template literals
+      let whereConditions = [`user_id = ${userId}`];
       
       if (since) {
-        whereConditions.push('date >= ?');
-        params.push(since);
+        whereConditions.push(`date >= '${since}'`);
       }
       if (until) {
-        whereConditions.push('date <= ?');
-        params.push(until);
+        whereConditions.push(`date <= '${until}'`);
       }
       if (machineId) {
-        whereConditions.push('machine_id = ?');
-        params.push(machineId);
+        whereConditions.push(`machine_id = '${machineId}'`);
       }
       
       const whereClause = `WHERE ${whereConditions.join(' AND ')}`;
       
-      // Build daily query
+      // Execute daily query
       const dailyQuery = `
         SELECT 
           machine_id,
@@ -365,18 +360,14 @@ app.get('/api/usage/aggregate', authenticateApiKey, async (req, res) => {
           SUM(cache_creation_tokens) as cache_creation_tokens,
           SUM(cache_read_tokens) as cache_read_tokens,
           SUM(total_tokens) as total_tokens,
-          SUM(total_cost) as total_cost,
-          SUM(energy_wh) as total_energy_wh,
-          SUM(co2_emissions_g) as total_co2_emissions_g,
-          SUM(tree_equivalent) as total_tree_equivalent,
-          AVG(carbon_intensity_g_kwh) as avg_carbon_intensity_g_kwh
+          SUM(total_cost) as total_cost
         FROM usage_data
         ${whereClause}
         GROUP BY machine_id, date 
         ORDER BY date DESC, machine_id
       `;
       
-      // Build total query
+      // Execute total query  
       const totalQuery = `
         SELECT 
           COUNT(DISTINCT machine_id) as total_machines,
@@ -385,19 +376,15 @@ app.get('/api/usage/aggregate', authenticateApiKey, async (req, res) => {
           SUM(cache_creation_tokens) as total_cache_creation_tokens,
           SUM(cache_read_tokens) as total_cache_read_tokens,
           SUM(total_tokens) as total_tokens,
-          SUM(total_cost) as total_cost,
-          SUM(energy_wh) as total_energy_wh,
-          SUM(co2_emissions_g) as total_co2_emissions_g,
-          SUM(tree_equivalent) as total_tree_equivalent,
-          AVG(carbon_intensity_g_kwh) as avg_carbon_intensity_g_kwh
+          SUM(total_cost) as total_cost
         FROM usage_data
         ${whereClause}
       `;
       
-      // Execute both queries with bound parameters
+      // Execute both queries
       const [daily, totalsArray] = await Promise.all([
-        db.prepare(dailyQuery).bind(...params).all(),
-        db.prepare(totalQuery).bind(...params).all()
+        db.sql(dailyQuery),
+        db.sql(totalQuery)
       ]);
       
       const totals = totalsArray[0] || {};
@@ -413,7 +400,9 @@ app.get('/api/usage/aggregate', authenticateApiKey, async (req, res) => {
         dailyResultsCount: dailyResults.length,
         dailyIsArray: Array.isArray(daily),
         totalsType: typeof totals,
-        requestId: req.requestId
+        requestId: req.requestId,
+        dailyQuery,
+        totalQuery
       });
       
       return { daily: dailyResults, totals: totals || {} };
@@ -453,10 +442,7 @@ app.get('/api/machines', authenticateApiKey, async (req, res) => {
           COUNT(*) as days_tracked,
           MIN(date) as first_date,
           MAX(date) as last_date,
-          SUM(total_cost) as total_cost,
-          SUM(energy_wh) as total_energy_wh,
-          SUM(co2_emissions_g) as total_co2_emissions_g,
-          SUM(tree_equivalent) as total_tree_equivalent
+          SUM(total_cost) as total_cost
         FROM usage_data 
         WHERE user_id = ${userId}
         GROUP BY machine_id
@@ -472,57 +458,6 @@ app.get('/api/machines', authenticateApiKey, async (req, res) => {
   }
 });
 
-// Environmental data endpoint
-app.get('/api/environmental/summary', authenticateApiKey, async (req, res) => {
-  const { since, until, machineId } = req.query;
-  const userId = req.user.id;
-  const queryContext = logDatabaseQuery('environmental_summary', userId);
-  
-  try {
-    const summary = await dbManager.executeQuery(async (db) => {
-      // Build WHERE conditions safely using parameterized queries
-      let whereConditions = ['user_id = ?'];
-      let params = [userId];
-      
-      if (since) {
-        whereConditions.push('date >= ?');
-        params.push(since);
-      }
-      if (until) {
-        whereConditions.push('date <= ?');
-        params.push(until);
-      }
-      if (machineId) {
-        whereConditions.push('machine_id = ?');
-        params.push(machineId);
-      }
-      
-      const query = `
-        SELECT 
-          COUNT(*) as total_sessions,
-          SUM(total_tokens) as total_tokens,
-          SUM(total_cost) as total_cost,
-          SUM(energy_wh) as total_energy_wh,
-          SUM(co2_emissions_g) as total_co2_emissions_g,
-          SUM(tree_equivalent) as total_tree_equivalent,
-          AVG(carbon_intensity_g_kwh) as avg_carbon_intensity_g_kwh,
-          COUNT(CASE WHEN energy_wh IS NOT NULL THEN 1 END) as sessions_with_environmental_data
-        FROM usage_data
-        WHERE ${whereConditions.join(' AND ')}
-      `;
-      
-      const results = await db.prepare(query).bind(...params).all();
-      return results[0] || {};
-    }, { ...queryContext, operation: 'fetch_environmental_summary' });
-    
-    res.json(summary || {});
-    log.performance('environmental_summary', Date.now() - queryContext.startTime, { userId });
-    
-  } catch (error) {
-    logError(error, { context: 'environmental_summary', userId, queryContext });
-    res.status(500).json({ error: 'Database error' });
-  }
-});
 
 // Session data endpoints
 app.get('/api/usage/sessions', authenticateApiKey, async (req, res) => {
@@ -704,8 +639,7 @@ app.post('/api/usage/sessions/batch', authenticateApiKey, async (req, res) => {
             machine_id, user_id, session_id, project_path, start_time, end_time,
             duration_minutes, input_tokens, output_tokens, 
             cache_creation_tokens, cache_read_tokens, total_tokens,
-            total_cost, models_used, model_breakdowns,
-            energy_wh, co2_emissions_g, carbon_intensity_g_kwh, tree_equivalent, environmental_source
+            total_cost, models_used, model_breakdowns
           ) VALUES (
             ${record.machine_id},
             ${record.user_id},
@@ -721,12 +655,7 @@ app.post('/api/usage/sessions/batch', authenticateApiKey, async (req, res) => {
             ${record.total_tokens},
             ${record.total_cost},
             ${JSON.stringify(record.models_used)},
-            ${JSON.stringify(record.model_breakdowns)},
-            ${record.energy_wh},
-            ${record.co2_emissions_g},
-            ${record.carbon_intensity_g_kwh},
-            ${record.tree_equivalent},
-            ${record.environmental_source}
+            ${JSON.stringify(record.model_breakdowns)}
           )
         `;
         processedCount++;
@@ -780,8 +709,7 @@ app.post('/api/usage/blocks/batch', authenticateApiKey, async (req, res) => {
             machine_id, user_id, block_id, start_time, end_time, actual_end_time,
             is_active, entry_count, input_tokens, output_tokens, 
             cache_creation_tokens, cache_read_tokens, total_tokens,
-            total_cost, models_used,
-            energy_wh, co2_emissions_g, carbon_intensity_g_kwh, tree_equivalent, environmental_source
+            total_cost, models_used
           ) VALUES (
             ${record.machine_id},
             ${record.user_id},
@@ -797,12 +725,7 @@ app.post('/api/usage/blocks/batch', authenticateApiKey, async (req, res) => {
             ${record.cache_read_tokens},
             ${record.total_tokens},
             ${record.total_cost},
-            ${JSON.stringify(record.models_used)},
-            ${record.energy_wh},
-            ${record.co2_emissions_g},
-            ${record.carbon_intensity_g_kwh},
-            ${record.tree_equivalent},
-            ${record.environmental_source}
+            ${record.models_used ? JSON.stringify(record.models_used) : '[]'}
           )
         `;
         processedCount++;

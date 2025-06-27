@@ -15,9 +15,6 @@ export interface Machine {
   first_date: string;
   last_date: string;
   total_cost: number;
-  total_energy_wh?: number;
-  total_co2_emissions_g?: number;
-  total_tree_equivalent?: number;
 }
 
 export interface UsageData {
@@ -31,10 +28,6 @@ export interface UsageData {
   total_cost: number;
   models_used: string[];
   model_breakdowns: Record<string, any>;
-  total_energy_wh?: number;
-  total_co2_emissions_g?: number;
-  total_tree_equivalent?: number;
-  avg_carbon_intensity_g_kwh?: number;
 }
 
 export interface SessionData {
@@ -83,10 +76,6 @@ export interface AggregateData {
     total_cache_read_tokens: number;
     total_tokens: number;
     total_cost: number;
-    total_energy_wh?: number;
-    total_co2_emissions_g?: number;
-    total_tree_equivalent?: number;
-    avg_carbon_intensity_g_kwh?: number;
   };
 }
 
@@ -203,23 +192,6 @@ export interface TeamLeaderboardData {
   total_participants: number;
 }
 
-export interface EnvironmentalSummary {
-  total_sessions: number;
-  total_tokens: number;
-  total_cost: number;
-  total_energy_wh: number;
-  total_co2_emissions_g: number;
-  total_tree_equivalent: number;
-  avg_carbon_intensity_g_kwh: number;
-  sessions_with_environmental_data: number;
-}
-
-export interface EnvironmentalSettings {
-  show_environmental_data: boolean;
-  preferred_equivalent_display: 'trees' | 'energy' | 'co2' | 'multiple';
-  include_in_leaderboards: boolean;
-  detail_level: 'summary' | 'detailed';
-}
 
 export interface ApiResponse<T = any> {
   data?: T;

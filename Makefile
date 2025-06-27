@@ -1,21 +1,19 @@
 # PromptPulse Development Makefile
-# Manages both Node.js API/Client and Python Environmental Service
+# Manages Node.js API and Next.js Client
 
-.PHONY: help install dev start-env start-api start-client test clean logs health stop setup check-deps
+.PHONY: help install dev start-api start-client test clean logs health stop setup check-deps
 
 # Default target
 help:
-	@echo "🌱 PromptPulse Development Commands"
+	@echo "PromptPulse Development Commands"
 	@echo "=================================="
 	@echo ""
 	@echo "Development:"
-	@echo "  make dev         - Start full development environment (API + Client + Environmental)"
-	@echo "  make start-env   - Start only environmental service"
+	@echo "  make dev         - Start full development environment (API + Client)"
 	@echo "  make start-api   - Start only Node.js API server"
 	@echo "  make start-client- Start only Next.js client"
 	@echo "  make restart-client - Restart only Next.js client"
 	@echo "  make restart-api - Restart only Node.js API server"
-	@echo "  make restart-env - Restart only environmental service"
 	@echo ""
 	@echo "Setup:"
 	@echo "  make install     - Install all dependencies"
@@ -24,7 +22,6 @@ help:
 	@echo ""
 	@echo "Testing:"
 	@echo "  make test        - Run tests for both services"
-	@echo "  make test-env    - Test environmental service only"
 	@echo "  make test-api    - Test Node.js API only"
 	@echo ""
 	@echo "Management:"
@@ -48,8 +45,6 @@ install: check-deps
 	@echo "📦 Installing dependencies..."
 	@echo "Installing Node.js dependencies..."
 	@npm install
-	@echo "Installing Python dependencies..."
-	@cd environmental-service && uv sync
 	@echo "✅ All dependencies installed"
 
 # Setup environment files
@@ -61,11 +56,6 @@ setup:
 dev: setup
 	@echo "🚀 Starting full development environment..."
 	@./scripts/start-dev.sh
-
-# Start environmental service only
-start-env:
-	@echo "🌱 Starting environmental service..."
-	@./scripts/start-environmental.sh
 
 # Start Node.js API only
 start-api:
@@ -81,11 +71,6 @@ start-client:
 test:
 	@echo "🧪 Running all tests..."
 	@./scripts/run-tests.sh
-
-# Test environmental service only
-test-env:
-	@echo "🧪 Testing environmental service..."
-	@cd environmental-service && uv run python test_service.py
 
 # Test Node.js API only
 test-api:
@@ -130,16 +115,8 @@ db-reset:
 # Development shortcuts
 api: start-api
 client: start-client
-env: start-env
 
 # Restart individual services
-restart-env:
-	@echo "🔄 Restarting environmental service..."
-	@echo "🛑 Killing processes on port 5000..."
-	@lsof -ti:5000 | xargs kill -9 2>/dev/null || true
-	@if [ -f "logs/pids/environmental-service.pid" ]; then rm -f logs/pids/environmental-service.pid; fi
-	@./scripts/start-environmental.sh
-
 restart-api:
 	@echo "🔄 Restarting API server..."
 	@echo "🛑 Killing processes on port 3000..."
@@ -161,15 +138,12 @@ kill-ports:
 	@lsof -ti:3000 | xargs kill -9 2>/dev/null || true
 	@echo "   Port 3001 (Client)..."
 	@lsof -ti:3001 | xargs kill -9 2>/dev/null || true
-	@echo "   Port 5000 (Environmental)..."
-	@lsof -ti:5000 | xargs kill -9 2>/dev/null || true
 	@echo "✅ All ports cleared"
 
 # Production deployment helpers
 build:
 	@echo "🏗️  Building for production..."
 	@npm run build
-	@cd environmental-service && uv build
 
 deploy: build
 	@echo "🚀 Deploying to production..."
@@ -179,7 +153,6 @@ deploy: build
 docker-build:
 	@echo "🐳 Building Docker images..."
 	@docker build -t promptpulse-api .
-	@docker build -t promptpulse-env-service ./environmental-service
 
 docker-dev:
 	@echo "🐳 Starting Docker development environment..."
@@ -202,4 +175,3 @@ info:
 	@echo "  uv version: $(shell uv --version 2>/dev/null || echo 'Not installed')"
 	@echo "  API URL: http://localhost:3000"
 	@echo "  Client URL: http://localhost:3001"
-	@echo "  Environmental Service URL: http://localhost:5000"

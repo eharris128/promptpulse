@@ -4,41 +4,6 @@
 version: '3.8'
 
 services:
-  # Environmental Service
-  environmental-service:
-    build:
-      context: ./environmental-service
-      dockerfile: Dockerfile
-    ports:
-      - "5000:5000"
-    environment:
-      - FLASK_DEBUG=true
-      - LOG_LEVEL=DEBUG
-      - REDIS_URL=redis://redis:6379/0
-    volumes:
-      - ./environmental-service/src:/app/src:ro
-      - ./environmental-service/.env:/app/.env:ro
-    depends_on:
-      - redis
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - promptpulse-network
-
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    command: redis-server --appendonly yes
-    volumes:
-      - redis-data:/data
-    networks:
-      - promptpulse-network
-
   # Node.js API Server
   api-server:
     build:
@@ -48,15 +13,12 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=development
-      - ENVIRONMENTAL_SERVICE_URL=http://environmental-service:5000
       - DATABASE_URL=${DATABASE_URL}
       - LOG_LEVEL=debug
     volumes:
       - .:/app:ro
       - /app/node_modules
       - ./.env:/app/.env:ro
-    depends_on:
-      - environmental-service
     networks:
       - promptpulse-network
 
@@ -79,8 +41,6 @@ services:
     networks:
       - promptpulse-network
 
-volumes:
-  redis-data:
 
 networks:
   promptpulse-network:

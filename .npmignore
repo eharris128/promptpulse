@@ -82,5 +82,4 @@ scripts/
 Makefile
 docker-compose*.yml
 Dockerfile
-environmental-service/
 DEVELOPMENT.md

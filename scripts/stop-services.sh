@@ -49,7 +49,6 @@ stop_service() {
 # Stop services in reverse order
 stop_service "Client" "logs/pids/client.pid"
 stop_service "API Server" "logs/pids/api-server.pid"
-stop_service "Environmental Service" "logs/pids/environmental-service.pid"
 
 # Also try to kill any remaining processes on known ports
 echo -e "${BLUE}🔍 Checking for remaining processes on ports...${NC}"
@@ -66,18 +65,13 @@ if lsof -ti:3000 > /dev/null 2>&1; then
     lsof -ti:3000 | xargs kill -9 2>/dev/null || true
 fi
 
-# Check port 5000 (environmental service)
-if lsof -ti:5000 > /dev/null 2>&1; then
-    echo -e "${YELLOW}🛑 Killing remaining processes on port 5000...${NC}"
-    lsof -ti:5000 | xargs kill -9 2>/dev/null || true
-fi
 
 echo ""
 echo -e "${GREEN}🎉 All services stopped successfully!${NC}"
 
 # Optionally show what's still running on our ports
 echo -e "${BLUE}🔍 Final port check:${NC}"
-for port in 3000 3001 5000; do
+for port in 3000 3001; do
     if lsof -ti:$port > /dev/null 2>&1; then
         echo -e "${RED}⚠️  Port $port still in use${NC}"
     else

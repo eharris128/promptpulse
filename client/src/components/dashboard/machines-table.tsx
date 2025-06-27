@@ -1,7 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCost, formatTreeEquivalent } from '@/lib/utils'
+import { formatCost } from '@/lib/utils'
 import { Machine } from '@/types'
 import { format, parseISO } from 'date-fns'
 
@@ -19,10 +19,6 @@ export function MachinesTable({ machines }: MachinesTableProps) {
     }
   }
 
-  // Check if any machine has environmental data
-  const hasEnvironmentalData = machines.some(machine => 
-    machine.total_tree_equivalent && machine.total_tree_equivalent > 0
-  )
 
   return (
     <Card className="col-span-3">
@@ -52,11 +48,6 @@ export function MachinesTable({ machines }: MachinesTableProps) {
                   <p className="text-xs text-muted-foreground">
                     {formatDate(machine.first_date)} - {formatDate(machine.last_date)}
                   </p>
-                  {hasEnvironmentalData && machine.total_tree_equivalent && machine.total_tree_equivalent > 0 && (
-                    <p className="text-xs text-green-600">
-                      {formatTreeEquivalent(machine.total_tree_equivalent)}
-                    </p>
-                  )}
                 </div>
                 <div className="ml-auto font-medium">
                   {formatCost(machine.total_cost)}

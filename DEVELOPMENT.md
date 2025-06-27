@@ -15,7 +15,7 @@ make install
 make dev
 ```
 
-That's it! All services will be running and ready for development.
+That's it! Both services will be running and ready for development.
 
 ## 📋 Available Commands
 
@@ -23,8 +23,7 @@ That's it! All services will be running and ready for development.
 
 | Command | Description |
 |---------|-------------|
-| `make dev` | Start full development environment (API + Client + Environmental) |
-| `make start-env` | Start only environmental service |
+| `make dev` | Start full development environment (API + Client) |
 | `make start-api` | Start only Node.js API server |
 | `make start-client` | Start only Next.js client |
 
@@ -40,8 +39,7 @@ That's it! All services will be running and ready for development.
 
 | Command | Description |
 |---------|-------------|
-| `make test` | Run tests for both services |
-| `make test-env` | Test environmental service only |
+| `make test` | Run all tests |
 | `make test-api` | Test Node.js API only |
 
 ### Management Commands
@@ -53,329 +51,174 @@ That's it! All services will be running and ready for development.
 | `make stop` | Stop all running services |
 | `make clean` | Clean up processes and temporary files |
 
-### Database Commands
-
-| Command | Description |
-|---------|-------------|
-| `make migrate` | Run database migrations |
-| `make db-reset` | Reset database (development only) |
-
 ## 🌐 Service URLs
 
 When running the development environment:
 
-- **Client Dashboard**: http://localhost:3001
 - **API Server**: http://localhost:3000
-- **Environmental Service**: http://localhost:5000
+- **Client Dashboard**: http://localhost:3001
 
-### Health Check URLs
+## 🔗 Quick Links
 
+- **Dashboard**: http://localhost:3001
 - **API Health**: http://localhost:3000/health
-- **Environmental Health**: http://localhost:5000/health
-- **Environmental Methodology**: http://localhost:5000/methodology
 
 ## 📁 Project Structure
 
 ```
 promptpulse/
-├── Makefile                    # Main development commands
-├── scripts/                    # Helper scripts
-│   ├── start-dev.sh           # Start full environment
-│   ├── start-environmental.sh # Start Python service
-│   ├── start-api.sh           # Start Node.js API
-│   ├── start-client.sh        # Start Next.js client
-│   ├── stop-services.sh       # Stop all services
-│   ├── check-health.sh        # Health check all services
-│   ├── show-logs.sh           # Show service logs
-│   ├── run-tests.sh           # Run test suite
-│   ├── setup-env.sh           # Setup environment files
-│   └── check-deps.sh          # Check dependencies
-├── environmental-service/      # Python environmental service
-│   ├── src/                   # Python source code
-│   ├── Dockerfile            # Docker configuration
-│   └── pyproject.toml        # Python dependencies
-├── client/                    # Next.js dashboard
-├── lib/                       # Node.js utilities
-├── server.js                  # Express.js API server
-└── logs/                      # Service logs
-    ├── pids/                  # Process ID files
-    ├── environmental-service.log
+├── bin/
+│   └── promptpulse.js           # CLI entry point
+├── lib/
+│   ├── collect.js               # Core data collection
+│   └── config.js               # Configuration utilities
+├── server.js                   # Express API server
+├── client/                     # Next.js dashboard
+├── migrations/                 # Database migrations
+├── scripts/
+│   ├── start-dev.sh            # Development startup
+│   ├── start-api.sh            # API server only
+│   └── start-client.sh         # Client only
+└── logs/
+    ├── pids/                   # Process ID files
     ├── api-server.log
     └── client.log
 ```
 
-## 🔧 Configuration
+## ⚙️ Configuration
 
 ### Environment Files
 
-The development environment uses several configuration files:
-
-- **`.env`** - Main configuration (API server, database, environmental service)
-- **`environmental-service/.env`** - Python service configuration
+- **`.env`** - Main configuration (API server, database)
 - **`client/.env.local`** - Next.js client configuration
 
-### Key Configuration Variables
+### Required Environment Variables
 
 ```bash
 # Database
-DATABASE_URL=libsql://your-database-url
+DATABASE_URL=your_sqlite_cloud_url
 
-# Environmental Service
-ENVIRONMENTAL_TRACKING_ENABLED=true
-ENVIRONMENTAL_SERVICE_URL=http://localhost:5000
-
-# Email (optional)
-RESEND_API_KEY=your_resend_key
-EMAIL_FROM_DOMAIN=mail.promptpulse.dev
-
-# Development
+# API Server
+PORT=3000
 NODE_ENV=development
-LOG_LEVEL=debug
+
+# Optional
+MACHINE_ID=your-machine-name
+LOG_LEVEL=info
 ```
 
-## 🐛 Debugging
-
-### View Logs
-
-```bash
-# All service logs
-make logs
-
-# Follow logs in real-time
-./scripts/show-logs.sh -f
-
-# Specific service logs
-./scripts/show-logs.sh --env
-./scripts/show-logs.sh --api
-./scripts/show-logs.sh --client
-```
-
-### Health Checks
-
-```bash
-# Check all services
-make health
-
-# Manual health checks
-curl http://localhost:5000/health
-curl http://localhost:3000/health
-curl http://localhost:3001
-```
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-1. **Port conflicts**: 
+1. **Port already in use**:
    ```bash
    make stop  # Stop all services
    make clean # Clean up processes
    ```
 
-2. **Dependency issues**:
-   ```bash
-   make check-deps  # Verify dependencies
-   make install     # Reinstall dependencies
-   ```
+2. **Database connection issues**:
+   - Check your `DATABASE_URL` in `.env`
+   - Ensure SQLite Cloud database is accessible
 
-3. **Environmental service not responding**:
+3. **Services not starting**:
    ```bash
-   cd environmental-service
-   uv run python test_service.py
-   ```
-
-4. **Database issues**:
-   ```bash
-   make migrate  # Run migrations
+   make check-deps  # Check dependencies
+   make health      # Check service status
    ```
 
 ## 🧪 Testing
 
-### Run All Tests
+### Running Tests
 
 ```bash
+# All tests
 make test
-```
 
-This runs:
-- Environmental service unit tests
-- Node.js API tests (if configured)
-- Integration tests
-- Health checks
-- Performance tests
-
-### Individual Test Suites
-
-```bash
-# Environmental service only
-make test-env
-
-# API tests only
+# API tests only  
 make test-api
 
-# Manual environmental service test
-cd environmental-service
-uv run python test_service.py
-```
-
-## 🌱 Environmental Impact Testing
-
-Test the environmental service integration:
-
-```bash
-# Start environmental service
-make start-env
-
-# Test calculation
-curl -X POST http://localhost:5000/calculate-impact \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "claude-3-5-sonnet-20241022",
-    "input_tokens": 150,
-    "output_tokens": 500,
-    "location": "us-west-1"
-  }'
-
-# Test with PromptPulse CLI
-promptpulse collect --granularity session
-```
-
-## 🐳 Docker Development (Optional)
-
-For containerized development:
-
-```bash
-# Build and start all services
-make docker-dev
-
-# Stop Docker environment
-make docker-stop
-
-# Build Docker images
-make docker-build
-```
-
-## 📊 Monitoring
-
-### Real-time Monitoring
-
-```bash
-# Watch logs
-make logs --follow
-
-# Monitor health
-watch make health
-
-# Check processes
-ps aux | grep -E "(node|python|npm)"
-```
-
-### Performance Monitoring
-
-```bash
-# Environmental service metrics
-curl http://localhost:5000/cache-stats
-
-# API performance
+# Manual API test
 curl http://localhost:3000/health
 ```
 
-## 🚀 Production Deployment
+### Test Structure
 
-### Build for Production
+- API endpoint tests
+- Database integration tests
+- CLI functionality tests
+
+## 🚀 Deployment
+
+### Building for Production
 
 ```bash
+# Build both services
 make build
+
+# Or build individually
+npm run build              # API server
+cd client && npm run build # Dashboard
 ```
 
-### Environment Variables for Production
+### Environment Setup
 
 ```bash
-# Required
-DATABASE_URL=your_production_database_url
-RESEND_API_KEY=your_resend_api_key
-
-# Recommended
+# Production environment variables
 NODE_ENV=production
-LOG_LEVEL=info
-ENVIRONMENTAL_SERVICE_URL=https://your-env-service.com
+PORT=3000
+DATABASE_URL=your_production_db_url
 ```
 
-## 💡 Development Tips
+## 🔄 Development Workflow
 
-1. **Use `make dev` for full development** - starts all services with proper configuration
+### Making Changes
 
-2. **Check health regularly** - `make health` shows the status of all services
+1. **API Changes**:
+   - Edit `server.js` or files in `lib/`
+   - Server auto-restarts with nodemon
+   - Test with `curl` or dashboard
 
-3. **Monitor logs** - `make logs` shows real-time logs from all services
+2. **Dashboard Changes**:
+   - Edit files in `client/src/`
+   - Client auto-reloads with Next.js
+   - View changes at http://localhost:3001
 
-4. **Test environmental integration** - the environmental service adds CO2 tracking to usage data
+3. **Database Changes**:
+   - Create new migration in `migrations/`
+   - Run `npm run migrate`
 
-5. **Use environment variables** - all services are configured via environment files
-
-6. **Stop services cleanly** - `make stop` gracefully shuts down all services
-
-## 🔄 Workflow Examples
-
-### Typical Development Session
+### CLI Development
 
 ```bash
-# Start development
-make dev
+# Link for global testing
+npm link
 
-# Check everything is working
-make health
-
-# Make code changes...
-
-# View logs if needed
-make logs
-
-# Run tests
-make test
-
-# Stop when done
-make stop
+# Test CLI commands
+promptpulse collect
+promptpulse dashboard
 ```
 
-### Adding Environmental Features
+## 📝 Adding Features
 
-```bash
-# Start environmental service
-make start-env
+### New API Endpoints
 
-# Test environmental calculations
-cd environmental-service
-uv run python test_service.py
+1. Add route to `server.js`
+2. Add authentication if needed
+3. Test with curl/Postman
+4. Update dashboard if needed
 
-# Integrate with API
-make start-api
+### New Dashboard Pages
 
-# Test full integration
-make test
-```
-
-### Debugging Issues
-
-```bash
-# Check dependencies
-make check-deps
-
-# View detailed health status
-make health
-
-# Check specific service logs
-./scripts/show-logs.sh --env
-
-# Restart everything
-make stop && make dev
-```
+1. Create component in `client/src/app/`
+2. Add navigation if needed
+3. Connect to API endpoints
+4. Test responsive design
 
 ## 📚 Additional Resources
 
-- **PromptPulse CLI**: Use `promptpulse --help` for CLI commands
-- **Environmental Service**: See `environmental-service/README_complete.md`
-- **API Documentation**: Check server.js for endpoint definitions
-- **Client Development**: See client/ directory for Next.js dashboard
+- **API Documentation**: See inline JSDoc comments
+- **Component Library**: Uses shadcn/ui components
+- **Database**: SQLite Cloud hosted database
 
----
-
-**Happy developing! 🌱 The PromptPulse development environment is designed to be simple, powerful, and environmentally conscious.**
+**Happy developing! 🚀 The PromptPulse development environment is designed to be simple and powerful.**

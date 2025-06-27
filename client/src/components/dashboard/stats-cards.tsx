@@ -13,13 +13,18 @@ export function StatsCards({ data }: StatsCardsProps) {
   console.log('StatsCards received data:', data)
   const { totals } = data
 
-  // Ensure totals exists with default values
+  // Ensure totals exists with default values and handle NaN
   const safeTotal = totals || {
     total_cost: 0,
     total_tokens: 0,
     total_input_tokens: 0,
     total_output_tokens: 0,
     total_machines: 0
+  }
+
+  // Additional safety for cost field to handle NaN
+  if (isNaN(safeTotal.total_cost)) {
+    safeTotal.total_cost = 0
   }
 
   return (

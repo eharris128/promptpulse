@@ -23,7 +23,10 @@ export function formatTokens(tokens: number): string {
 }
 
 export function formatCost(cost: number): string {
-  if (cost === 0) return '$0.00'
+  // Handle invalid values (NaN, null, undefined)
+  if (cost === null || cost === undefined || isNaN(cost) || cost === 0) {
+    return '$0.00'
+  }
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -125,4 +128,3 @@ export function formatSavings(savings: number, isOver: boolean): string {
   return isOver ? `+${formatted} Value` : `${formatted} Saved`
 }
 
-// Environmental formatting utilities

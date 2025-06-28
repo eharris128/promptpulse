@@ -1,4 +1,4 @@
-import { AggregateData, Machine, SessionData, BlockData, ProjectData, ApiResponse, LeaderboardData, LeaderboardSettings, EmailPreferences, PlanSettings, Team, TeamWithRole, TeamMember, TeamInvitation } from '@/types';
+import { AggregateData, Machine, SessionData, BlockData, ProjectData, ApiResponse, LeaderboardData, TeamLeaderboardData, LeaderboardSettings, EmailPreferences, PlanSettings, Team, TeamWithRole, TeamMember, TeamInvitation } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://exciting-patience-production.up.railway.app';
 
@@ -238,8 +238,8 @@ class ApiClient {
     });
   }
 
-  async getTeamLeaderboard(teamId: string, period: 'daily' | 'weekly'): Promise<LeaderboardData & { team_id: string }> {
-    return this.request<LeaderboardData & { team_id: string }>(`/api/teams/${teamId}/leaderboard/${period}`);
+  async getTeamLeaderboard(teamId: string, period: 'daily' | 'weekly'): Promise<TeamLeaderboardData> {
+    return this.request<TeamLeaderboardData>(`/api/teams/${teamId}/leaderboard/${period}`);
   }
 
   async updateTeam(teamId: string, data: { name: string; description?: string }): Promise<ApiResponse> {

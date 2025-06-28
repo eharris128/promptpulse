@@ -208,6 +208,7 @@ export interface TeamLeaderboardEntry {
   daily_average: number;
   rank: number;
   percentile: number;
+  is_current_user?: boolean;
 }
 
 export interface TeamLeaderboardData {

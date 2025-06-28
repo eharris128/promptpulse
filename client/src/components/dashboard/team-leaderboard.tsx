@@ -6,17 +6,17 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatCost, formatTokens, getAverageLabel } from '@/lib/utils'
 import { apiClient } from '@/lib/api'
-import { LeaderboardData, LeaderboardEntry } from '@/types'
+import { TeamLeaderboardData, TeamLeaderboardEntry } from '@/types'
 import { Trophy, Users } from 'lucide-react'
 
 interface TeamLeaderboardProps {
-  teamId: number
+  teamId: string // KSUID
   teamName: string
 }
 
 export function TeamLeaderboard({ teamId, teamName }: TeamLeaderboardProps) {
   const [dataLoading, setDataLoading] = useState(false)
-  const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null)
+  const [leaderboardData, setLeaderboardData] = useState<TeamLeaderboardData | null>(null)
   const [period, setPeriod] = useState<'daily' | 'weekly'>('daily')
   const [error, setError] = useState<string | null>(null)
 

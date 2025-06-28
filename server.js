@@ -366,60 +366,193 @@ app.get('/api/usage/aggregate', authenticateApiKey, CommonValidators.usageQuery,
   try {
     
     const results = await dbManager.executeQuery(async (db) => {
-      // Build WHERE conditions using parameterized queries
-      let conditions = [
-        { condition: 'user_id = ?', value: userId }
-      ];
-      
-      if (since) {
-        conditions.push({ condition: 'date >= ?', value: since });
+      // Build queries based on conditions
+      let daily;
+      if (machineId && since && until) {
+        daily = await db.sql`
+          SELECT 
+            machine_id,
+            date,
+            SUM(input_tokens) as input_tokens,
+            SUM(output_tokens) as output_tokens,
+            SUM(cache_creation_tokens) as cache_creation_tokens,
+            SUM(cache_read_tokens) as cache_read_tokens,
+            SUM(total_tokens) as total_tokens,
+            SUM(total_cost) as total_cost,
+            GROUP_CONCAT(models_used, '|') as models_used_concat
+          FROM usage_data
+          WHERE user_id = ${userId} AND machine_id = ${machineId} AND date >= ${since} AND date <= ${until}
+          GROUP BY machine_id, date 
+          ORDER BY date DESC, machine_id
+        `;
+      } else if (machineId && since) {
+        daily = await db.sql`
+          SELECT 
+            machine_id,
+            date,
+            SUM(input_tokens) as input_tokens,
+            SUM(output_tokens) as output_tokens,
+            SUM(cache_creation_tokens) as cache_creation_tokens,
+            SUM(cache_read_tokens) as cache_read_tokens,
+            SUM(total_tokens) as total_tokens,
+            SUM(total_cost) as total_cost,
+            GROUP_CONCAT(models_used, '|') as models_used_concat
+          FROM usage_data
+          WHERE user_id = ${userId} AND machine_id = ${machineId} AND date >= ${since}
+          GROUP BY machine_id, date 
+          ORDER BY date DESC, machine_id
+        `;
+      } else if (since && until) {
+        daily = await db.sql`
+          SELECT 
+            machine_id,
+            date,
+            SUM(input_tokens) as input_tokens,
+            SUM(output_tokens) as output_tokens,
+            SUM(cache_creation_tokens) as cache_creation_tokens,
+            SUM(cache_read_tokens) as cache_read_tokens,
+            SUM(total_tokens) as total_tokens,
+            SUM(total_cost) as total_cost,
+            GROUP_CONCAT(models_used, '|') as models_used_concat
+          FROM usage_data
+          WHERE user_id = ${userId} AND date >= ${since} AND date <= ${until}
+          GROUP BY machine_id, date 
+          ORDER BY date DESC, machine_id
+        `;
+      } else if (since) {
+        daily = await db.sql`
+          SELECT 
+            machine_id,
+            date,
+            SUM(input_tokens) as input_tokens,
+            SUM(output_tokens) as output_tokens,
+            SUM(cache_creation_tokens) as cache_creation_tokens,
+            SUM(cache_read_tokens) as cache_read_tokens,
+            SUM(total_tokens) as total_tokens,
+            SUM(total_cost) as total_cost,
+            GROUP_CONCAT(models_used, '|') as models_used_concat
+          FROM usage_data
+          WHERE user_id = ${userId} AND date >= ${since}
+          GROUP BY machine_id, date 
+          ORDER BY date DESC, machine_id
+        `;
+      } else if (machineId) {
+        daily = await db.sql`
+          SELECT 
+            machine_id,
+            date,
+            SUM(input_tokens) as input_tokens,
+            SUM(output_tokens) as output_tokens,
+            SUM(cache_creation_tokens) as cache_creation_tokens,
+            SUM(cache_read_tokens) as cache_read_tokens,
+            SUM(total_tokens) as total_tokens,
+            SUM(total_cost) as total_cost,
+            GROUP_CONCAT(models_used, '|') as models_used_concat
+          FROM usage_data
+          WHERE user_id = ${userId} AND machine_id = ${machineId}
+          GROUP BY machine_id, date 
+          ORDER BY date DESC, machine_id
+        `;
+      } else {
+        daily = await db.sql`
+          SELECT 
+            machine_id,
+            date,
+            SUM(input_tokens) as input_tokens,
+            SUM(output_tokens) as output_tokens,
+            SUM(cache_creation_tokens) as cache_creation_tokens,
+            SUM(cache_read_tokens) as cache_read_tokens,
+            SUM(total_tokens) as total_tokens,
+            SUM(total_cost) as total_cost,
+            GROUP_CONCAT(models_used, '|') as models_used_concat
+          FROM usage_data
+          WHERE user_id = ${userId}
+          GROUP BY machine_id, date 
+          ORDER BY date DESC, machine_id
+        `;
       }
-      if (until) {
-        conditions.push({ condition: 'date <= ?', value: until });
+      
+      // Similar approach for totals query
+      let totalsArray;
+      if (machineId && since && until) {
+        totalsArray = await db.sql`
+          SELECT 
+            COUNT(DISTINCT machine_id) as total_machines,
+            SUM(input_tokens) as total_input_tokens,
+            SUM(output_tokens) as total_output_tokens,
+            SUM(cache_creation_tokens) as total_cache_creation_tokens,
+            SUM(cache_read_tokens) as total_cache_read_tokens,
+            SUM(total_tokens) as total_tokens,
+            SUM(total_cost) as total_cost
+          FROM usage_data
+          WHERE user_id = ${userId} AND machine_id = ${machineId} AND date >= ${since} AND date <= ${until}
+        `;
+      } else if (machineId && since) {
+        totalsArray = await db.sql`
+          SELECT 
+            COUNT(DISTINCT machine_id) as total_machines,
+            SUM(input_tokens) as total_input_tokens,
+            SUM(output_tokens) as total_output_tokens,
+            SUM(cache_creation_tokens) as total_cache_creation_tokens,
+            SUM(cache_read_tokens) as total_cache_read_tokens,
+            SUM(total_tokens) as total_tokens,
+            SUM(total_cost) as total_cost
+          FROM usage_data
+          WHERE user_id = ${userId} AND machine_id = ${machineId} AND date >= ${since}
+        `;
+      } else if (since && until) {
+        totalsArray = await db.sql`
+          SELECT 
+            COUNT(DISTINCT machine_id) as total_machines,
+            SUM(input_tokens) as total_input_tokens,
+            SUM(output_tokens) as total_output_tokens,
+            SUM(cache_creation_tokens) as total_cache_creation_tokens,
+            SUM(cache_read_tokens) as total_cache_read_tokens,
+            SUM(total_tokens) as total_tokens,
+            SUM(total_cost) as total_cost
+          FROM usage_data
+          WHERE user_id = ${userId} AND date >= ${since} AND date <= ${until}
+        `;
+      } else if (since) {
+        totalsArray = await db.sql`
+          SELECT 
+            COUNT(DISTINCT machine_id) as total_machines,
+            SUM(input_tokens) as total_input_tokens,
+            SUM(output_tokens) as total_output_tokens,
+            SUM(cache_creation_tokens) as total_cache_creation_tokens,
+            SUM(cache_read_tokens) as total_cache_read_tokens,
+            SUM(total_tokens) as total_tokens,
+            SUM(total_cost) as total_cost
+          FROM usage_data
+          WHERE user_id = ${userId} AND date >= ${since}
+        `;
+      } else if (machineId) {
+        totalsArray = await db.sql`
+          SELECT 
+            COUNT(DISTINCT machine_id) as total_machines,
+            SUM(input_tokens) as total_input_tokens,
+            SUM(output_tokens) as total_output_tokens,
+            SUM(cache_creation_tokens) as total_cache_creation_tokens,
+            SUM(cache_read_tokens) as total_cache_read_tokens,
+            SUM(total_tokens) as total_tokens,
+            SUM(total_cost) as total_cost
+          FROM usage_data
+          WHERE user_id = ${userId} AND machine_id = ${machineId}
+        `;
+      } else {
+        totalsArray = await db.sql`
+          SELECT 
+            COUNT(DISTINCT machine_id) as total_machines,
+            SUM(input_tokens) as total_input_tokens,
+            SUM(output_tokens) as total_output_tokens,
+            SUM(cache_creation_tokens) as total_cache_creation_tokens,
+            SUM(cache_read_tokens) as total_cache_read_tokens,
+            SUM(total_tokens) as total_tokens,
+            SUM(total_cost) as total_cost
+          FROM usage_data
+          WHERE user_id = ${userId}
+        `;
       }
-      if (machineId) {
-        conditions.push({ condition: 'machine_id = ?', value: machineId });
-      }
-      
-      const { clause: whereClause, params } = buildSecureWhereClause(conditions);
-      
-      // Execute daily query with parameterized values
-      const dailyQuery = `
-        SELECT 
-          machine_id,
-          date,
-          SUM(input_tokens) as input_tokens,
-          SUM(output_tokens) as output_tokens,
-          SUM(cache_creation_tokens) as cache_creation_tokens,
-          SUM(cache_read_tokens) as cache_read_tokens,
-          SUM(total_tokens) as total_tokens,
-          SUM(total_cost) as total_cost,
-          GROUP_CONCAT(models_used, '|') as models_used_concat
-        FROM usage_data
-        ${whereClause}
-        GROUP BY machine_id, date 
-        ORDER BY date DESC, machine_id
-      `;
-      
-      // Execute total query with parameterized values  
-      const totalQuery = `
-        SELECT 
-          COUNT(DISTINCT machine_id) as total_machines,
-          SUM(input_tokens) as total_input_tokens,
-          SUM(output_tokens) as total_output_tokens,
-          SUM(cache_creation_tokens) as total_cache_creation_tokens,
-          SUM(cache_read_tokens) as total_cache_read_tokens,
-          SUM(total_tokens) as total_tokens,
-          SUM(total_cost) as total_cost
-        FROM usage_data
-        ${whereClause}
-      `;
-      
-      // Execute both queries with parameters
-      const [daily, totalsArray] = await Promise.all([
-        db.sql(dailyQuery, params),
-        db.sql(totalQuery, params)
-      ]);
       
       const totals = totalsArray[0] || {};
       
@@ -458,8 +591,7 @@ app.get('/api/usage/aggregate', authenticateApiKey, CommonValidators.usageQuery,
         dailyIsArray: Array.isArray(daily),
         totalsType: typeof totals,
         requestId: req.requestId,
-        dailyQuery,
-        totalQuery
+        queryType: 'tagged_template_literals'
       });
       
       return { daily: dailyResults, totals: totals || {} };
@@ -524,40 +656,111 @@ app.get('/api/usage/sessions', authenticateApiKey, CommonValidators.usageQuery, 
   
   try {
     const sessions = await dbManager.executeQuery(async (db) => {
-      // Build query using parameterized queries
-      let conditions = [
-        { condition: 'user_id = ?', value: userId }
-      ];
-      
-      if (machineId) {
-        conditions.push({ condition: 'machine_id = ?', value: machineId });
-      }
-      
-      if (projectPath) {
-        conditions.push({ condition: 'project_path LIKE ?', value: `%${projectPath}%` });
-      }
-      
-      if (since) {
-        conditions.push({ condition: 'start_time >= ?', value: since });
-      }
-      
-      if (until) {
-        conditions.push({ condition: 'start_time <= ?', value: until });
-      }
-      
-      const { clause: whereClause, params } = buildSecureWhereClause(conditions);
-      
       // Validate and sanitize limit parameter
       const sanitizedLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 1000);
       
-      const query = `
-        SELECT * FROM usage_sessions 
-        ${whereClause}
-        ORDER BY start_time DESC 
-        LIMIT ?
-      `;
+      // Build query based on conditions
+      let result;
+      if (machineId && projectPath && since && until) {
+        result = await db.sql`
+          SELECT * FROM usage_sessions 
+          WHERE user_id = ${userId} AND machine_id = ${machineId} 
+            AND project_path LIKE ${'%' + projectPath + '%'}
+            AND start_time >= ${since} AND start_time <= ${until}
+          ORDER BY start_time DESC 
+          LIMIT ${sanitizedLimit}
+        `;
+      } else if (machineId && projectPath && since) {
+        result = await db.sql`
+          SELECT * FROM usage_sessions 
+          WHERE user_id = ${userId} AND machine_id = ${machineId} 
+            AND project_path LIKE ${'%' + projectPath + '%'}
+            AND start_time >= ${since}
+          ORDER BY start_time DESC 
+          LIMIT ${sanitizedLimit}
+        `;
+      } else if (machineId && projectPath) {
+        result = await db.sql`
+          SELECT * FROM usage_sessions 
+          WHERE user_id = ${userId} AND machine_id = ${machineId} 
+            AND project_path LIKE ${'%' + projectPath + '%'}
+          ORDER BY start_time DESC 
+          LIMIT ${sanitizedLimit}
+        `;
+      } else if (machineId && since && until) {
+        result = await db.sql`
+          SELECT * FROM usage_sessions 
+          WHERE user_id = ${userId} AND machine_id = ${machineId} 
+            AND start_time >= ${since} AND start_time <= ${until}
+          ORDER BY start_time DESC 
+          LIMIT ${sanitizedLimit}
+        `;
+      } else if (machineId && since) {
+        result = await db.sql`
+          SELECT * FROM usage_sessions 
+          WHERE user_id = ${userId} AND machine_id = ${machineId} 
+            AND start_time >= ${since}
+          ORDER BY start_time DESC 
+          LIMIT ${sanitizedLimit}
+        `;
+      } else if (projectPath && since && until) {
+        result = await db.sql`
+          SELECT * FROM usage_sessions 
+          WHERE user_id = ${userId} 
+            AND project_path LIKE ${'%' + projectPath + '%'}
+            AND start_time >= ${since} AND start_time <= ${until}
+          ORDER BY start_time DESC 
+          LIMIT ${sanitizedLimit}
+        `;
+      } else if (projectPath && since) {
+        result = await db.sql`
+          SELECT * FROM usage_sessions 
+          WHERE user_id = ${userId} 
+            AND project_path LIKE ${'%' + projectPath + '%'}
+            AND start_time >= ${since}
+          ORDER BY start_time DESC 
+          LIMIT ${sanitizedLimit}
+        `;
+      } else if (since && until) {
+        result = await db.sql`
+          SELECT * FROM usage_sessions 
+          WHERE user_id = ${userId} 
+            AND start_time >= ${since} AND start_time <= ${until}
+          ORDER BY start_time DESC 
+          LIMIT ${sanitizedLimit}
+        `;
+      } else if (machineId) {
+        result = await db.sql`
+          SELECT * FROM usage_sessions 
+          WHERE user_id = ${userId} AND machine_id = ${machineId}
+          ORDER BY start_time DESC 
+          LIMIT ${sanitizedLimit}
+        `;
+      } else if (projectPath) {
+        result = await db.sql`
+          SELECT * FROM usage_sessions 
+          WHERE user_id = ${userId} 
+            AND project_path LIKE ${'%' + projectPath + '%'}
+          ORDER BY start_time DESC 
+          LIMIT ${sanitizedLimit}
+        `;
+      } else if (since) {
+        result = await db.sql`
+          SELECT * FROM usage_sessions 
+          WHERE user_id = ${userId} AND start_time >= ${since}
+          ORDER BY start_time DESC 
+          LIMIT ${sanitizedLimit}
+        `;
+      } else {
+        result = await db.sql`
+          SELECT * FROM usage_sessions 
+          WHERE user_id = ${userId}
+          ORDER BY start_time DESC 
+          LIMIT ${sanitizedLimit}
+        `;
+      }
       
-      return await db.sql(query, [...params, sanitizedLimit]);
+      return result;
     }, { ...queryContext, operation: 'fetch_user_sessions' });
     
     // Parse JSON fields
@@ -595,8 +798,8 @@ app.get('/api/usage/projects', authenticateApiKey, CommonValidators.usageQuery, 
         currentTime: new Date().toISOString()
       });
       
-      // Use parameterized query for security
-      const query = `
+      // Use tagged template literal for SQLite Cloud
+      const results = await db.sql`
         SELECT 
           project_path,
           COUNT(*) as session_count,
@@ -609,13 +812,11 @@ app.get('/api/usage/projects', authenticateApiKey, CommonValidators.usageQuery, 
           AVG(duration_minutes) as avg_duration,
           MAX(start_time) as last_activity
         FROM usage_sessions
-        WHERE user_id = ? AND project_path IS NOT NULL AND start_time >= ?
+        WHERE user_id = ${userId} AND project_path IS NOT NULL AND start_time >= ${sinceDate}
         GROUP BY project_path 
         ORDER BY total_tokens DESC
-        LIMIT ?
+        LIMIT ${limitValue}
       `;
-      
-      const results = await db.sql(query, [userId, sinceDate, limitValue]);
       
       // Debug: Log the raw results
       logger.debug('Projects query raw results', {
@@ -630,12 +831,11 @@ app.get('/api/usage/projects', authenticateApiKey, CommonValidators.usageQuery, 
       });
       
       // Also check total sessions for comparison
-      const totalSessionsQuery = `
+      const totals = await db.sql`
         SELECT COUNT(*) as total_sessions, COUNT(DISTINCT project_path) as unique_projects
         FROM usage_sessions
-        WHERE user_id = ? AND project_path IS NOT NULL AND start_time >= ?
+        WHERE user_id = ${userId} AND project_path IS NOT NULL AND start_time >= ${sinceDate}
       `;
-      const totals = await db.sql(totalSessionsQuery, [userId, sinceDate]);
       
       logger.debug('Projects debug totals', {
         userId,
@@ -719,7 +919,7 @@ app.get('/api/usage/projects/flattened', authenticateApiKey, CommonValidators.us
       const limitValue = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
       
       // Get comprehensive project data with better flattening
-      const query = `
+      return await db.sql`
         SELECT 
           project_path,
           COUNT(DISTINCT session_id) as total_sessions,
@@ -740,13 +940,11 @@ app.get('/api/usage/projects/flattened', authenticateApiKey, CommonValidators.us
             MAX(1, (JULIANDAY(MAX(start_time)) - JULIANDAY(MIN(start_time)) + 1)), 2
           ) as sessions_per_day
         FROM usage_sessions
-        WHERE user_id = ? AND project_path IS NOT NULL AND start_time >= ?
+        WHERE user_id = ${userId} AND project_path IS NOT NULL AND start_time >= ${sinceDate}
         GROUP BY project_path 
         ORDER BY total_tokens DESC
-        LIMIT ?
+        LIMIT ${limitValue}
       `;
-      
-      return await db.sql(query, [userId, sinceDate, limitValue]);
     }, { ...queryContext, operation: 'fetch_flattened_projects' });
 
     // Process and enhance the flattened data
@@ -837,30 +1035,93 @@ app.get('/api/usage/blocks', authenticateApiKey, CommonValidators.usageQuery, as
   
   try {
     const blocks = await dbManager.executeQuery(async (db) => {
-      let conditions = [
-        { condition: 'user_id = ?', value: userId }
-      ];
-      
-      if (machineId) {
-        conditions.push({ condition: 'machine_id = ?', value: machineId });
+      // Build query based on conditions
+      let result;
+      if (machineId && since && until && activeOnly === 'true') {
+        result = await db.sql`
+          SELECT * FROM usage_blocks 
+          WHERE user_id = ${userId} AND machine_id = ${machineId} 
+            AND start_time >= ${since} AND start_time <= ${until}
+            AND is_active = 1
+          ORDER BY start_time DESC
+        `;
+      } else if (machineId && since && until) {
+        result = await db.sql`
+          SELECT * FROM usage_blocks 
+          WHERE user_id = ${userId} AND machine_id = ${machineId} 
+            AND start_time >= ${since} AND start_time <= ${until}
+          ORDER BY start_time DESC
+        `;
+      } else if (machineId && since && activeOnly === 'true') {
+        result = await db.sql`
+          SELECT * FROM usage_blocks 
+          WHERE user_id = ${userId} AND machine_id = ${machineId} 
+            AND start_time >= ${since} AND is_active = 1
+          ORDER BY start_time DESC
+        `;
+      } else if (machineId && since) {
+        result = await db.sql`
+          SELECT * FROM usage_blocks 
+          WHERE user_id = ${userId} AND machine_id = ${machineId} 
+            AND start_time >= ${since}
+          ORDER BY start_time DESC
+        `;
+      } else if (since && until && activeOnly === 'true') {
+        result = await db.sql`
+          SELECT * FROM usage_blocks 
+          WHERE user_id = ${userId} 
+            AND start_time >= ${since} AND start_time <= ${until}
+            AND is_active = 1
+          ORDER BY start_time DESC
+        `;
+      } else if (since && until) {
+        result = await db.sql`
+          SELECT * FROM usage_blocks 
+          WHERE user_id = ${userId} 
+            AND start_time >= ${since} AND start_time <= ${until}
+          ORDER BY start_time DESC
+        `;
+      } else if (machineId && activeOnly === 'true') {
+        result = await db.sql`
+          SELECT * FROM usage_blocks 
+          WHERE user_id = ${userId} AND machine_id = ${machineId} 
+            AND is_active = 1
+          ORDER BY start_time DESC
+        `;
+      } else if (since && activeOnly === 'true') {
+        result = await db.sql`
+          SELECT * FROM usage_blocks 
+          WHERE user_id = ${userId} AND start_time >= ${since} 
+            AND is_active = 1
+          ORDER BY start_time DESC
+        `;
+      } else if (machineId) {
+        result = await db.sql`
+          SELECT * FROM usage_blocks 
+          WHERE user_id = ${userId} AND machine_id = ${machineId}
+          ORDER BY start_time DESC
+        `;
+      } else if (since) {
+        result = await db.sql`
+          SELECT * FROM usage_blocks 
+          WHERE user_id = ${userId} AND start_time >= ${since}
+          ORDER BY start_time DESC
+        `;
+      } else if (activeOnly === 'true') {
+        result = await db.sql`
+          SELECT * FROM usage_blocks 
+          WHERE user_id = ${userId} AND is_active = 1
+          ORDER BY start_time DESC
+        `;
+      } else {
+        result = await db.sql`
+          SELECT * FROM usage_blocks 
+          WHERE user_id = ${userId}
+          ORDER BY start_time DESC
+        `;
       }
       
-      if (since) {
-        conditions.push({ condition: 'start_time >= ?', value: since });
-      }
-      
-      if (until) {
-        conditions.push({ condition: 'start_time <= ?', value: until });
-      }
-      
-      if (activeOnly === 'true') {
-        conditions.push({ condition: 'is_active = ?', value: 1 });
-      }
-      
-      const { clause: whereClause, params } = buildSecureWhereClause(conditions);
-      const query = `SELECT * FROM usage_blocks ${whereClause} ORDER BY start_time DESC`;
-      
-      return await db.sql(query, params);
+      return result;
     }, { operation: 'fetch_usage_blocks', user_id: userId });
     
     // Parse JSON fields
@@ -1147,16 +1408,28 @@ app.post('/api/upload-history/check', authenticateApiKey, async (req, res) => {
         const identifiers = typeRecords.map(r => r.identifier);
         
         // Use parameterized query to check existing uploads
-        const placeholders = identifiers.map(() => '?').join(',');
-        const query = `
-          SELECT identifier 
-          FROM upload_history 
-          WHERE user_id = ? AND machine_id = ? AND upload_type = ? 
-          AND identifier IN (${placeholders})
-        `;
-        
-        const existingIds = await db.sql(query, [userId, machine_id, uploadType, ...identifiers]);
-        results[uploadType] = existingIds.map(row => row.identifier);
+        if (identifiers.length === 1) {
+          const existingIds = await db.sql`
+            SELECT identifier 
+            FROM upload_history 
+            WHERE user_id = ${userId} AND machine_id = ${machine_id} AND upload_type = ${uploadType} 
+            AND identifier = ${identifiers[0]}
+          `;
+          results[uploadType] = existingIds.map(row => row.identifier);
+        } else {
+          // For multiple identifiers, use multiple queries to avoid IN clause parameter binding issues
+          const existingIds = [];
+          for (const identifier of identifiers) {
+            const result = await db.sql`
+              SELECT identifier 
+              FROM upload_history 
+              WHERE user_id = ${userId} AND machine_id = ${machine_id} AND upload_type = ${uploadType} 
+              AND identifier = ${identifier}
+            `;
+            existingIds.push(...result);
+          }
+          results[uploadType] = existingIds.map(row => row.identifier);
+        }
       }
       
       return results;
@@ -1252,8 +1525,8 @@ app.get('/api/leaderboard/:period', authenticateApiKey, CommonValidators.leaderb
     }
     
     const leaderboardData = await dbManager.executeQuery(async (db) => {
-      // Get leaderboard data for users who opted in using parameterized query
-      const leaderboardQuery = `
+      // Get leaderboard data for users who opted in using tagged template literal
+      return await db.sql`
         SELECT 
           u.id as user_id,
           u.username,
@@ -1264,13 +1537,11 @@ app.get('/api/leaderboard/:period', authenticateApiKey, CommonValidators.leaderb
           ROW_NUMBER() OVER (ORDER BY SUM(ud.total_tokens) DESC) as rank
         FROM users u
         JOIN usage_data ud ON u.id = ud.user_id
-        WHERE u.leaderboard_enabled = 1 AND date >= date('now', '-' || ? || ' days')
+        WHERE u.leaderboard_enabled = 1 AND date >= date('now', '-' || ${daysBack} || ' days')
         GROUP BY u.id, u.username, u.display_name
         ORDER BY total_tokens DESC
         LIMIT 100
       `;
-      
-      return await db.sql(leaderboardQuery, [daysBack]);
     }, { ...queryContext, operation: 'fetch_leaderboard_data', period });
     
     const totalParticipants = leaderboardData.length;

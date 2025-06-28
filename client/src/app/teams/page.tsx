@@ -154,7 +154,7 @@ export default function Teams() {
           ? { 
               ...team, 
               name: editTeamName.trim(),
-              description: editTeamDescription.trim() || null
+              description: editTeamDescription.trim() || undefined
             }
           : team
       ))

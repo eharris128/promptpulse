@@ -9,6 +9,12 @@ import { initializeDbManager, getDbManager } from './lib/db-manager.js';
 import { logger, requestLogger, logDatabaseQuery, logError, log } from './lib/logger.js';
 import emailService from './lib/email-service.js';
 import reportGenerator from './lib/report-generator.js';
+import { 
+  detectSqlInjectionMiddleware, 
+  sanitizeAllInputs, 
+  securityHeaders,
+  CommonValidators 
+} from './lib/validation-middleware.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -90,12 +96,38 @@ const batchLimiter = rateLimit({
 // Apply to batch endpoints
 app.use('/api/usage/*/batch', batchLimiter);
 
+// Apply security middleware
+app.use(securityHeaders);
+app.use(detectSqlInjectionMiddleware);
+app.use(sanitizeAllInputs);
+
 const DATABASE_URL = process.env.DATABASE_URL;
 
 if (!DATABASE_URL) {
   logger.error('DATABASE_URL environment variable is required');
   process.exit(1);
 }
+
+// Security utilities for SQL injection prevention
+const buildSecureWhereClause = (conditions) => {
+  if (!conditions || conditions.length === 0) {
+    return { clause: '', params: [] };
+  }
+  
+  const placeholders = conditions.map(() => '?').join(' AND ');
+  const clause = `WHERE ${conditions.map(c => c.condition).join(' AND ')}`;
+  const params = conditions.map(c => c.value);
+  
+  return { clause, params };
+};
+
+const validateSqlIdentifier = (identifier) => {
+  // Only allow alphanumeric characters, underscores, and hyphens
+  if (!/^[a-zA-Z0-9_-]+$/.test(identifier)) {
+    throw new Error(`Invalid identifier: ${identifier}`);
+  }
+  return identifier;
+};
 
 // Initialize database manager immediately
 const dbManager = initializeDbManager(DATABASE_URL, {
@@ -319,7 +351,7 @@ app.post('/api/usage', authenticateApiKey, async (req, res) => {
   }
 });
 
-app.get('/api/usage/aggregate', authenticateApiKey, async (req, res) => {
+app.get('/api/usage/aggregate', authenticateApiKey, CommonValidators.usageQuery, async (req, res) => {
   const { since, until, machineId } = req.query;
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('usage_aggregate', userId);
@@ -334,22 +366,24 @@ app.get('/api/usage/aggregate', authenticateApiKey, async (req, res) => {
   try {
     
     const results = await dbManager.executeQuery(async (db) => {
-      // Build WHERE conditions using template literals
-      let whereConditions = [`user_id = '${userId}'`];
+      // Build WHERE conditions using parameterized queries
+      let conditions = [
+        { condition: 'user_id = ?', value: userId }
+      ];
       
       if (since) {
-        whereConditions.push(`date >= '${since}'`);
+        conditions.push({ condition: 'date >= ?', value: since });
       }
       if (until) {
-        whereConditions.push(`date <= '${until}'`);
+        conditions.push({ condition: 'date <= ?', value: until });
       }
       if (machineId) {
-        whereConditions.push(`machine_id = '${machineId}'`);
+        conditions.push({ condition: 'machine_id = ?', value: machineId });
       }
       
-      const whereClause = `WHERE ${whereConditions.join(' AND ')}`;
+      const { clause: whereClause, params } = buildSecureWhereClause(conditions);
       
-      // Execute daily query
+      // Execute daily query with parameterized values
       const dailyQuery = `
         SELECT 
           machine_id,
@@ -367,7 +401,7 @@ app.get('/api/usage/aggregate', authenticateApiKey, async (req, res) => {
         ORDER BY date DESC, machine_id
       `;
       
-      // Execute total query  
+      // Execute total query with parameterized values  
       const totalQuery = `
         SELECT 
           COUNT(DISTINCT machine_id) as total_machines,
@@ -381,10 +415,10 @@ app.get('/api/usage/aggregate', authenticateApiKey, async (req, res) => {
         ${whereClause}
       `;
       
-      // Execute both queries
+      // Execute both queries with parameters
       const [daily, totalsArray] = await Promise.all([
-        db.sql(dailyQuery),
-        db.sql(totalQuery)
+        db.sql(dailyQuery, params),
+        db.sql(totalQuery, params)
       ]);
       
       const totals = totalsArray[0] || {};
@@ -483,40 +517,47 @@ app.get('/api/machines', authenticateApiKey, async (req, res) => {
 
 
 // Session data endpoints
-app.get('/api/usage/sessions', authenticateApiKey, async (req, res) => {
+app.get('/api/usage/sessions', authenticateApiKey, CommonValidators.usageQuery, async (req, res) => {
   const { machineId, projectPath, since, until, limit = 50 } = req.query;
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('fetch_sessions', userId);
   
   try {
     const sessions = await dbManager.executeQuery(async (db) => {
-      // Build query dynamically with SQLite Cloud syntax
-      let conditions = [`user_id = '${userId}'`];
+      // Build query using parameterized queries
+      let conditions = [
+        { condition: 'user_id = ?', value: userId }
+      ];
       
       if (machineId) {
-        conditions.push(`machine_id = '${machineId}'`);
+        conditions.push({ condition: 'machine_id = ?', value: machineId });
       }
       
       if (projectPath) {
-        conditions.push(`project_path LIKE '%${projectPath}%'`);
+        conditions.push({ condition: 'project_path LIKE ?', value: `%${projectPath}%` });
       }
       
       if (since) {
-        conditions.push(`start_time >= '${since}'`);
+        conditions.push({ condition: 'start_time >= ?', value: since });
       }
       
       if (until) {
-        conditions.push(`start_time <= '${until}'`);
+        conditions.push({ condition: 'start_time <= ?', value: until });
       }
       
-      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+      const { clause: whereClause, params } = buildSecureWhereClause(conditions);
       
-      return await db.sql`
+      // Validate and sanitize limit parameter
+      const sanitizedLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 1000);
+      
+      const query = `
         SELECT * FROM usage_sessions 
         ${whereClause}
         ORDER BY start_time DESC 
-        LIMIT ${parseInt(limit)}
+        LIMIT ?
       `;
+      
+      return await db.sql(query, [...params, sanitizedLimit]);
     }, { ...queryContext, operation: 'fetch_user_sessions' });
     
     // Parse JSON fields
@@ -534,7 +575,7 @@ app.get('/api/usage/sessions', authenticateApiKey, async (req, res) => {
 });
 
 // Projects data endpoint
-app.get('/api/usage/projects', authenticateApiKey, async (req, res) => {
+app.get('/api/usage/projects', authenticateApiKey, CommonValidators.usageQuery, async (req, res) => {
   const { since, limit = 10 } = req.query;
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('fetch_projects', userId);
@@ -543,9 +584,19 @@ app.get('/api/usage/projects', authenticateApiKey, async (req, res) => {
     const projects = await dbManager.executeQuery(async (db) => {
       // Default to last 30 days if no since parameter provided
       const sinceDate = since || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      const limitValue = parseInt(limit);
+      const limitValue = Math.min(Math.max(parseInt(limit) || 10, 1), 100);
       
-      return await db.sql`
+      // Debug: Log the parameters being used
+      logger.debug('Projects query parameters', {
+        userId,
+        sinceDate,
+        limitValue,
+        originalSince: since,
+        currentTime: new Date().toISOString()
+      });
+      
+      // Use parameterized query for security
+      const query = `
         SELECT 
           project_path,
           COUNT(*) as session_count,
@@ -558,28 +609,92 @@ app.get('/api/usage/projects', authenticateApiKey, async (req, res) => {
           AVG(duration_minutes) as avg_duration,
           MAX(start_time) as last_activity
         FROM usage_sessions
-        WHERE user_id = ${userId} AND project_path IS NOT NULL AND start_time >= ${sinceDate}
+        WHERE user_id = ? AND project_path IS NOT NULL AND start_time >= ?
         GROUP BY project_path 
         ORDER BY total_tokens DESC
-        LIMIT ${limitValue}
+        LIMIT ?
       `;
+      
+      const results = await db.sql(query, [userId, sinceDate, limitValue]);
+      
+      // Debug: Log the raw results
+      logger.debug('Projects query raw results', {
+        userId,
+        resultCount: results.length,
+        results: results.map(r => ({
+          project_path: r.project_path,
+          session_count: r.session_count,
+          total_tokens: r.total_tokens,
+          last_activity: r.last_activity
+        }))
+      });
+      
+      // Also check total sessions for comparison
+      const totalSessionsQuery = `
+        SELECT COUNT(*) as total_sessions, COUNT(DISTINCT project_path) as unique_projects
+        FROM usage_sessions
+        WHERE user_id = ? AND project_path IS NOT NULL AND start_time >= ?
+      `;
+      const totals = await db.sql(totalSessionsQuery, [userId, sinceDate]);
+      
+      logger.debug('Projects debug totals', {
+        userId,
+        totalSessions: totals[0]?.total_sessions,
+        uniqueProjects: totals[0]?.unique_projects,
+        queryTimeWindow: sinceDate
+      });
+      
+      return results;
     }, { ...queryContext, operation: 'fetch_user_projects' });
     
-    // Add project name derivation with safety check
+    // Add project name derivation with safety check and enhanced flattening
     const projectsWithNames = Array.isArray(projects) ? projects.map(project => {
-      // Extract project name from path (e.g., /home/user/projects/my-app -> my-app)
+      // Extract project name from path with better normalization
       let projectName = project.project_path;
+      let normalizedPath = project.project_path;
+      
       if (projectName) {
-        const parts = projectName.split('/');
+        // Normalize path separators and clean up the path
+        normalizedPath = projectName.replace(/\\/g, '/').toLowerCase();
+        
+        // Extract project name from path (e.g., /home/user/projects/my-app -> my-app)
+        const parts = projectName.split(/[/\\]/);
         projectName = parts[parts.length - 1] || parts[parts.length - 2] || 'Unknown';
+        
+        // Clean up common project name patterns
+        if (projectName.startsWith('projects-')) {
+          projectName = projectName.substring(9); // Remove 'projects-' prefix
+        }
       }
       
-      return {
+      // Enhanced project metadata
+      const enhancedProject = {
         ...project,
         project_name: projectName,
-        avg_duration: project.avg_duration ? Math.round(project.avg_duration) : null
+        normalized_path: normalizedPath,
+        avg_duration: project.avg_duration ? Math.round(project.avg_duration) : null,
+        // Calculate additional metrics
+        avg_cost_per_session: project.session_count > 0 ? (project.total_cost / project.session_count) : 0,
+        avg_tokens_per_session: project.session_count > 0 ? Math.round(project.total_tokens / project.session_count) : 0,
+        // Add activity indicators
+        is_recent: project.last_activity && new Date(project.last_activity) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        activity_level: project.session_count >= 5 ? 'high' : project.session_count >= 2 ? 'medium' : 'low'
       };
+      
+      return enhancedProject;
     }) : [];
+    
+    // Log final results for debugging
+    logger.debug('Projects with enhanced flattening', {
+      userId,
+      finalProjectCount: projectsWithNames.length,
+      projectNames: projectsWithNames.map(p => ({
+        name: p.project_name,
+        sessions: p.session_count,
+        tokens: p.total_tokens,
+        activity_level: p.activity_level
+      }))
+    });
     
     res.json(projectsWithNames);
     log.performance('fetch_projects', Date.now() - queryContext.startTime, { 
@@ -591,35 +706,161 @@ app.get('/api/usage/projects', authenticateApiKey, async (req, res) => {
   }
 });
 
+// Enhanced flattened project overview endpoint
+app.get('/api/usage/projects/flattened', authenticateApiKey, CommonValidators.usageQuery, async (req, res) => {
+  const { since, limit = 20 } = req.query;
+  const userId = req.user.id;
+  const queryContext = logDatabaseQuery('fetch_flattened_projects', userId);
+  
+  try {
+    const flattenedProjects = await dbManager.executeQuery(async (db) => {
+      // Default to last 30 days if no since parameter provided
+      const sinceDate = since || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const limitValue = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
+      
+      // Get comprehensive project data with better flattening
+      const query = `
+        SELECT 
+          project_path,
+          COUNT(DISTINCT session_id) as total_sessions,
+          COUNT(DISTINCT DATE(start_time)) as active_days,
+          MIN(start_time) as first_session,
+          MAX(start_time) as last_session,
+          SUM(total_cost) as total_cost,
+          SUM(total_tokens) as total_tokens,
+          SUM(input_tokens) as total_input_tokens,
+          SUM(output_tokens) as total_output_tokens,
+          SUM(cache_creation_tokens) as total_cache_creation_tokens,
+          SUM(cache_read_tokens) as total_cache_read_tokens,
+          AVG(duration_minutes) as avg_session_duration,
+          SUM(duration_minutes) as total_duration_minutes,
+          -- Calculate session frequency
+          ROUND(
+            CAST(COUNT(DISTINCT session_id) AS FLOAT) / 
+            MAX(1, (JULIANDAY(MAX(start_time)) - JULIANDAY(MIN(start_time)) + 1)), 2
+          ) as sessions_per_day
+        FROM usage_sessions
+        WHERE user_id = ? AND project_path IS NOT NULL AND start_time >= ?
+        GROUP BY project_path 
+        ORDER BY total_tokens DESC
+        LIMIT ?
+      `;
+      
+      return await db.sql(query, [userId, sinceDate, limitValue]);
+    }, { ...queryContext, operation: 'fetch_flattened_projects' });
+
+    // Process and enhance the flattened data
+    const enhancedProjects = flattenedProjects.map(project => {
+      // Clean project name
+      let projectName = project.project_path;
+      if (projectName) {
+        const parts = projectName.split(/[/\\]/);
+        projectName = parts[parts.length - 1] || parts[parts.length - 2] || 'Unknown';
+        
+        // Remove common prefixes for cleaner names
+        if (projectName.startsWith('projects-')) {
+          projectName = projectName.substring(9);
+        }
+      }
+
+      // Calculate project timeline
+      const firstSession = new Date(project.first_session);
+      const lastSession = new Date(project.last_session);
+      const projectAgeInDays = Math.max(1, Math.ceil((lastSession - firstSession) / (1000 * 60 * 60 * 24)));
+      
+      return {
+        project_name: projectName,
+        project_path: project.project_path,
+        
+        // Flattened session data
+        summary: {
+          total_sessions: project.total_sessions,
+          active_days: project.active_days,
+          project_age_days: projectAgeInDays,
+          sessions_per_day: project.sessions_per_day || 0
+        },
+        
+        // Aggregated usage metrics
+        usage: {
+          total_tokens: project.total_tokens,
+          total_input_tokens: project.total_input_tokens,
+          total_output_tokens: project.total_output_tokens,
+          total_cache_creation_tokens: project.total_cache_creation_tokens,
+          total_cache_read_tokens: project.total_cache_read_tokens,
+          total_cost: project.total_cost,
+          avg_tokens_per_session: project.total_sessions > 0 ? Math.round(project.total_tokens / project.total_sessions) : 0,
+          avg_cost_per_session: project.total_sessions > 0 ? parseFloat((project.total_cost / project.total_sessions).toFixed(4)) : 0
+        },
+        
+        // Time analytics
+        time: {
+          first_session: project.first_session,
+          last_session: project.last_session,
+          total_duration_minutes: Math.round(project.total_duration_minutes || 0),
+          avg_session_duration: Math.round(project.avg_session_duration || 0),
+          is_recent_activity: new Date(project.last_session) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        },
+        
+        // Activity classification
+        activity_level: project.total_sessions >= 10 ? 'very_high' : 
+                       project.total_sessions >= 5 ? 'high' : 
+                       project.total_sessions >= 2 ? 'medium' : 'low',
+        
+        // Calculated engagement score (tokens per day)
+        engagement_score: projectAgeInDays > 0 ? Math.round(project.total_tokens / projectAgeInDays) : 0
+      };
+    });
+
+    res.json({
+      projects: enhancedProjects,
+      metadata: {
+        time_window_days: 30,
+        total_projects: enhancedProjects.length,
+        query_timestamp: new Date().toISOString()
+      }
+    });
+    
+    log.performance('fetch_flattened_projects', Date.now() - queryContext.startTime, { 
+      userId, projectCount: enhancedProjects.length 
+    });
+    
+  } catch (error) {
+    logError(error, { context: 'fetch_flattened_projects', userId, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // Block data endpoints
-app.get('/api/usage/blocks', authenticateApiKey, async (req, res) => {
+app.get('/api/usage/blocks', authenticateApiKey, CommonValidators.usageQuery, async (req, res) => {
   const { machineId, since, until, activeOnly } = req.query;
   const userId = req.user.id;
   
   try {
     const blocks = await dbManager.executeQuery(async (db) => {
-      let conditions = [`user_id = '${userId}'`];
+      let conditions = [
+        { condition: 'user_id = ?', value: userId }
+      ];
       
       if (machineId) {
-        conditions.push(`machine_id = '${machineId}'`);
+        conditions.push({ condition: 'machine_id = ?', value: machineId });
       }
       
       if (since) {
-        conditions.push(`start_time >= '${since}'`);
+        conditions.push({ condition: 'start_time >= ?', value: since });
       }
       
       if (until) {
-        conditions.push(`start_time <= '${until}'`);
+        conditions.push({ condition: 'start_time <= ?', value: until });
       }
       
       if (activeOnly === 'true') {
-        conditions.push('is_active = 1');
+        conditions.push({ condition: 'is_active = ?', value: 1 });
       }
       
-      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+      const { clause: whereClause, params } = buildSecureWhereClause(conditions);
       const query = `SELECT * FROM usage_blocks ${whereClause} ORDER BY start_time DESC`;
       
-      return await db.sql(query);
+      return await db.sql(query, params);
     }, { operation: 'fetch_usage_blocks', user_id: userId });
     
     // Parse JSON fields
@@ -673,6 +914,19 @@ app.post('/api/usage/daily/batch', authenticateApiKey, async (req, res) => {
             ${JSON.stringify(record.model_breakdowns)}
           )
         `;
+        
+        // Log to upload history for deduplication
+        await db.sql`
+          INSERT OR IGNORE INTO upload_history (
+            user_id, machine_id, upload_type, identifier
+          ) VALUES (
+            ${record.user_id},
+            ${record.machine_id},
+            'daily',
+            ${record.date}
+          )
+        `;
+        
         processedCount++;
       }
     }, { ...queryContext, operation: 'batch_upload_daily_data' });
@@ -736,6 +990,19 @@ app.post('/api/usage/sessions/batch', authenticateApiKey, async (req, res) => {
             ${JSON.stringify(record.model_breakdowns)}
           )
         `;
+        
+        // Log to upload history for deduplication
+        await db.sql`
+          INSERT OR IGNORE INTO upload_history (
+            user_id, machine_id, upload_type, identifier
+          ) VALUES (
+            ${record.user_id},
+            ${record.machine_id},
+            'session',
+            ${record.session_id}
+          )
+        `;
+        
         processedCount++;
       }
     }, { ...queryContext, operation: 'batch_upload_session_data' });
@@ -816,6 +1083,19 @@ app.post('/api/usage/blocks/batch', authenticateApiKey, async (req, res) => {
             ${JSON.stringify(record.models_used || [])}
           )
         `;
+        
+        // Log to upload history for deduplication
+        await db.sql`
+          INSERT OR IGNORE INTO upload_history (
+            user_id, machine_id, upload_type, identifier
+          ) VALUES (
+            ${record.user_id},
+            ${record.machine_id},
+            'block',
+            ${record.block_id}
+          )
+        `;
+        
         processedCount++;
       }
     }, { ...queryContext, operation: 'batch_upload_block_data' });
@@ -840,6 +1120,57 @@ app.post('/api/usage/blocks/batch', authenticateApiKey, async (req, res) => {
     });
     console.error('Block batch upload error:', error);
     res.status(500).json({ error: 'Database error', details: error.message });
+  }
+});
+
+// Upload history check endpoint for client-side deduplication
+app.post('/api/upload-history/check', authenticateApiKey, async (req, res) => {
+  const { machine_id, records } = req.body;
+  const userId = req.user.id;
+  const queryContext = logDatabaseQuery('check_upload_history', userId);
+  
+  if (!machine_id || !records || !Array.isArray(records)) {
+    return res.status(400).json({ error: 'machine_id and records array are required' });
+  }
+  
+  try {
+    const existingUploads = await dbManager.executeQuery(async (db) => {
+      const results = {};
+      
+      // Check each upload type separately for efficiency
+      const uploadTypes = ['daily', 'session', 'block'];
+      
+      for (const uploadType of uploadTypes) {
+        const typeRecords = records.filter(r => r.upload_type === uploadType);
+        if (typeRecords.length === 0) continue;
+        
+        const identifiers = typeRecords.map(r => r.identifier);
+        
+        // Use parameterized query to check existing uploads
+        const placeholders = identifiers.map(() => '?').join(',');
+        const query = `
+          SELECT identifier 
+          FROM upload_history 
+          WHERE user_id = ? AND machine_id = ? AND upload_type = ? 
+          AND identifier IN (${placeholders})
+        `;
+        
+        const existingIds = await db.sql(query, [userId, machine_id, uploadType, ...identifiers]);
+        results[uploadType] = existingIds.map(row => row.identifier);
+      }
+      
+      return results;
+    }, { ...queryContext, operation: 'check_upload_history' });
+    
+    res.json(existingUploads);
+    
+    log.performance('check_upload_history', Date.now() - queryContext.startTime, { 
+      userId, machine_id, recordCount: records.length 
+    });
+    
+  } catch (error) {
+    logError(error, { context: 'check_upload_history', userId, machine_id, queryContext });
+    res.status(500).json({ error: 'Database error' });
   }
 });
 
@@ -904,24 +1235,24 @@ app.get('/api/usage/analytics/patterns', authenticateApiKey, async (req, res) =>
 
 
 // Leaderboard endpoints
-app.get('/api/leaderboard/:period', authenticateApiKey, async (req, res) => {
+app.get('/api/leaderboard/:period', authenticateApiKey, CommonValidators.leaderboardParams, async (req, res) => {
   const { period } = req.params; // 'daily' or 'weekly'
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('fetch_leaderboard', userId);
   
   try {
-    let dateFilter = '';
+    let daysBack;
     if (period === 'daily') {
       // Show data from the last 2 days to be more inclusive
-      dateFilter = "date >= date('now', '-1 day')";
+      daysBack = 1;
     } else if (period === 'weekly') {
-      dateFilter = "date >= date('now', '-7 days')";
+      daysBack = 7;
     } else {
       return res.status(400).json({ error: 'Invalid period. Use daily or weekly.' });
     }
     
     const leaderboardData = await dbManager.executeQuery(async (db) => {
-      // Get leaderboard data for users who opted in
+      // Get leaderboard data for users who opted in using parameterized query
       const leaderboardQuery = `
         SELECT 
           u.id as user_id,
@@ -933,13 +1264,13 @@ app.get('/api/leaderboard/:period', authenticateApiKey, async (req, res) => {
           ROW_NUMBER() OVER (ORDER BY SUM(ud.total_tokens) DESC) as rank
         FROM users u
         JOIN usage_data ud ON u.id = ud.user_id
-        WHERE u.leaderboard_enabled = 1 AND ${dateFilter}
+        WHERE u.leaderboard_enabled = 1 AND date >= date('now', '-' || ? || ' days')
         GROUP BY u.id, u.username, u.display_name
         ORDER BY total_tokens DESC
         LIMIT 100
       `;
       
-      return await db.sql(leaderboardQuery);
+      return await db.sql(leaderboardQuery, [daysBack]);
     }, { ...queryContext, operation: 'fetch_leaderboard_data', period });
     
     const totalParticipants = leaderboardData.length;

@@ -186,6 +186,56 @@ This includes:
 - Timestamps and session data
 - Cost calculations
 
+## Privacy & Data Collection
+
+### What Data is Collected
+
+PromptPulse collects **usage statistics and metadata only**:
+
+- **Usage Statistics**: Token counts, costs, timestamps, model usage patterns
+- **Project Paths**: Project folder names or paths (configurable privacy levels)
+- **Machine Identifiers**: Hostname or custom MACHINE_ID for multi-device tracking
+- **Session Data**: Session timestamps and duration for analytics
+
+### What is NEVER Collected
+
+**Your prompts and conversation content are NEVER uploaded or stored.** PromptPulse only reads usage statistics from Claude Code's log files, not your actual conversations or prompts.
+
+### Project Path Privacy Controls
+
+Project paths may contain sensitive information like company names or project names. You can control how project paths are collected:
+
+```bash
+# Set your privacy preference (choose one):
+export PROJECT_PATH_PRIVACY=basename  # Only folder names (recommended default)
+export PROJECT_PATH_PRIVACY=none      # No project paths collected
+export PROJECT_PATH_PRIVACY=hash      # Hashed paths for analytics
+export PROJECT_PATH_PRIVACY=full      # Full paths (least private)
+```
+
+#### Privacy Options Explained
+
+- **`basename`** (default): Only collects project folder names (e.g., `my-project`)
+- **`none`**: No project path information is collected at all
+- **`hash`**: Project paths are hashed for analytics while preserving privacy
+- **`full`**: Complete project paths are collected (e.g., `/home/user/work/company/my-project`)
+
+### Leaderboard Privacy
+
+Leaderboard participation is completely **opt-in**:
+
+- **Private by default**: Your usage data is private until you choose to participate
+- **Granular controls**: Separate settings for public vs team leaderboards
+- **Display name privacy**: Use custom display names instead of your username
+- **Team privacy**: Different privacy controls for team vs public contexts
+
+### Data Security
+
+- **API Key Authentication**: All data is secured with unique API keys
+- **Data Isolation**: Each user's data is completely isolated
+- **No Sensitive Data**: No conversation content, prompts, or personal information
+- **Secure Storage**: Usage statistics are stored securely with encryption in transit
+
 ## Multi-User & Team Support
 
 ### How It Works

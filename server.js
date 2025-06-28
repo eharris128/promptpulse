@@ -1699,13 +1699,13 @@ app.put('/api/teams/:teamId', authenticateApiKey, async (req, res) => {
   
   try {
     await dbManager.executeQuery(async (db) => {
-      // Check if user is admin of this team
+      // Check if user is admin or owner of this team
       const membership = await db.sql`
         SELECT role FROM team_members 
         WHERE team_id = ${teamId} AND user_id = ${userId}
       `;
       
-      if (!membership[0] || membership[0].role !== 'admin') {
+      if (!membership[0] || (membership[0].role !== 'admin' && membership[0].role !== 'owner')) {
         throw new Error('Not authorized');
       }
       
@@ -1800,7 +1800,7 @@ app.delete('/api/teams/:teamId/members/me', authenticateApiKey, async (req, res)
   }
 });
 
-// Remove team member (admin only)
+// Remove team member (admin or owner only)
 app.delete('/api/teams/:teamId/members/:targetUserId', authenticateApiKey, async (req, res) => {
   const userId = req.user.id;
   const teamId = req.params.teamId;
@@ -1813,13 +1813,13 @@ app.delete('/api/teams/:teamId/members/:targetUserId', authenticateApiKey, async
   
   try {
     await dbManager.executeQuery(async (db) => {
-      // Check if user is admin of this team
+      // Check if user is admin or owner of this team
       const membership = await db.sql`
         SELECT role FROM team_members 
         WHERE team_id = ${teamId} AND user_id = ${userId}
       `;
       
-      if (!membership[0] || membership[0].role !== 'admin') {
+      if (!membership[0] || (membership[0].role !== 'admin' && membership[0].role !== 'owner')) {
         throw new Error('Not authorized');
       }
       
@@ -1858,7 +1858,7 @@ app.delete('/api/teams/:teamId/members/:targetUserId', authenticateApiKey, async
   }
 });
 
-// Promote member to admin (admin only)
+// Promote member to admin (admin or owner only)
 app.put('/api/teams/:teamId/members/:targetUserId/promote', authenticateApiKey, async (req, res) => {
   const userId = req.user.id;
   const teamId = req.params.teamId;
@@ -1867,13 +1867,13 @@ app.put('/api/teams/:teamId/members/:targetUserId/promote', authenticateApiKey, 
   
   try {
     await dbManager.executeQuery(async (db) => {
-      // Check if user is admin of this team
+      // Check if user is admin or owner of this team
       const membership = await db.sql`
         SELECT role FROM team_members 
         WHERE team_id = ${teamId} AND user_id = ${userId}
       `;
       
-      if (!membership[0] || membership[0].role !== 'admin') {
+      if (!membership[0] || (membership[0].role !== 'admin' && membership[0].role !== 'owner')) {
         throw new Error('Not authorized');
       }
       

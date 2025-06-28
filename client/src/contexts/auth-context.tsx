@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
 import { apiClient } from '@/lib/api'
 import { sanitizeApiKey } from '@/lib/utils'
 
@@ -29,6 +30,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   const checkAuth = async () => {
     const apiKey = apiClient.getApiKey()
@@ -54,6 +56,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
       apiClient.setApiKey(sanitizedApiKey)
       await apiClient.getMachines()
       setIsAuthenticated(true)
+      
+      // Check for pending team invitation
+      if (typeof window !== 'undefined') {
+        const pendingInvite = sessionStorage.getItem('pendingTeamInvite')
+        if (pendingInvite) {
+          sessionStorage.removeItem('pendingTeamInvite')
+          // Join the team automatically after successful login
+          try {
+            await apiClient.joinTeam(pendingInvite)
+            router.push('/teams')
+          } catch (error) {
+            console.error('Failed to join team after login:', error)
+            // Still redirect to the invitation page so user can see the error
+            router.push(`/teams/join/${pendingInvite}`)
+          }
+        }
+      }
+      
       return true
     } catch (error) {
       console.error('Login failed:', error)

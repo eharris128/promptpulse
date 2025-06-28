@@ -47,7 +47,19 @@ async function runMigrations() {
         const statements = migrationSQL
           .split(';')
           .map(s => s.trim())
-          .filter(s => s.length > 0 && !s.startsWith('--'));
+          .filter(s => {
+            if (s.length === 0) return false;
+            // Remove comment-only statements, but keep statements that have SQL after comments
+            const lines = s.split('\n').map(line => line.trim());
+            const nonCommentLines = lines.filter(line => line.length > 0 && !line.startsWith('--'));
+            return nonCommentLines.length > 0;
+          })
+          .map(s => {
+            // Clean up the statement by removing comment lines but keeping SQL
+            const lines = s.split('\n').map(line => line.trim());
+            const sqlLines = lines.filter(line => line.length > 0 && !line.startsWith('--'));
+            return sqlLines.join('\n');
+          });
         
         for (const statement of statements) {
           if (statement.trim()) {

@@ -58,6 +58,28 @@ promptpulse collect --granularity blocks   # Only 5-hour blocks
 promptpulse collect --granularity all      # Everything (default)
 ```
 
+### Automatic Collection
+
+Set up automatic data collection with cron to keep your dashboard up-to-date:
+
+```bash
+# Set up automatic collection (runs every 15 minutes by default)
+promptpulse setup
+
+# Configure different intervals
+promptpulse setup --interval 30     # Every 30 minutes
+promptpulse setup --interval 60     # Every hour
+promptpulse setup --interval daily  # Once daily at 9 AM
+
+# Check collection status
+promptpulse status
+
+# Remove automatic collection
+promptpulse setup --remove
+```
+
+Collection logs are stored in `~/.promptpulse/collection.log` for monitoring and debugging.
+
 ### User Management
 
 ```bash
@@ -177,6 +199,22 @@ promptpulse collect                               # Collect all data
 promptpulse collect --granularity <type>         # Collect specific data
 ```
 
+### Automatic Collection Setup
+```bash
+promptpulse setup                                 # Set up 15-minute automatic collection
+promptpulse setup --interval 30                  # Set up 30-minute collection
+promptpulse setup --interval 60                  # Set up hourly collection
+promptpulse setup --interval daily               # Set up daily collection
+promptpulse setup --remove                       # Remove automatic collection
+```
+
+### Health & Diagnostics
+```bash
+promptpulse status                                # Check collection status and health
+promptpulse doctor                                # Diagnose common issues
+promptpulse dashboard                             # Open web dashboard
+```
+
 ### Aliases
 You can use `ppulse` as a shorthand for `promptpulse` in all commands.
 
@@ -192,6 +230,8 @@ You can use `ppulse` as a shorthand for `promptpulse` in all commands.
 
 - Use `promptpulse --help` for command documentation
 - Check your API key is valid with `promptpulse whoami`
+- Check collection health with `promptpulse status`
+- Diagnose issues with `promptpulse doctor`
 - Ensure you have Claude Code usage data in `~/.claude/projects/`
 
 ## Contributing

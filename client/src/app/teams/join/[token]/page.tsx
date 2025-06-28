@@ -1,100 +1,184 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Loader2, Users, CheckCircle } from 'lucide-react'
+import { Loader2, Users } from 'lucide-react'
 import { apiClient } from '@/lib/api'
 
 interface JoinTeamPageProps {
-  params: {
+  params: Promise<{
     token: string
-  }
+  }>
 }
 
 export default function JoinTeamPage({ params }: JoinTeamPageProps) {
+  const resolvedParams = use(params)
   const router = useRouter()
-  const [status, setStatus] = useState<'checking' | 'success' | 'error'>('checking')
-  const [message, setMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [isJoining, setIsJoining] = useState(false)
   const [teamName, setTeamName] = useState('')
+  const [error, setError] = useState('')
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
+  // Check authentication status
   useEffect(() => {
-    joinTeam()
+    const apiKey = apiClient.getApiKey()
+    setIsAuthenticated(!!apiKey)
   }, [])
 
-  const joinTeam = async () => {
-    try {
-      // Attempt to join the team
-      const result = await apiClient.joinTeam(params.token)
-      setStatus('success')
-      setTeamName(result.teamName)
-      setMessage(result.message || `Successfully joined ${result.teamName}!`)
-      
-      // Redirect to teams page after 3 seconds
-      setTimeout(() => {
-        router.push('/teams')
-      }, 3000)
-      
-    } catch (error) {
-      setStatus('error')
-      if (error instanceof Error) {
-        setMessage(error.message)
-      } else {
-        setMessage('Failed to join team. The invitation may be invalid or expired.')
+  // Fetch team preview
+  useEffect(() => {
+    const fetchTeamPreview = async () => {
+      try {
+        setIsLoading(true)
+        console.log('Fetching team preview for token:', resolvedParams.token)
+        const { teamName } = await apiClient.getTeamPreview(resolvedParams.token)
+        console.log('Team preview response:', { teamName })
+        setTeamName(teamName)
+      } catch (error) {
+        console.error('Error fetching team preview:', error)
+        setError('Invalid or expired invitation')
+      } finally {
+        setIsLoading(false)
       }
+    }
+
+    fetchTeamPreview()
+  }, [resolvedParams.token])
+
+  const handleJoin = async () => {
+    if (!isAuthenticated) {
+      // Redirect to home page where they can authenticate
+      sessionStorage.setItem('pendingTeamInvite', resolvedParams.token)
+      router.push('/')
+      return
+    }
+
+    try {
+      setIsJoining(true)
+      const result = await apiClient.joinTeam(resolvedParams.token)
+      // Redirect to teams page after successful join
+      router.push('/teams')
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message)
+      } else {
+        setError('Failed to join team')
+      }
+      setIsJoining(false)
     }
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (error && !teamName) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+            <Users className="h-6 w-6 text-destructive" />
+          </div>
+          <h1 className="text-2xl font-semibold">Invalid Invitation</h1>
+          <p className="text-muted-foreground">{error}</p>
+          <Button onClick={() => router.push('/')} variant="outline">
+            Go to Dashboard
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="container mx-auto p-8 max-w-2xl">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Join Team
-          </CardTitle>
-          <CardDescription>
-            {status === 'checking' && 'Processing your invitation...'}
-            {status === 'success' && 'Welcome to the team!'}
-            {status === 'error' && 'Unable to join team'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {status === 'checking' && (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          )}
-          
-          {status === 'success' && (
-            <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-md p-4 flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
-              <div>
-                <p>{message}</p>
-                <p className="text-sm mt-1 opacity-80">Redirecting to teams page...</p>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <p className="text-muted-foreground">You have been invited to join</p>
+          <h1 className="text-4xl font-bold tracking-tight">{teamName}</h1>
+        </div>
+
+        {/* Card */}
+        <div className="bg-card border rounded-lg shadow-lg">
+          <div className="p-8 space-y-6">
+            {/* Logo/Icon */}
+            <div className="flex justify-center">
+              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                <Users className="h-10 w-10 text-primary" />
               </div>
             </div>
-          )}
-          
-          {status === 'error' && (
-            <>
-              <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-md p-4">
-                <p>{message}</p>
+
+            {/* Welcome message */}
+            <div className="text-center space-y-2">
+              <h2 className="text-xl font-semibold">Welcome to PromptPulse</h2>
+              <p className="text-sm text-muted-foreground">
+                Track and analyze your Claude Code usage with your team
+              </p>
+            </div>
+
+            {/* Error message if any */}
+            {error && teamName && (
+              <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-md p-3">
+                {error}
               </div>
-              
-              <div className="flex gap-4 pt-4">
-                <Button variant="outline" onClick={() => router.push('/teams')}>
-                  Go to Teams
+            )}
+
+            {/* Action button */}
+            <Button 
+              onClick={handleJoin} 
+              className="w-full" 
+              size="lg"
+              disabled={isJoining}
+            >
+              {isJoining ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Joining...
+                </>
+              ) : isAuthenticated ? (
+                'Join Team'
+              ) : (
+                'Sign in to Join'
+              )}
+            </Button>
+
+            {/* Alternative actions */}
+            {!isAuthenticated && (
+              <p className="text-center text-sm text-muted-foreground">
+                No account?{' '}
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto font-normal"
+                  onClick={() => {
+                    sessionStorage.setItem('pendingTeamInvite', resolvedParams.token)
+                    router.push('/')
+                  }}
+                >
+                  Create one first
                 </Button>
-                <Button onClick={() => router.push('/')}>
-                  Go to Dashboard
-                </Button>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Footer link */}
+        <p className="text-center text-sm text-muted-foreground">
+          Changed your mind?{' '}
+          <Button 
+            variant="link" 
+            className="p-0 h-auto font-normal text-muted-foreground"
+            onClick={() => router.push('/')}
+          >
+            Go back
+          </Button>
+        </p>
+      </div>
     </div>
   )
 }

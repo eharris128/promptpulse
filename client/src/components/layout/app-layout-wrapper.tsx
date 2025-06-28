@@ -1,6 +1,7 @@
 'use client'
 
 import { useAuth } from '@/contexts/auth-context'
+import { usePathname } from 'next/navigation'
 import { AppLayout } from './app-layout'
 import { LoginForm } from '@/components/auth/login-form'
 
@@ -10,6 +11,11 @@ interface AppLayoutWrapperProps {
 
 export function AppLayoutWrapper({ children }: AppLayoutWrapperProps) {
   const { isAuthenticated, loading, login, logout } = useAuth()
+  const pathname = usePathname()
+  
+  // Routes that don't require authentication
+  const publicRoutes = ['/teams/join/']
+  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
 
   if (loading) {
     return (
@@ -20,6 +26,11 @@ export function AppLayoutWrapper({ children }: AppLayoutWrapperProps) {
         </div>
       </div>
     )
+  }
+
+  // For public routes, render children directly without authentication check
+  if (isPublicRoute) {
+    return <>{children}</>
   }
 
   if (!isAuthenticated) {

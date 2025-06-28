@@ -21,13 +21,18 @@ export default function Settings() {
   const [saving, setSaving] = useState(false)
   const [settings, setSettings] = useState<LeaderboardSettings>({
     leaderboard_enabled: false,
-    display_name: ''
+    display_name: '',
+    team_leaderboard_enabled: true,
+    team_display_name: ''
   })
   const [emailPreferences, setEmailPreferences] = useState<EmailPreferences>({
-    email_reports_enabled: false,
-    report_frequency: 'weekly',
-    preferred_time: '09:00',
-    timezone: 'UTC'
+    daily_digest: true,
+    weekly_summary: true,
+    leaderboard_updates: true,
+    team_invitations: true,
+    security_alerts: true,
+    email_frequency: 'daily',
+    timezone_for_emails: 'UTC'
   })
   const [planSettings, setPlanSettings] = useState<PlanSettings>({
     claude_plan: 'max_100'
@@ -161,7 +166,7 @@ export default function Settings() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Leaderboard Participation</CardTitle>
+              <CardTitle>Public Leaderboard</CardTitle>
               <CardDescription>
                 Control whether your usage data appears on the public leaderboard
               </CardDescription>
@@ -169,15 +174,15 @@ export default function Settings() {
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="leaderboard-enabled" className="text-base font-medium">
-                    Enable Leaderboard
+                  <Label htmlFor="public-leaderboard-enabled" className="text-base font-medium">
+                    Enable Public Leaderboard
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Allow your usage statistics to be included in leaderboard rankings
+                    Allow your usage statistics to be included in public leaderboard rankings
                   </p>
                 </div>
                 <Switch
-                  id="leaderboard-enabled"
+                  id="public-leaderboard-enabled"
                   checked={settings.leaderboard_enabled}
                   onCheckedChange={(checked) => 
                     setSettings(prev => ({ ...prev, leaderboard_enabled: checked }))
@@ -187,10 +192,10 @@ export default function Settings() {
 
               {settings.leaderboard_enabled && (
                 <div className="space-y-2">
-                  <Label htmlFor="display-name">Display Name (Optional)</Label>
+                  <Label htmlFor="public-display-name">Public Display Name (Optional)</Label>
                   <Input
-                    id="display-name"
-                    placeholder="Leave empty to use your username"
+                    id="public-display-name"
+                    placeholder="Leave empty to stay anonymous on public leaderboards"
                     value={settings.display_name || ''}
                     maxLength={50}
                     onChange={(e) => {
@@ -199,7 +204,7 @@ export default function Settings() {
                     }}
                   />
                   <p className="text-sm text-muted-foreground">
-                    This name will be shown on the leaderboard instead of your username
+                    How you appear on public leaderboards • Leave empty to stay anonymous
                   </p>
                 </div>
               )}
@@ -208,28 +213,149 @@ export default function Settings() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Email Reports</CardTitle>
+              <CardTitle>Team Leaderboard</CardTitle>
               <CardDescription>
-                Configure automatic email reports about your Claude Code usage
+                Control whether your usage data appears in team leaderboards
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="email-reports-enabled" className="text-base font-medium">
-                    Enable Email Reports
+                  <Label htmlFor="team-leaderboard-enabled" className="text-base font-medium">
+                    Enable Team Leaderboard
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Receive periodic usage summaries via email
+                    Allow your usage statistics to be included in team rankings
                   </p>
                 </div>
                 <Switch
-                  id="email-reports-enabled"
-                  checked={emailPreferences.email_reports_enabled}
+                  id="team-leaderboard-enabled"
+                  checked={settings.team_leaderboard_enabled}
                   onCheckedChange={(checked) => 
-                    setEmailPreferences(prev => ({ ...prev, email_reports_enabled: checked }))
+                    setSettings(prev => ({ ...prev, team_leaderboard_enabled: checked }))
                   }
                 />
+              </div>
+
+              {settings.team_leaderboard_enabled && (
+                <div className="space-y-2">
+                  <Label htmlFor="team-display-name">Team Display Name (Optional)</Label>
+                  <Input
+                    id="team-display-name"
+                    placeholder="What should teammates call you?"
+                    value={settings.team_display_name || ''}
+                    maxLength={50}
+                    onChange={(e) => {
+                      const sanitized = sanitizeDisplayName(e.target.value)
+                      setSettings(prev => ({ ...prev, team_display_name: sanitized }))
+                    }}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    How you appear to teammates • Falls back to public name, then username
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Email Notifications</CardTitle>
+              <CardDescription>
+                Configure which email notifications you'd like to receive
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="daily-digest" className="text-base font-medium">
+                      Daily Digest
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Daily summary of your Claude Code usage
+                    </p>
+                  </div>
+                  <Switch
+                    id="daily-digest"
+                    checked={emailPreferences.daily_digest}
+                    onCheckedChange={(checked) => 
+                      setEmailPreferences(prev => ({ ...prev, daily_digest: checked }))
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="weekly-summary" className="text-base font-medium">
+                      Weekly Summary
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Comprehensive weekly usage report
+                    </p>
+                  </div>
+                  <Switch
+                    id="weekly-summary"
+                    checked={emailPreferences.weekly_summary}
+                    onCheckedChange={(checked) => 
+                      setEmailPreferences(prev => ({ ...prev, weekly_summary: checked }))
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="leaderboard-updates" className="text-base font-medium">
+                      Leaderboard Updates
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Notifications about your leaderboard ranking changes
+                    </p>
+                  </div>
+                  <Switch
+                    id="leaderboard-updates"
+                    checked={emailPreferences.leaderboard_updates}
+                    onCheckedChange={(checked) => 
+                      setEmailPreferences(prev => ({ ...prev, leaderboard_updates: checked }))
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="team-invitations" className="text-base font-medium">
+                      Team Invitations
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Notifications when you're invited to join teams
+                    </p>
+                  </div>
+                  <Switch
+                    id="team-invitations"
+                    checked={emailPreferences.team_invitations}
+                    onCheckedChange={(checked) => 
+                      setEmailPreferences(prev => ({ ...prev, team_invitations: checked }))
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="security-alerts" className="text-base font-medium">
+                      Security Alerts
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Important security notifications about your account
+                    </p>
+                  </div>
+                  <Switch
+                    id="security-alerts"
+                    checked={emailPreferences.security_alerts}
+                    onCheckedChange={(checked) => 
+                      setEmailPreferences(prev => ({ ...prev, security_alerts: checked }))
+                    }
+                  />
+                </div>
               </div>
 
               {emailPreferences.email && !isEditingEmail && (
@@ -263,8 +389,9 @@ export default function Settings() {
                   {(!emailPreferences.email || isEditingEmail) && (
                     <div className="space-y-3">
                       <div className="space-y-2">
-                        <Label htmlFor="email">Email Address</Label>
+                        <Label htmlFor="email">Email Address (coming soon...)</Label>
                         <Input
+                          disabled
                           id="email"
                           type="email"
                           placeholder="your.email@example.com"
@@ -299,49 +426,56 @@ export default function Settings() {
                 </div>
               )}
 
-              {emailPreferences.email_reports_enabled && emailPreferences.email && (
+              {emailPreferences.email && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="report-frequency">Report Frequency</Label>
+                      <Label htmlFor="email-frequency">Email Frequency</Label>
                       <Select
-                        id="report-frequency"
-                        value={emailPreferences.report_frequency}
+                        id="email-frequency"
+                        value={emailPreferences.email_frequency}
                         onChange={(e) => 
                           setEmailPreferences(prev => ({ 
                             ...prev, 
-                            report_frequency: e.target.value as 'daily' | 'weekly' | 'monthly'
+                            email_frequency: e.target.value as 'immediate' | 'daily' | 'weekly' | 'none'
                           }))
                         }
                       >
+                        <option value="immediate">Immediate</option>
                         <option value="daily">Daily</option>
                         <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
+                        <option value="none">None (Disabled)</option>
                       </Select>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="preferred-time">Preferred Time</Label>
-                      <Input
-                        id="preferred-time"
-                        type="time"
-                        value={emailPreferences.preferred_time}
+                      <Label htmlFor="timezone-for-emails">Timezone for Emails</Label>
+                      <Select
+                        id="timezone-for-emails"
+                        value={emailPreferences.timezone_for_emails}
                         onChange={(e) => 
-                          setEmailPreferences(prev => ({ ...prev, preferred_time: e.target.value }))
+                          setEmailPreferences(prev => ({ ...prev, timezone_for_emails: e.target.value }))
                         }
-                      />
+                      >
+                        <option value="UTC">UTC</option>
+                        <option value="America/New_York">New York</option>
+                        <option value="America/Los_Angeles">Los Angeles</option>
+                        <option value="Europe/London">London</option>
+                        <option value="Europe/Paris">Paris</option>
+                        <option value="Asia/Tokyo">Tokyo</option>
+                        <option value="Asia/Shanghai">Shanghai</option>
+                        <option value="Asia/Kolkata">Mumbai</option>
+                        <option value="Australia/Sydney">Sydney</option>
+                      </Select>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="timezone">Timezone</Label>
-                    <Select
-                      id="timezone"
-                      value={emailPreferences.timezone}
-                      onChange={(e) => 
-                        setEmailPreferences(prev => ({ ...prev, timezone: e.target.value }))
-                      }
-                    >
+                    <Label htmlFor="email-frequency-desc">Email Delivery</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Choose how frequently you want to receive email notifications. Individual notification types can be controlled above.
+                    </p>
+                    <Select>
                       <option value="UTC">UTC</option>
                       <option value="America/New_York">Eastern Time (US)</option>
                       <option value="America/Chicago">Central Time (US)</option>

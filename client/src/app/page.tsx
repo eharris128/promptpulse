@@ -5,16 +5,18 @@ import { StatsCards } from '@/components/dashboard/stats-cards'
 import { UsageChart } from '@/components/dashboard/usage-chart'
 import { MachinesTable } from '@/components/dashboard/machines-table'
 import { FixedPlanComparison } from '@/components/dashboard/fixed-plan-comparison'
+import { ProjectsWidget } from '@/components/dashboard/projects-widget'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { apiClient } from '@/lib/api'
-import { AggregateData, Machine, LeaderboardData, PlanSettings } from '@/types'
+import { AggregateData, Machine, ProjectData, LeaderboardData, PlanSettings } from '@/types'
 
 export default function Dashboard() {
   const [dataLoading, setDataLoading] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [usageData, setUsageData] = useState<AggregateData | null>(null)
   const [machines, setMachines] = useState<Machine[]>([])
+  const [projectsData, setProjectsData] = useState<ProjectData[]>([])
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null)
   const [planSettings, setPlanSettings] = useState<PlanSettings | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -32,15 +34,17 @@ export default function Dashboard() {
         setDataLoading(true)
       }
       setError(null)
-      const [usageResponse, machinesResponse, planResponse] = await Promise.all([
+      const [usageResponse, machinesResponse, planResponse, projectsResponse] = await Promise.all([
         apiClient.getUsageAggregate(),
         apiClient.getMachines(),
-        apiClient.getPlanSettings()
+        apiClient.getPlanSettings(),
+        apiClient.getProjects({ limit: 10 })
       ])
       
       setUsageData(usageResponse)
       setMachines(machinesResponse)
       setPlanSettings(planResponse)
+      setProjectsData(projectsResponse)
       
       try {
         const leaderboard = await apiClient.getLeaderboard('daily')
@@ -86,7 +90,7 @@ export default function Dashboard() {
       )}
 
       {dataLoading && !usageData && (
-        <div className="flex items-center justify-center py-8">
+        <div className="space-y-4">
           <div className="text-lg">Loading dashboard data...</div>
         </div>
       )}
@@ -94,11 +98,14 @@ export default function Dashboard() {
       {!dataLoading && usageData && usageData.totals && planSettings && (
         <>
           <StatsCards data={usageData} />
-          <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-            <FixedPlanComparison 
-              actualCost={usageData.totals?.total_cost || 0} 
-              userPlan={planSettings.claude_plan} 
-            />
+          <FixedPlanComparison 
+            actualCost={usageData.totals?.total_cost || 0} 
+            userPlan={planSettings.claude_plan} 
+          />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+            <div className="lg:col-span-4">
+              <ProjectsWidget data={projectsData} />
+            </div>
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
             <UsageChart data={usageData} type="cost" />

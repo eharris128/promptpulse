@@ -1,4 +1,4 @@
-import { AggregateData, Machine, SessionData, BlockData, ApiResponse, LeaderboardData, LeaderboardSettings, EmailPreferences, PlanSettings, Team, TeamWithRole, TeamMember, TeamInvitation } from '@/types';
+import { AggregateData, Machine, SessionData, BlockData, ProjectData, ApiResponse, LeaderboardData, LeaderboardSettings, EmailPreferences, PlanSettings, Team, TeamWithRole, TeamMember, TeamInvitation } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://exciting-patience-production.up.railway.app';
 
@@ -122,6 +122,18 @@ class ApiClient {
     return this.request<BlockData[]>(`/api/usage/blocks${query ? `?${query}` : ''}`);
   }
 
+  async getProjects(params?: {
+    since?: string;
+    limit?: number;
+  }): Promise<ProjectData[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.since) searchParams.set('since', params.since);
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+
+    const query = searchParams.toString();
+    return this.request<ProjectData[]>(`/api/usage/projects${query ? `?${query}` : ''}`);
+  }
+
   async getUsagePatterns(params?: {
     machineId?: string;
     period?: 'hour' | 'day' | 'week';
@@ -211,20 +223,47 @@ class ApiClient {
     });
   }
 
-  async getTeamMembers(teamId: number): Promise<TeamMember[]> {
+  async getTeamMembers(teamId: string): Promise<TeamMember[]> {
     return this.request<TeamMember[]>(`/api/teams/${teamId}/members`);
   }
 
-  async inviteToTeam(teamId: number, email: string): Promise<ApiResponse> {
-    return this.request<ApiResponse>(`/api/teams/${teamId}/invite`, {
+
+  async getTeamPreview(inviteCode: string): Promise<{ teamName: string }> {
+    return this.request<{ teamName: string }>(`/api/teams/join/${inviteCode}/preview`);
+  }
+
+  async joinTeam(inviteCode: string): Promise<ApiResponse & { teamName: string }> {
+    return this.request<ApiResponse & { teamName: string }>(`/api/teams/join/${inviteCode}`, {
       method: 'POST',
-      body: JSON.stringify({ email }),
     });
   }
 
-  async joinTeam(inviteToken: string): Promise<ApiResponse & { teamName: string }> {
-    return this.request<ApiResponse & { teamName: string }>(`/api/teams/join/${inviteToken}`, {
-      method: 'POST',
+  async getTeamLeaderboard(teamId: string, period: 'daily' | 'weekly'): Promise<LeaderboardData & { team_id: string }> {
+    return this.request<LeaderboardData & { team_id: string }>(`/api/teams/${teamId}/leaderboard/${period}`);
+  }
+
+  async updateTeam(teamId: string, data: { name: string; description?: string }): Promise<ApiResponse> {
+    return this.request<ApiResponse>(`/api/teams/${teamId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async leaveTeam(teamId: string): Promise<ApiResponse> {
+    return this.request<ApiResponse>(`/api/teams/${teamId}/members/me`, {
+      method: 'DELETE',
+    });
+  }
+
+  async removeTeamMember(teamId: string, userId: string): Promise<ApiResponse> {
+    return this.request<ApiResponse>(`/api/teams/${teamId}/members/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async promoteTeamMember(teamId: string, userId: string): Promise<ApiResponse> {
+    return this.request<ApiResponse>(`/api/teams/${teamId}/members/${userId}/promote`, {
+      method: 'PUT',
     });
   }
 }

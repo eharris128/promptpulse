@@ -122,7 +122,6 @@ export default function Leaderboard() {
           <Card>
             <CardHeader>
               <CardTitle>
-                {/* eslint-disable-next-line */}
                 {period === 'daily' ? 'Daily' : 'Weekly'} Top Performers
               </CardTitle>
               <CardDescription>

@@ -66,6 +66,20 @@ export interface BlockData {
   models_used: string[];
 }
 
+export interface ProjectData {
+  project_path: string;
+  project_name: string;
+  session_count: number;
+  total_cost: number;
+  total_tokens: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_tokens: number;
+  cache_read_tokens: number;
+  avg_duration: number | null;
+  last_activity: string;
+}
+
 export interface AggregateData {
   daily: UsageData[];
   totals: {
@@ -89,6 +103,7 @@ export interface LeaderboardEntry {
   daily_average: number;
   rank: number;
   percentile: number;
+  is_current_user?: boolean;
 }
 
 export interface LeaderboardData {
@@ -101,14 +116,19 @@ export interface LeaderboardData {
 export interface LeaderboardSettings {
   leaderboard_enabled: boolean;
   display_name?: string;
+  team_leaderboard_enabled: boolean;
+  team_display_name?: string;
 }
 
 export interface EmailPreferences {
   email?: string;
-  email_reports_enabled: boolean;
-  report_frequency: 'daily' | 'weekly' | 'monthly';
-  preferred_time: string; // HH:MM format
-  timezone: string;
+  daily_digest: boolean;
+  weekly_summary: boolean;
+  leaderboard_updates: boolean;
+  team_invitations: boolean;
+  security_alerts: boolean;
+  email_frequency: 'immediate' | 'daily' | 'weekly' | 'none';
+  timezone_for_emails: string;
 }
 
 export type ClaudePlan = 'pro_17' | 'max_100' | 'max_200';
@@ -125,47 +145,54 @@ export interface PlanPricing {
 }
 
 export interface Team {
-  id: number;
+  id: string; // KSUID
   name: string;
   description?: string;
-  created_by: number;
-  invite_code: string;
-  is_active: boolean;
+  owner_id: string; // KSUID of team owner
+  invite_code: string; // Simple invite code for joining
+  is_public: boolean;
   max_members: number;
-  member_count: number;
+  is_active: boolean;
+  member_count?: number;
   created_at: string;
   updated_at: string;
 }
 
 export interface TeamWithRole extends Team {
-  role: 'admin' | 'member';
+  role: 'owner' | 'admin' | 'member';
+  status: 'active' | 'inactive' | 'removed';
   joined_at: string;
 }
 
 export interface TeamMember {
   id: number;
-  team_id: number;
-  user_id: number;
+  team_id: string; // KSUID
+  user_id: string; // KSUID
   username: string;
   display_name?: string;
   email?: string;
-  role: 'admin' | 'member';
+  role: 'owner' | 'admin' | 'member';
+  status: 'active' | 'inactive' | 'removed';
   joined_at: string;
-  invited_by?: number;
+  invited_by?: string; // KSUID
 }
 
 export interface TeamInvitation {
-  id: number;
-  team_id: number;
-  team_name: string;
+  id: string; // KSUID
+  team_id: string; // KSUID
+  team_name?: string;
   email: string;
-  invited_by: number;
-  invited_by_username: string;
-  invite_token: string;
-  status: 'pending' | 'accepted' | 'expired' | 'declined';
+  invited_by: string; // KSUID
+  invited_by_username?: string;
+  token: string;
+  role: 'owner' | 'admin' | 'member';
+  message?: string;
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
   expires_at: string;
+  used_at?: string;
+  used_by?: string; // KSUID
   created_at: string;
-  accepted_at?: string;
+  updated_at: string;
 }
 
 export interface TeamSettings {
@@ -173,7 +200,7 @@ export interface TeamSettings {
 }
 
 export interface TeamLeaderboardEntry {
-  user_id: number;
+  user_id: string; // KSUID
   username: string;
   display_name?: string;
   total_tokens: number;
@@ -184,7 +211,7 @@ export interface TeamLeaderboardEntry {
 }
 
 export interface TeamLeaderboardData {
-  team_id: number;
+  team_id: string; // KSUID
   team_name: string;
   period: 'daily' | 'weekly';
   entries: TeamLeaderboardEntry[];

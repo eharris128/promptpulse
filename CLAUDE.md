@@ -20,7 +20,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `promptpulse logout` - Clear authentication and log out
 - `promptpulse whoami` - Show current user information
 - `promptpulse collect` - Collect and upload Claude Code usage data
-- `promptpulse setup` - Configure automatic data collection
+- `promptpulse setup` - Configure automatic data collection with cron
+- `promptpulse status` - Show collection status and health information
+- `promptpulse doctor` - Diagnose common collection issues and system health
 - `promptpulse dashboard` - Open web dashboard in browser
 
 ## Development Environment
@@ -40,6 +42,13 @@ npm run client:dev  # Dashboard only at http://localhost:3001
 ```bash
 npm run migrate     # Apply database migrations
 node check-db.js    # Test database connectivity
+```
+
+### CLI Diagnostic Commands
+```bash
+promptpulse status   # Check collection status and health
+promptpulse doctor   # Diagnose issues and system health
+promptpulse setup    # Set up automatic collection with cron
 ```
 
 ## Code Style Guidelines
@@ -75,11 +84,33 @@ node check-db.js    # Test database connectivity
 - No sensitive data in logs or error messages
 - API keys are generated securely and stored in ~/.promptpulse/config.json
 
+### Data Collection & Privacy
+- **Usage Statistics**: Token counts, costs, timestamps, model usage
+- **Project Paths**: Derived from Claude Code session IDs (configurable privacy levels)
+- **Machine Identifiers**: Hostname or custom MACHINE_ID for multi-device tracking
+- **No Content Collection**: Prompts and conversation content are NEVER uploaded or stored
+
+#### Project Path Privacy Controls
+Set `PROJECT_PATH_PRIVACY` environment variable to control project path collection:
+- `basename` (default): Only project folder names (e.g., `/my-project`)
+- `full`: Complete project paths (e.g., `/home/user/work/company/my-project`)
+- `hash`: Hashed paths for analytics without revealing structure
+- `none`: No project path collection
+
+```bash
+# Examples
+export PROJECT_PATH_PRIVACY=basename  # Most private, still useful
+export PROJECT_PATH_PRIVACY=none      # Maximum privacy
+export PROJECT_PATH_PRIVACY=hash      # Analytics-friendly privacy
+```
+
 ### Data Collection
 - Reads Claude Code usage from ~/.claude/projects/**/*.jsonl
 - Supports multiple granularities: daily, session, blocks, all
 - Implements deduplication to prevent duplicate uploads
 - Maintains upload logs for debugging and tracking
+- Automatic collection via cron with configurable intervals (15, 30, 60 minutes, or daily)
+- Collection logs stored in ~/.promptpulse/collection.log
 
 ### Multi-User Support
 - Each user has isolated data access
@@ -120,6 +151,17 @@ node check-db.js    # Test database connectivity
 ```bash
 promptpulse collect --granularity all  # Test full collection
 promptpulse whoami                      # Verify authentication
+promptpulse status                      # Check collection health
+promptpulse doctor                      # Diagnose any issues
+```
+
+### Automatic Collection Setup
+```bash
+promptpulse setup                       # Set up 15-minute collection (default)
+promptpulse setup --interval 30         # Set up 30-minute collection
+promptpulse setup --interval 60         # Set up hourly collection
+promptpulse setup --interval daily      # Set up daily collection (9 AM)
+promptpulse setup --remove              # Remove automatic collection
 ```
 
 ### Package Management

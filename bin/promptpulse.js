@@ -23,10 +23,16 @@ program
 // Setup command
 program
   .command('setup')
-  .description('Set up cron job to automatically collect usage data every 15 minutes')
-  .action(async () => {
-    const { setup } = await import('../lib/setup.js');
-    await setup();
+  .description('Set up automatic collection of usage data')
+  .option('-i, --interval <minutes>', 'collection interval: 15, 30, 60, or daily', '15')
+  .option('-r, --remove', 'remove automatic collection')
+  .action(async (options) => {
+    const { setup, removeSetup } = await import('../lib/setup.js');
+    if (options.remove) {
+      await removeSetup();
+    } else {
+      await setup(options);
+    }
   });
 
 // Collect command
@@ -76,6 +82,24 @@ program
   .action(async (action, args) => {
     const { userCommand } = await import('../lib/user-cli.js');
     await userCommand(action, args);
+  });
+
+// Status command
+program
+  .command('status')
+  .description('Show collection status and health information')
+  .action(async () => {
+    const { status } = await import('../lib/status.js');
+    await status();
+  });
+
+// Doctor command
+program
+  .command('doctor')
+  .description('Diagnose common collection issues and system health')
+  .action(async () => {
+    const { doctor } = await import('../lib/status.js');
+    await doctor();
   });
 
 // Dashboard command

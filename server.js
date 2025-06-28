@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import crypto from 'crypto';
+import KSUID from 'ksuid';
 import rateLimit from 'express-rate-limit';
 import { authenticateApiKey, createUser, listUsers } from './lib/server-auth.js';
 import { initializeDbManager, getDbManager } from './lib/db-manager.js';
@@ -358,7 +359,8 @@ app.get('/api/usage/aggregate', authenticateApiKey, async (req, res) => {
           SUM(cache_creation_tokens) as cache_creation_tokens,
           SUM(cache_read_tokens) as cache_read_tokens,
           SUM(total_tokens) as total_tokens,
-          SUM(total_cost) as total_cost
+          SUM(total_cost) as total_cost,
+          GROUP_CONCAT(models_used, '|') as models_used_concat
         FROM usage_data
         ${whereClause}
         GROUP BY machine_id, date 
@@ -389,6 +391,29 @@ app.get('/api/usage/aggregate', authenticateApiKey, async (req, res) => {
       
       // Ensure daily is always an array
       const dailyResults = Array.isArray(daily) ? daily : [];
+      
+      // Process models_used field
+      dailyResults.forEach(row => {
+        if (row.models_used_concat) {
+          // Split by pipe, parse each JSON array, flatten, and deduplicate
+          const allModels = row.models_used_concat.split('|')
+            .map(jsonStr => {
+              try {
+                return JSON.parse(jsonStr);
+              } catch (e) {
+                return [];
+              }
+            })
+            .flat();
+          
+          // Deduplicate models
+          row.models_used = [...new Set(allModels)];
+        } else {
+          row.models_used = [];
+        }
+        // Remove the concat field
+        delete row.models_used_concat;
+      });
       
       // Debug logging
       const debugCount = await db.sql`SELECT COUNT(*) as count FROM usage_data WHERE user_id = ${userId}`;
@@ -508,6 +533,64 @@ app.get('/api/usage/sessions', authenticateApiKey, async (req, res) => {
   }
 });
 
+// Projects data endpoint
+app.get('/api/usage/projects', authenticateApiKey, async (req, res) => {
+  const { since, limit = 10 } = req.query;
+  const userId = req.user.id;
+  const queryContext = logDatabaseQuery('fetch_projects', userId);
+  
+  try {
+    const projects = await dbManager.executeQuery(async (db) => {
+      // Default to last 30 days if no since parameter provided
+      const sinceDate = since || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const limitValue = parseInt(limit);
+      
+      return await db.sql`
+        SELECT 
+          project_path,
+          COUNT(*) as session_count,
+          SUM(total_cost) as total_cost,
+          SUM(total_tokens) as total_tokens,
+          SUM(input_tokens) as input_tokens,
+          SUM(output_tokens) as output_tokens,
+          SUM(cache_creation_tokens) as cache_creation_tokens,
+          SUM(cache_read_tokens) as cache_read_tokens,
+          AVG(duration_minutes) as avg_duration,
+          MAX(start_time) as last_activity
+        FROM usage_sessions
+        WHERE user_id = ${userId} AND project_path IS NOT NULL AND start_time >= ${sinceDate}
+        GROUP BY project_path 
+        ORDER BY total_tokens DESC
+        LIMIT ${limitValue}
+      `;
+    }, { ...queryContext, operation: 'fetch_user_projects' });
+    
+    // Add project name derivation with safety check
+    const projectsWithNames = Array.isArray(projects) ? projects.map(project => {
+      // Extract project name from path (e.g., /home/user/projects/my-app -> my-app)
+      let projectName = project.project_path;
+      if (projectName) {
+        const parts = projectName.split('/');
+        projectName = parts[parts.length - 1] || parts[parts.length - 2] || 'Unknown';
+      }
+      
+      return {
+        ...project,
+        project_name: projectName,
+        avg_duration: project.avg_duration ? Math.round(project.avg_duration) : null
+      };
+    }) : [];
+    
+    res.json(projectsWithNames);
+    log.performance('fetch_projects', Date.now() - queryContext.startTime, { 
+      userId, projectCount: projectsWithNames.length 
+    });
+  } catch (error) {
+    logError(error, { context: 'fetch_projects', userId, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // Block data endpoints
 app.get('/api/usage/blocks', authenticateApiKey, async (req, res) => {
   const { machineId, since, until, activeOnly } = req.query;
@@ -534,12 +617,9 @@ app.get('/api/usage/blocks', authenticateApiKey, async (req, res) => {
       }
       
       const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+      const query = `SELECT * FROM usage_blocks ${whereClause} ORDER BY start_time DESC`;
       
-      return await db.sql`
-        SELECT * FROM usage_blocks 
-        ${whereClause}
-        ORDER BY start_time DESC
-      `;
+      return await db.sql(query);
     }, { operation: 'fetch_usage_blocks', user_id: userId });
     
     // Parse JSON fields
@@ -832,7 +912,8 @@ app.get('/api/leaderboard/:period', authenticateApiKey, async (req, res) => {
   try {
     let dateFilter = '';
     if (period === 'daily') {
-      dateFilter = "date = date('now')";
+      // Show data from the last 2 days to be more inclusive
+      dateFilter = "date >= date('now', '-1 day')";
     } else if (period === 'weekly') {
       dateFilter = "date >= date('now', '-7 days')";
     } else {
@@ -896,7 +977,7 @@ app.get('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) =
   try {
     const user = await dbManager.executeQuery(async (db) => {
       return await db.sql`
-        SELECT leaderboard_enabled, display_name 
+        SELECT leaderboard_enabled, display_name, team_leaderboard_enabled, team_display_name 
         FROM users 
         WHERE id = ${userId}
       `;
@@ -908,7 +989,9 @@ app.get('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) =
     
     res.json({
       leaderboard_enabled: Boolean(user[0].leaderboard_enabled),
-      display_name: user[0].display_name
+      display_name: user[0].display_name,
+      team_leaderboard_enabled: Boolean(user[0].team_leaderboard_enabled),
+      team_display_name: user[0].team_display_name
     });
     
     log.performance('get_leaderboard_settings', Date.now() - queryContext.startTime, { userId });
@@ -932,10 +1015,11 @@ function sanitizeDisplayName(input) {
 
 app.put('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) => {
   const userId = req.user.id;
-  const { leaderboard_enabled, display_name } = req.body;
+  const { leaderboard_enabled, display_name, team_leaderboard_enabled, team_display_name } = req.body;
   const queryContext = logDatabaseQuery('update_leaderboard_settings', userId);
   
   const sanitizedDisplayName = sanitizeDisplayName(display_name);
+  const sanitizedTeamDisplayName = sanitizeDisplayName(team_display_name);
   
   try {
     await dbManager.executeQuery(async (db) => {
@@ -944,6 +1028,8 @@ app.put('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) =
         SET 
           leaderboard_enabled = ${leaderboard_enabled ? 1 : 0},
           display_name = ${sanitizedDisplayName},
+          team_leaderboard_enabled = ${team_leaderboard_enabled ? 1 : 0},
+          team_display_name = ${sanitizedTeamDisplayName},
           leaderboard_updated_at = CURRENT_TIMESTAMP
         WHERE id = ${userId}
       `;
@@ -952,7 +1038,9 @@ app.put('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) =
     res.json({ 
       message: 'Leaderboard settings updated successfully',
       leaderboard_enabled: Boolean(leaderboard_enabled),
-      display_name: sanitizedDisplayName
+      display_name: sanitizedDisplayName,
+      team_leaderboard_enabled: Boolean(team_leaderboard_enabled),
+      team_display_name: sanitizedTeamDisplayName
     });
     
     log.performance('update_leaderboard_settings', Date.now() - queryContext.startTime, { 
@@ -990,17 +1078,23 @@ app.get('/api/user/email-preferences', authenticateApiKey, async (req, res) => {
     
     // Default values if no preferences exist yet
     const defaultPrefs = {
-      email_reports_enabled: false,
-      report_frequency: 'weekly',
-      preferred_time: '09:00',
-      timezone: preferences.user.timezone || 'UTC'
+      daily_digest: true,
+      weekly_summary: true,
+      leaderboard_updates: true,
+      team_invitations: true,
+      security_alerts: true,
+      email_frequency: 'daily',
+      timezone_for_emails: preferences.user.timezone || 'UTC'
     };
     
     const userPrefs = preferences.preferences ? {
-      email_reports_enabled: Boolean(preferences.preferences.email_reports_enabled),
-      report_frequency: preferences.preferences.report_frequency,
-      preferred_time: preferences.preferences.preferred_time,
-      timezone: preferences.preferences.timezone
+      daily_digest: Boolean(preferences.preferences.daily_digest),
+      weekly_summary: Boolean(preferences.preferences.weekly_summary),
+      leaderboard_updates: Boolean(preferences.preferences.leaderboard_updates),
+      team_invitations: Boolean(preferences.preferences.team_invitations),
+      security_alerts: Boolean(preferences.preferences.security_alerts),
+      email_frequency: preferences.preferences.email_frequency,
+      timezone_for_emails: preferences.preferences.timezone_for_emails
     } : defaultPrefs;
     
     res.json({
@@ -1018,17 +1112,21 @@ app.get('/api/user/email-preferences', authenticateApiKey, async (req, res) => {
 
 app.put('/api/user/email-preferences', authenticateApiKey, async (req, res) => {
   const userId = req.user.id;
-  const { email_reports_enabled, report_frequency, preferred_time, timezone } = req.body;
+  const { 
+    daily_digest, 
+    weekly_summary, 
+    leaderboard_updates, 
+    team_invitations, 
+    security_alerts, 
+    email_frequency, 
+    timezone_for_emails 
+  } = req.body;
   const queryContext = logDatabaseQuery('update_email_preferences', userId);
   
   // Validate inputs
-  const validFrequencies = ['daily', 'weekly', 'monthly'];
-  if (report_frequency && !validFrequencies.includes(report_frequency)) {
-    return res.status(400).json({ error: 'Invalid report frequency. Must be daily, weekly, or monthly.' });
-  }
-  
-  if (preferred_time && !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(preferred_time)) {
-    return res.status(400).json({ error: 'Invalid time format. Use HH:MM format.' });
+  const validFrequencies = ['immediate', 'daily', 'weekly', 'none'];
+  if (email_frequency && !validFrequencies.includes(email_frequency)) {
+    return res.status(400).json({ error: 'Invalid email frequency. Must be immediate, daily, weekly, or none.' });
   }
   
   try {
@@ -1036,27 +1134,34 @@ app.put('/api/user/email-preferences', authenticateApiKey, async (req, res) => {
       // Insert or update preferences
       return await db.sql`
         INSERT OR REPLACE INTO user_email_preferences (
-          user_id, email_reports_enabled, report_frequency, preferred_time, timezone
+          user_id, daily_digest, weekly_summary, leaderboard_updates, 
+          team_invitations, security_alerts, email_frequency, timezone_for_emails
         ) VALUES (
           ${userId},
-          ${email_reports_enabled ? 1 : 0},
-          ${report_frequency || 'weekly'},
-          ${preferred_time || '09:00'},
-          ${timezone || 'UTC'}
+          ${daily_digest !== undefined ? (daily_digest ? 1 : 0) : 1},
+          ${weekly_summary !== undefined ? (weekly_summary ? 1 : 0) : 1},
+          ${leaderboard_updates !== undefined ? (leaderboard_updates ? 1 : 0) : 1},
+          ${team_invitations !== undefined ? (team_invitations ? 1 : 0) : 1},
+          ${security_alerts !== undefined ? (security_alerts ? 1 : 0) : 1},
+          ${email_frequency || 'daily'},
+          ${timezone_for_emails || 'UTC'}
         )
       `;
     }, { ...queryContext, operation: 'update_user_email_preferences' });
     
     res.json({ 
       message: 'Email preferences updated successfully',
-      email_reports_enabled: Boolean(email_reports_enabled),
-      report_frequency: report_frequency || 'weekly',
-      preferred_time: preferred_time || '09:00',
-      timezone: timezone || 'UTC'
+      daily_digest: daily_digest !== undefined ? Boolean(daily_digest) : true,
+      weekly_summary: weekly_summary !== undefined ? Boolean(weekly_summary) : true,
+      leaderboard_updates: leaderboard_updates !== undefined ? Boolean(leaderboard_updates) : true,
+      team_invitations: team_invitations !== undefined ? Boolean(team_invitations) : true,
+      security_alerts: security_alerts !== undefined ? Boolean(security_alerts) : true,
+      email_frequency: email_frequency || 'daily',
+      timezone_for_emails: timezone_for_emails || 'UTC'
     });
     
     log.performance('update_email_preferences', Date.now() - queryContext.startTime, { 
-      userId, email_reports_enabled: Boolean(email_reports_enabled) 
+      userId, email_frequency: email_frequency || 'daily' 
     });
     
   } catch (error) {
@@ -1286,22 +1391,20 @@ app.post('/api/teams', authenticateApiKey, async (req, res) => {
   
   try {
     const result = await dbManager.executeQuery(async (db) => {
-      // Generate unique invite code
+      // Generate KSUID for team and unique invite code
+      const teamId = KSUID.randomSync().string;
       const inviteCode = crypto.randomBytes(8).toString('hex');
       
       // Create team
-      const teamResult = await db.sql`
-        INSERT INTO teams (name, description, created_by, invite_code)
-        VALUES (${name.trim()}, ${description?.trim() || null}, ${userId}, ${inviteCode})
-        RETURNING id
+      await db.sql`
+        INSERT INTO teams (id, name, description, owner_id, is_public, max_members, is_active, invite_code)
+        VALUES (${teamId}, ${name.trim()}, ${description?.trim() || null}, ${userId}, 0, 50, 1, ${inviteCode})
       `;
       
-      const teamId = teamResult[0].id;
-      
-      // Add creator as admin
+      // Add creator as owner
       await db.sql`
-        INSERT INTO team_members (team_id, user_id, role)
-        VALUES (${teamId}, ${userId}, 'admin')
+        INSERT INTO team_members (team_id, user_id, role, status)
+        VALUES (${teamId}, ${userId}, 'owner', 'active')
       `;
       
       // Return created team with member count
@@ -1326,98 +1429,10 @@ app.post('/api/teams', authenticateApiKey, async (req, res) => {
   }
 });
 
-app.post('/api/teams/:teamId/invite', authenticateApiKey, async (req, res) => {
-  const userId = req.user.id;
-  const teamId = parseInt(req.params.teamId);
-  const { email } = req.body;
-  const queryContext = logDatabaseQuery('invite_to_team', userId);
-  
-  if (!email || typeof email !== 'string') {
-    return res.status(400).json({ error: 'Email is required' });
-  }
-  
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return res.status(400).json({ error: 'Invalid email format' });
-  }
-  
-  try {
-    const result = await dbManager.executeQuery(async (db) => {
-      // Check if user is admin of this team
-      const membership = await db.sql`
-        SELECT role FROM team_members 
-        WHERE team_id = ${teamId} AND user_id = ${userId}
-      `;
-      
-      if (!membership[0] || membership[0].role !== 'admin') {
-        throw new Error('Not authorized');
-      }
-      
-      // Check if user is already a member
-      const existingMember = await db.sql`
-        SELECT tm.user_id FROM team_members tm
-        JOIN users u ON tm.user_id = u.id
-        WHERE tm.team_id = ${teamId} AND u.email = ${email}
-      `;
-      
-      if (existingMember.length > 0) {
-        throw new Error('User already in team');
-      }
-      
-      // Check for existing pending invitation
-      const existingInvite = await db.sql`
-        SELECT id FROM team_invitations
-        WHERE team_id = ${teamId} AND email = ${email} AND status = 'pending'
-        AND expires_at > datetime('now')
-      `;
-      
-      if (existingInvite.length > 0) {
-        throw new Error('Invitation already sent');
-      }
-      
-      // Create invitation
-      const inviteToken = crypto.randomBytes(32).toString('hex');
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
-      
-      await db.sql`
-        INSERT INTO team_invitations (team_id, email, invited_by, invite_token, expires_at)
-        VALUES (${teamId}, ${email}, ${userId}, ${inviteToken}, ${expiresAt})
-      `;
-      
-      // Get team info for email
-      const team = await db.sql`
-        SELECT name FROM teams WHERE id = ${teamId}
-      `;
-      
-      return { inviteToken, teamName: team[0].name };
-    }, { ...queryContext, operation: 'invite_to_team' });
-    
-    // TODO: Send invitation email
-    
-    res.json({ message: 'Invitation sent successfully' });
-    
-    log.performance('invite_to_team', Date.now() - queryContext.startTime, { 
-      userId, teamId, email 
-    });
-    
-  } catch (error) {
-    if (error.message === 'Not authorized') {
-      return res.status(403).json({ error: 'Not authorized to invite members' });
-    }
-    if (error.message === 'User already in team') {
-      return res.status(409).json({ error: 'User is already a member of this team' });
-    }
-    if (error.message === 'Invitation already sent') {
-      return res.status(409).json({ error: 'Invitation already sent to this email' });
-    }
-    logError(error, { context: 'invite_to_team', userId, teamId, queryContext });
-    res.status(500).json({ error: 'Database error' });
-  }
-});
 
 app.get('/api/teams/:teamId/members', authenticateApiKey, async (req, res) => {
   const userId = req.user.id;
-  const teamId = parseInt(req.params.teamId);
+  const teamId = req.params.teamId;
   const queryContext = logDatabaseQuery('get_team_members', userId);
   
   try {
@@ -1434,7 +1449,7 @@ app.get('/api/teams/:teamId/members', authenticateApiKey, async (req, res) => {
       
       // Get team members
       return await db.sql`
-        SELECT tm.*, u.username, u.display_name, u.email
+        SELECT tm.*, u.username, COALESCE(u.team_display_name, u.display_name, u.username) as display_name, u.email
         FROM team_members tm
         JOIN users u ON tm.user_id = u.id
         WHERE tm.team_id = ${teamId}
@@ -1457,57 +1472,161 @@ app.get('/api/teams/:teamId/members', authenticateApiKey, async (req, res) => {
   }
 });
 
-app.post('/api/teams/join/:inviteToken', authenticateApiKey, async (req, res) => {
+app.get('/api/teams/:teamId/leaderboard/:period', authenticateApiKey, async (req, res) => {
+  const { teamId, period } = req.params; // teamId and 'daily' or 'weekly'
   const userId = req.user.id;
-  const inviteToken = req.params.inviteToken;
+  const queryContext = logDatabaseQuery('fetch_team_leaderboard', userId);
+  
+  try {
+    // Validate period
+    if (period !== 'daily' && period !== 'weekly') {
+      return res.status(400).json({ error: 'Invalid period. Use daily or weekly.' });
+    }
+    
+    let dateFilter = '';
+    if (period === 'daily') {
+      // Show data from the last 2 days to be more inclusive
+      dateFilter = "date >= date('now', '-1 day')";
+    } else if (period === 'weekly') {
+      dateFilter = "date >= date('now', '-7 days')";
+    }
+    
+    const leaderboardData = await dbManager.executeQuery(async (db) => {
+      // Check if user is a member of this team
+      const membership = await db.sql`
+        SELECT role FROM team_members 
+        WHERE team_id = ${teamId} AND user_id = ${userId}
+      `;
+      
+      if (!membership[0]) {
+        throw new Error('Not authorized');
+      }
+      
+      // Get team leaderboard data - only for team members who have team_leaderboard_enabled
+      if (period === 'daily') {
+        return await db.sql`
+          SELECT 
+            u.id as user_id,
+            u.username,
+            COALESCE(u.team_display_name, u.display_name, u.username) as display_name,
+            SUM(ud.total_tokens) as total_tokens,
+            SUM(ud.total_cost) as total_cost,
+            ROUND(AVG(ud.total_tokens), 0) as daily_average,
+            ROW_NUMBER() OVER (ORDER BY SUM(ud.total_tokens) DESC) as rank
+          FROM users u
+          JOIN team_members tm ON u.id = tm.user_id
+          JOIN usage_data ud ON u.id = ud.user_id
+          WHERE tm.team_id = ${teamId} AND u.team_leaderboard_enabled = 1 AND ud.date >= date('now', '-1 day')
+          GROUP BY u.id, u.username, u.team_display_name, u.display_name
+          ORDER BY total_tokens DESC
+        `;
+      } else {
+        return await db.sql`
+          SELECT 
+            u.id as user_id,
+            u.username,
+            COALESCE(u.team_display_name, u.display_name, u.username) as display_name,
+            SUM(ud.total_tokens) as total_tokens,
+            SUM(ud.total_cost) as total_cost,
+            ROUND(AVG(ud.total_tokens), 0) as daily_average,
+            ROW_NUMBER() OVER (ORDER BY SUM(ud.total_tokens) DESC) as rank
+          FROM users u
+          JOIN team_members tm ON u.id = tm.user_id
+          JOIN usage_data ud ON u.id = ud.user_id
+          WHERE tm.team_id = ${teamId} AND u.team_leaderboard_enabled = 1 AND ud.date >= date('now', '-7 days')
+          GROUP BY u.id, u.username, u.team_display_name, u.display_name
+          ORDER BY total_tokens DESC
+        `;
+      }
+    }, { ...queryContext, operation: 'fetch_team_leaderboard_data', teamId, period });
+    
+    const totalParticipants = leaderboardData.length;
+    
+    // Add percentiles and mark current user
+    const entriesWithPercentiles = leaderboardData.map((entry, index) => ({
+      ...entry,
+      percentile: Math.round(((totalParticipants - index) / totalParticipants) * 100),
+      is_current_user: entry.user_id === userId
+    }));
+    
+    // Find current user's rank
+    const userRank = entriesWithPercentiles.find(entry => entry.user_id === userId)?.rank;
+    
+    res.json({
+      period,
+      entries: entriesWithPercentiles,
+      user_rank: userRank,
+      total_participants: totalParticipants,
+      team_id: teamId
+    });
+    
+    log.performance('fetch_team_leaderboard', Date.now() - queryContext.startTime, { 
+      userId, teamId, period, participantCount: totalParticipants 
+    });
+    
+  } catch (error) {
+    if (error.message === 'Not authorized') {
+      return res.status(403).json({ error: 'Not authorized to view team leaderboard' });
+    }
+    logError(error, { context: 'fetch_team_leaderboard', userId, teamId, period, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get team preview by invite code (no auth required)
+app.get('/api/teams/join/:inviteCode/preview', async (req, res) => {
+  const inviteCode = req.params.inviteCode;
+  const queryContext = logDatabaseQuery('preview_team_invite', 'anonymous');
+  
+  try {
+    const team = await dbManager.executeQuery(async (db) => {
+      const result = await db.sql`
+        SELECT name
+        FROM teams 
+        WHERE invite_code = ${inviteCode} AND is_active = 1
+      `;
+      
+      if (!result[0]) {
+        throw new Error('Invalid invite code');
+      }
+      
+      return result[0];
+    }, { ...queryContext, operation: 'preview_team_invite' });
+    
+    res.json({ teamName: team.name });
+    
+    log.performance('preview_team_invite', Date.now() - queryContext.startTime, { 
+      inviteCode: inviteCode.substring(0, 4) + '...' 
+    });
+    
+  } catch (error) {
+    if (error.message === 'Invalid invite code') {
+      return res.status(404).json({ error: 'Invalid or expired invitation' });
+    }
+    logError(error, { context: 'preview_team_invite', inviteCode, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.post('/api/teams/join/:inviteCode', authenticateApiKey, async (req, res) => {
+  const userId = req.user.id;
+  const inviteCode = req.params.inviteCode;
   const queryContext = logDatabaseQuery('join_team', userId);
   
   try {
     const result = await dbManager.executeQuery(async (db) => {
-      // Get user email
-      const user = await db.sql`
-        SELECT email FROM users WHERE id = ${userId}
+      // Find team by invite code
+      const team = await db.sql`
+        SELECT id, name, max_members, owner_id
+        FROM teams 
+        WHERE invite_code = ${inviteCode} AND is_active = 1
       `;
       
-      const userEmail = user[0]?.email;
-      let invitation;
-      
-      if (userEmail) {
-        // User has email - try email-based invitation matching
-        invitation = await db.sql`
-          SELECT ti.*, t.name as team_name, t.max_members
-          FROM team_invitations ti
-          JOIN teams t ON ti.team_id = t.id
-          WHERE ti.invite_token = ${inviteToken} 
-          AND ti.email = ${userEmail}
-          AND ti.status = 'pending'
-          AND ti.expires_at > datetime('now')
-        `;
+      if (!team[0]) {
+        throw new Error('Invalid invite code');
       }
       
-      if (!invitation || !invitation[0]) {
-        // No email-based match found, try token-only matching
-        // This allows users without emails to join via valid invite tokens
-        invitation = await db.sql`
-          SELECT ti.*, t.name as team_name, t.max_members
-          FROM team_invitations ti
-          JOIN teams t ON ti.team_id = t.id
-          WHERE ti.invite_token = ${inviteToken} 
-          AND ti.status = 'pending'
-          AND ti.expires_at > datetime('now')
-        `;
-        
-        if (!invitation[0]) {
-          throw new Error('Invalid or expired invitation');
-        }
-        
-        // For users without email, we allow joining but warn that email-specific invites won't work
-        if (!userEmail) {
-          console.log(`User ${userId} joining team without email via token ${inviteToken}`);
-        }
-      }
-      
-      const teamId = invitation[0].team_id;
+      const teamId = team[0].id;
       
       // Check if already a member
       const existingMember = await db.sql`
@@ -1524,24 +1643,17 @@ app.post('/api/teams/join/:inviteToken', authenticateApiKey, async (req, res) =>
         SELECT COUNT(*) as count FROM team_members WHERE team_id = ${teamId}
       `;
       
-      if (memberCount[0].count >= invitation[0].max_members) {
+      if (memberCount[0].count >= team[0].max_members) {
         throw new Error('Team is full');
       }
       
-      // Add user to team
+      // Add user to team as regular member
       await db.sql`
-        INSERT INTO team_members (team_id, user_id, invited_by)
-        VALUES (${teamId}, ${userId}, ${invitation[0].invited_by})
+        INSERT INTO team_members (team_id, user_id, role, status, invited_by)
+        VALUES (${teamId}, ${userId}, 'member', 'active', ${team[0].owner_id})
       `;
       
-      // Update invitation status
-      await db.sql`
-        UPDATE team_invitations
-        SET status = 'accepted', accepted_at = datetime('now')
-        WHERE id = ${invitation[0].id}
-      `;
-      
-      return { teamName: invitation[0].team_name };
+      return { teamName: team[0].name };
     }, { ...queryContext, operation: 'join_team' });
     
     res.json({ 
@@ -1552,8 +1664,8 @@ app.post('/api/teams/join/:inviteToken', authenticateApiKey, async (req, res) =>
     log.performance('join_team', Date.now() - queryContext.startTime, { userId });
     
   } catch (error) {
-    if (error.message === 'Invalid or expired invitation') {
-      return res.status(404).json({ error: 'Invalid or expired invitation' });
+    if (error.message === 'Invalid invite code') {
+      return res.status(404).json({ error: 'Invalid invite code' });
     }
     if (error.message === 'Already a member') {
       return res.status(409).json({ error: 'You are already a member of this team' });
@@ -1561,7 +1673,249 @@ app.post('/api/teams/join/:inviteToken', authenticateApiKey, async (req, res) =>
     if (error.message === 'Team is full') {
       return res.status(409).json({ error: 'Team has reached maximum member capacity' });
     }
-    logError(error, { context: 'join_team', userId, queryContext });
+    logError(error, { context: 'join_team', userId, inviteCode, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Update team name (admin only)
+app.put('/api/teams/:teamId', authenticateApiKey, async (req, res) => {
+  const userId = req.user.id;
+  const teamId = req.params.teamId;
+  const { name, description } = req.body;
+  const queryContext = logDatabaseQuery('update_team', userId);
+  
+  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    return res.status(400).json({ error: 'Team name is required' });
+  }
+  
+  if (name.length > 100) {
+    return res.status(400).json({ error: 'Team name must be 100 characters or less' });
+  }
+  
+  if (description && description.length > 200) {
+    return res.status(400).json({ error: 'Team description must be 200 characters or less' });
+  }
+  
+  try {
+    await dbManager.executeQuery(async (db) => {
+      // Check if user is admin of this team
+      const membership = await db.sql`
+        SELECT role FROM team_members 
+        WHERE team_id = ${teamId} AND user_id = ${userId}
+      `;
+      
+      if (!membership[0] || membership[0].role !== 'admin') {
+        throw new Error('Not authorized');
+      }
+      
+      // Update team name and description
+      await db.sql`
+        UPDATE teams 
+        SET name = ${name.trim()}, description = ${description?.trim() || null}
+        WHERE id = ${teamId} AND is_active = 1
+      `;
+    }, { ...queryContext, operation: 'update_team' });
+    
+    res.json({ message: 'Team updated successfully' });
+    
+    log.performance('update_team', Date.now() - queryContext.startTime, { 
+      userId, teamId 
+    });
+    
+  } catch (error) {
+    if (error.message === 'Not authorized') {
+      return res.status(403).json({ error: 'Only team admins can update team details' });
+    }
+    logError(error, { context: 'update_team', userId, teamId, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Leave team
+app.delete('/api/teams/:teamId/members/me', authenticateApiKey, async (req, res) => {
+  const userId = req.user.id;
+  const teamId = req.params.teamId;
+  const queryContext = logDatabaseQuery('leave_team', userId);
+  
+  try {
+    const result = await dbManager.executeQuery(async (db) => {
+      // Check if user is member of this team
+      const membership = await db.sql`
+        SELECT role FROM team_members 
+        WHERE team_id = ${teamId} AND user_id = ${userId}
+      `;
+      
+      if (!membership[0]) {
+        throw new Error('Not a member');
+      }
+      
+      // If user is admin, check if they're the only admin
+      if (membership[0].role === 'admin') {
+        const adminCount = await db.sql`
+          SELECT COUNT(*) as count FROM team_members 
+          WHERE team_id = ${teamId} AND role = 'admin'
+        `;
+        
+        if (adminCount[0].count === 1) {
+          // Check if there are other members to promote
+          const totalMembers = await db.sql`
+            SELECT COUNT(*) as count FROM team_members 
+            WHERE team_id = ${teamId}
+          `;
+          
+          if (totalMembers[0].count > 1) {
+            throw new Error('Promote another admin first');
+          }
+          // If solo member, allow leaving (will effectively delete team)
+        }
+      }
+      
+      // Remove user from team
+      await db.sql`
+        DELETE FROM team_members 
+        WHERE team_id = ${teamId} AND user_id = ${userId}
+      `;
+      
+      return { success: true };
+    }, { ...queryContext, operation: 'leave_team' });
+    
+    res.json({ message: 'Successfully left team' });
+    
+    log.performance('leave_team', Date.now() - queryContext.startTime, { 
+      userId, teamId 
+    });
+    
+  } catch (error) {
+    if (error.message === 'Not a member') {
+      return res.status(404).json({ error: 'You are not a member of this team' });
+    }
+    if (error.message === 'Promote another admin first') {
+      return res.status(409).json({ 
+        error: 'You are the only admin. Promote another member to admin first or remove all members.' 
+      });
+    }
+    logError(error, { context: 'leave_team', userId, teamId, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Remove team member (admin only)
+app.delete('/api/teams/:teamId/members/:targetUserId', authenticateApiKey, async (req, res) => {
+  const userId = req.user.id;
+  const teamId = req.params.teamId;
+  const targetUserId = req.params.targetUserId;
+  const queryContext = logDatabaseQuery('remove_team_member', userId);
+  
+  if (userId === targetUserId) {
+    return res.status(400).json({ error: 'Use the leave team endpoint to remove yourself' });
+  }
+  
+  try {
+    await dbManager.executeQuery(async (db) => {
+      // Check if user is admin of this team
+      const membership = await db.sql`
+        SELECT role FROM team_members 
+        WHERE team_id = ${teamId} AND user_id = ${userId}
+      `;
+      
+      if (!membership[0] || membership[0].role !== 'admin') {
+        throw new Error('Not authorized');
+      }
+      
+      // Check if target user is member of this team
+      const targetMembership = await db.sql`
+        SELECT role FROM team_members 
+        WHERE team_id = ${teamId} AND user_id = ${targetUserId}
+      `;
+      
+      if (!targetMembership[0]) {
+        throw new Error('User not found');
+      }
+      
+      // Remove target user from team
+      await db.sql`
+        DELETE FROM team_members 
+        WHERE team_id = ${teamId} AND user_id = ${targetUserId}
+      `;
+    }, { ...queryContext, operation: 'remove_team_member' });
+    
+    res.json({ message: 'Member removed from team successfully' });
+    
+    log.performance('remove_team_member', Date.now() - queryContext.startTime, { 
+      userId, teamId, targetUserId 
+    });
+    
+  } catch (error) {
+    if (error.message === 'Not authorized') {
+      return res.status(403).json({ error: 'Only team admins can remove members' });
+    }
+    if (error.message === 'User not found') {
+      return res.status(404).json({ error: 'User is not a member of this team' });
+    }
+    logError(error, { context: 'remove_team_member', userId, teamId, targetUserId, queryContext });
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Promote member to admin (admin only)
+app.put('/api/teams/:teamId/members/:targetUserId/promote', authenticateApiKey, async (req, res) => {
+  const userId = req.user.id;
+  const teamId = req.params.teamId;
+  const targetUserId = req.params.targetUserId;
+  const queryContext = logDatabaseQuery('promote_team_member', userId);
+  
+  try {
+    await dbManager.executeQuery(async (db) => {
+      // Check if user is admin of this team
+      const membership = await db.sql`
+        SELECT role FROM team_members 
+        WHERE team_id = ${teamId} AND user_id = ${userId}
+      `;
+      
+      if (!membership[0] || membership[0].role !== 'admin') {
+        throw new Error('Not authorized');
+      }
+      
+      // Check if target user is member of this team
+      const targetMembership = await db.sql`
+        SELECT role FROM team_members 
+        WHERE team_id = ${teamId} AND user_id = ${targetUserId}
+      `;
+      
+      if (!targetMembership[0]) {
+        throw new Error('User not found');
+      }
+      
+      if (targetMembership[0].role === 'admin') {
+        throw new Error('Already admin');
+      }
+      
+      // Promote target user to admin
+      await db.sql`
+        UPDATE team_members 
+        SET role = 'admin'
+        WHERE team_id = ${teamId} AND user_id = ${targetUserId}
+      `;
+    }, { ...queryContext, operation: 'promote_team_member' });
+    
+    res.json({ message: 'Member promoted to admin successfully' });
+    
+    log.performance('promote_team_member', Date.now() - queryContext.startTime, { 
+      userId, teamId, targetUserId 
+    });
+    
+  } catch (error) {
+    if (error.message === 'Not authorized') {
+      return res.status(403).json({ error: 'Only team admins can promote members' });
+    }
+    if (error.message === 'User not found') {
+      return res.status(404).json({ error: 'User is not a member of this team' });
+    }
+    if (error.message === 'Already admin') {
+      return res.status(409).json({ error: 'User is already an admin' });
+    }
+    logError(error, { context: 'promote_team_member', userId, teamId, targetUserId, queryContext });
     res.status(500).json({ error: 'Database error' });
   }
 });

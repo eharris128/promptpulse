@@ -7,9 +7,13 @@ Track and analyze your Claude Code usage with beautiful dashboards and competiti
 - **Secure API key authentication** for private data access
 - **Beautiful hosted dashboard** built with Next.js and Recharts
 - **Multi-machine tracking** - aggregate usage across all your devices
+- **Team collaboration** - create teams and compare usage with colleagues
+- **Team leaderboards** - compete within your team or organization
+- **Role-based team management** - owner, admin, and member permissions
 - **Competitive leaderboards** - compare your usage with other users (opt-in)
 - **Detailed analytics** - daily costs, token usage, session tracking
 - **Project-based insights** - see usage by project
+- **Granular email preferences** - control exactly which notifications you receive
 - **Cost tracking** - monitor your Claude API spending
 - **Simple CLI** - easy setup and data collection
 
@@ -115,15 +119,27 @@ Access your personalized dashboard to view:
 - **Session tracking** - Detailed session and project analytics
 - **Dark mode support** - Easy on the eyes during long coding sessions
 
+### Team Features
+- **Team creation** - Create teams for your organization or project groups
+- **Invite system** - Share invite links to add team members
+- **Role management** - Owner, admin, and member permissions
+- **Team leaderboards** - Compare usage within your team
+- **Team analytics** - Aggregate team usage statistics
+- **Privacy controls** - Separate team and public leaderboard participation
+
 ### Leaderboard Features
 - **Daily & Weekly rankings** - See how you stack up against other users
+- **Team leaderboards** - Compete within your team or organization
 - **Opt-in participation** - Complete control over your privacy
 - **Custom display names** - Show a nickname instead of your username
+- **Separate team display names** - Different names for team vs public contexts
 - **Percentile rankings** - Know where you stand in the community
 
 ### Privacy Controls
-- **Leaderboard settings** - Enable/disable participation anytime
+- **Leaderboard settings** - Enable/disable public and team participation separately
 - **Display name management** - Control how you appear to others
+- **Team privacy** - Separate controls for team vs public visibility
+- **Granular email preferences** - 5 individual notification controls
 - **Private by default** - Your data stays private unless you opt in
 
 ## Dashboard Authentication
@@ -170,17 +186,20 @@ This includes:
 - Timestamps and session data
 - Cost calculations
 
-## Multi-User Support
+## Multi-User & Team Support
 
 ### How It Works
 - Each user has a unique API key for authentication
 - All data is completely isolated between users
-- Multiple team members can track usage independently
+- Team features allow collaboration while maintaining privacy
+- Role-based permissions for team management
 
 ### Use Cases
-- **Teams** - Each developer tracks their own Claude usage
+- **Development Teams** - Create teams to compare usage and collaborate
+- **Organizations** - Department-wide usage tracking and leaderboards
 - **Freelancers** - Separate usage by client projects
 - **Personal** - Track usage across work and personal machines
+- **Study Groups** - Compare Claude usage for learning projects
 
 ## CLI Commands Reference
 
@@ -215,8 +234,46 @@ promptpulse doctor                                # Diagnose common issues
 promptpulse dashboard                             # Open web dashboard
 ```
 
+### Team Management
+Team features are managed through the web dashboard:
+```bash
+promptpulse dashboard                             # Open dashboard to manage teams
+```
+
+**Team Features (Dashboard Only):**
+- Create and manage teams with custom names and descriptions
+- Generate and share team invite links
+- Manage team member roles (owner, admin, member)
+- View team usage leaderboards and analytics
+- Join teams using invite codes
+
 ### Aliases
 You can use `ppulse` as a shorthand for `promptpulse` in all commands.
+
+## Team Collaboration
+
+PromptPulse now supports team features for collaborative Claude Code usage tracking:
+
+### Creating Teams
+1. Open your dashboard at [https://www.promptpulse.dev](https://www.promptpulse.dev)
+2. Navigate to the Teams section
+3. Click "Create Team" and provide a name and description
+4. Share the generated invite link with team members
+
+### Joining Teams
+1. Receive an invite link from a team owner or admin
+2. Click the link to join the team automatically
+3. Your usage will now appear in team leaderboards (if enabled)
+
+### Team Roles
+- **Owner**: Full team management, can promote/remove members
+- **Admin**: Can invite members and manage team settings
+- **Member**: Can view team leaderboards and participate
+
+### Team Privacy
+- Team participation is separate from public leaderboard participation
+- You can have different display names for team vs public contexts
+- Team usage data is aggregated but individual privacy is maintained
 
 ## Support
 

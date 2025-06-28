@@ -15,6 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## CLI Commands
 
+### Core Commands
 - `promptpulse` or `ppulse` - Main CLI tool for usage tracking
 - `promptpulse login` - Create new account (interactive) or login with API key
 - `promptpulse logout` - Clear authentication and log out
@@ -24,6 +25,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `promptpulse status` - Show collection status and health information
 - `promptpulse doctor` - Diagnose common collection issues and system health
 - `promptpulse dashboard` - Open web dashboard in browser
+
+### Team Management (Dashboard Only)
+Team features are managed through the web dashboard:
+- Create and manage teams with customizable names and descriptions
+- Invite team members via shareable invite links
+- Role-based permissions (owner, admin, member)
+- Team usage leaderboards and collaboration analytics
+- Join teams using invite codes
 
 ## Development Environment
 
@@ -66,15 +75,23 @@ promptpulse setup    # Set up automatic collection with cron
 ### Core Components
 - **CLI Tool** (`bin/promptpulse.js`) - Command-line interface
 - **API Server** (`server.js`) - Express.js backend with authentication
-- **Dashboard** (`client/`) - Next.js frontend application
+- **Dashboard** (`client/`) - Next.js frontend application with team management
 - **Library** (`lib/`) - Shared utilities and core logic
 
 ### Key Directories
 - `lib/` - Core CLI and server utilities
 - `bin/` - CLI entry point and executable
 - `client/src/` - Next.js application source
-- `migrations/` - Database schema migrations
+- `migrations/` - Modular database schema migrations (6 focused files)
 - `logs/` - Application logs and upload tracking
+
+### Database Schema (Modernized)
+- **Users**: KSUID-based user IDs with secure API key authentication
+- **Usage Data**: Token usage, costs, sessions, and billing blocks
+- **Email Preferences**: Granular notification controls (5 separate preferences)
+- **Teams**: KSUID-based team system with role hierarchy
+- **Team Members**: Many-to-many relationships with owner/admin/member roles
+- **Team Invitations**: Secure invitation system with expiring tokens
 
 ## Project Conventions
 
@@ -88,6 +105,7 @@ promptpulse setup    # Set up automatic collection with cron
 - **Usage Statistics**: Token counts, costs, timestamps, model usage
 - **Project Paths**: Derived from Claude Code session IDs (configurable privacy levels)
 - **Machine Identifiers**: Hostname or custom MACHINE_ID for multi-device tracking
+- **Team Data**: Team membership, roles, and aggregated team usage (no individual data shared)
 - **No Content Collection**: Prompts and conversation content are NEVER uploaded or stored
 
 #### Project Path Privacy Controls
@@ -115,14 +133,19 @@ export PROJECT_PATH_PRIVACY=hash      # Analytics-friendly privacy
 ### Multi-User Support
 - Each user has isolated data access
 - Support for multiple machines per user
-- Leaderboard participation is opt-in
+- Leaderboard participation is opt-in (both public and team leaderboards)
 - Display names for privacy in public rankings
+- Separate team display names for team contexts
+- Team-based collaboration with role management
+- Team invite system with secure invite codes
 
 ### Database Patterns
 - Use SQLite Cloud for hosted database access
 - All tables include user_id for data isolation
+- KSUID-based primary keys for teams (string IDs instead of integers)
+- Modular migration system with focused, sequential migration files
 - Implement proper indexes for query performance
-- Use migrations for schema changes
+- Use migrations for schema changes with rollback support
 
 ### API Design
 - RESTful endpoints with consistent response formats
@@ -135,6 +158,10 @@ export PROJECT_PATH_PRIVACY=hash      # Analytics-friendly privacy
 - Real-time usage statistics and charts
 - Machine management and session tracking
 - Privacy-controlled leaderboard participation
+- **Team Management**: Create teams, invite members, manage roles
+- **Team Leaderboards**: Compare usage within teams
+- **Team Collaboration**: Share invite links, role-based permissions
+- **Granular Email Preferences**: 5 separate notification controls
 - Dark mode support
 
 
@@ -193,6 +220,12 @@ promptpulse setup --remove              # Remove automatic collection
 - `EMAIL_FROM_DOMAIN` - Domain for sender email addresses (default: mail.promptpulse.dev)
   - Uses format: `PromptPulse <noreply@{EMAIL_FROM_DOMAIN}>`
   - Recommended: Set up a Resend subdomain like `mail.promptpulse.dev`
+
+### Team Configuration
+- Teams use KSUID string IDs for better scalability
+- Invite codes are automatically generated for team sharing
+- Role hierarchy: owner > admin > member
+- Team leaderboards are separate from public leaderboards
 
 
 ## Common Tasks

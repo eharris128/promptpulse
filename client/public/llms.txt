@@ -1,15 +1,18 @@
-# PromptPulse - Claude Code Usage Tracking Platform
+# PromptPulse - Claude Code Usage Tracking & Team Collaboration Platform
 
 ## Overview
-Multi-user platform for tracking and analyzing Claude Code usage across multiple machines. Features automatic data collection, user authentication, and a beautiful web dashboard for visualizing usage patterns.
+Multi-user platform for tracking and analyzing Claude Code usage across multiple machines. Features automatic data collection, user authentication, team collaboration, and a beautiful web dashboard for visualizing usage patterns and team leaderboards.
 
 ## Key Features
 - Multi-user support with API key authentication
+- **Team collaboration** - create teams and compare usage with colleagues
+- **Team leaderboards** - compete within teams with role-based permissions
 - Beautiful dashboard built with Next.js and Recharts
 - Multi-machine tracking - aggregate usage across all devices
 - Automatic collection via cron job configuration
 - Detailed analytics - daily costs, token usage, session tracking
 - Project-based insights and cost tracking
+- Granular email preferences with 5 individual notification controls
 
 ## Project Structure
 
@@ -28,16 +31,23 @@ Multi-user platform for tracking and analyzing Claude Code usage across multiple
   - `lib/server-auth.js` - Server-side authentication middleware
 
 ### API Server
-- `server.js` - Express.js API server with authentication
-- `migrations/` - Database schema migrations
-  - `001_initial_schema.sql` - Consolidated database schema with KSUID users, secure API keys
+- `server.js` - Express.js API server with authentication and team management
+- `migrations/` - Modular database schema migrations
+  - `001_create_migrations_table.sql` - Migration tracking table
+  - `002_create_users_table.sql` - KSUID-based users with secure API keys
+  - `003_create_usage_tables.sql` - Usage data, sessions, blocks, upload history
+  - `004_create_email_tables.sql` - Granular email preferences and send logging
+  - `005_create_teams_tables.sql` - KSUID teams with member roles and invitations
+  - `006_restore_invite_codes.sql` - Simple team invite code system
 
 ### Web Dashboard
-- `client/` - Next.js dashboard application
+- `client/` - Next.js dashboard application with team management
   - `client/src/app/` - Next.js app directory
     - `client/src/app/page.tsx` - Dashboard home page
-    - `client/src/app/leaderboard/page.tsx` - Leaderboard view
-    - `client/src/app/settings/page.tsx` - Settings page
+    - `client/src/app/leaderboard/page.tsx` - Public leaderboard view
+    - `client/src/app/teams/page.tsx` - Team management and team leaderboards
+    - `client/src/app/teams/join/[token]/page.tsx` - Team invite acceptance
+    - `client/src/app/settings/page.tsx` - Settings with email preferences
     - `client/src/app/layout.tsx` - Root layout
   - `client/src/components/` - React components
     - `client/src/components/auth/login-form.tsx` - Authentication form
@@ -45,6 +55,8 @@ Multi-user platform for tracking and analyzing Claude Code usage across multiple
       - `stats-cards.tsx` - Usage statistics cards
       - `usage-chart.tsx` - Interactive usage charts
       - `machines-table.tsx` - Machine overview table
+      - `team-leaderboard.tsx` - Team-specific leaderboard component
+      - `fixed-plan-comparison.tsx` - Plan comparison analytics
     - `client/src/components/layout/` - Layout components
       - `app-layout.tsx` - Main application layout
       - `side-nav.tsx` - Navigation sidebar
@@ -65,6 +77,14 @@ Multi-user platform for tracking and analyzing Claude Code usage across multiple
 - `promptpulse whoami` - Show current user information
 - `promptpulse user config show` - Show configuration (debugging)
 
+### Team Management (Dashboard Only)
+Team features are accessed through the web dashboard:
+- Create and manage teams with custom names and descriptions
+- Generate and share team invite links
+- Manage team member roles (owner, admin, member)
+- View team usage leaderboards and analytics
+- Join teams using invite codes
+
 ### Data Collection
 - `promptpulse collect` - Collect and upload Claude Code usage data
 - `promptpulse collect --granularity daily` - Only daily aggregates
@@ -74,7 +94,9 @@ Multi-user platform for tracking and analyzing Claude Code usage across multiple
 
 ### Setup & Dashboard
 - `promptpulse setup` - Set up cron job for automatic collection
-- `promptpulse dashboard` - Open web dashboard in browser
+- `promptpulse status` - Check collection status and health
+- `promptpulse doctor` - Diagnose common collection issues
+- `promptpulse dashboard` - Open web dashboard in browser (includes team management)
 
 ### Aliases
 - `ppulse` - Short alias for `promptpulse`
@@ -97,6 +119,23 @@ All endpoints require `X-API-Key` header with valid API key.
 ### Analytics
 - `GET /api/usage/analytics/patterns?period=day` - Usage patterns
 - `GET /api/usage/analytics/costs?groupBy=project` - Cost breakdown
+
+### Team Management
+- `GET /api/teams` - Get user's teams with roles
+- `POST /api/teams` - Create new team
+- `PUT /api/teams/:id` - Update team details
+- `GET /api/teams/:id/members` - Get team members
+- `POST /api/teams/:id/members/:userId/promote` - Promote member to admin
+- `DELETE /api/teams/:id/members/:userId` - Remove team member
+- `POST /api/teams/join/:inviteCode` - Join team via invite code
+- `GET /api/teams/:id/leaderboard` - Get team leaderboard data
+
+### Email & Preferences
+- `GET /api/email-preferences` - Get user email preferences
+- `PUT /api/email-preferences` - Update email notification settings
+- `POST /api/send-test-email` - Send test email
+- `GET /api/leaderboard-settings` - Get leaderboard participation settings
+- `PUT /api/leaderboard-settings` - Update leaderboard and display name settings
 
 ## Configuration
 
@@ -130,12 +169,30 @@ All endpoints require `X-API-Key` header with valid API key.
 - `~/.claude/projects/**/*.jsonl` - Claude Code usage data files
 - `$CLAUDE_CONFIG_DIR/projects/**/*.jsonl` - Alternative path if set
 
+## Database Schema (Modernized)
+
+### Core Tables
+- **users**: KSUID-based user IDs with secure API key authentication
+- **usage_data**: Daily usage aggregates with token counts and costs
+- **usage_sessions**: Individual Claude Code sessions with project paths
+- **usage_blocks**: 5-hour billing blocks for cost analysis
+- **upload_history**: Deduplication tracking for data uploads
+
+### Email System
+- **user_email_preferences**: Granular notification controls (5 separate preferences)
+- **email_send_log**: Email delivery tracking and analytics
+
+### Team System (KSUID-based)
+- **teams**: Teams with KSUID string IDs, invite codes, and metadata
+- **team_members**: Many-to-many relationships with role hierarchy (owner/admin/member)
+- **team_invitations**: Secure invitation system with expiring tokens
+
 ## Data Flow
 1. Collection: CLI reads Claude usage data from ~/.claude/projects/
 2. Authentication: User's API key validates requests
-3. Storage: Data stored in SQLite Cloud with user isolation
-4. API: RESTful endpoints serve user-specific data
-5. Dashboard: React app visualizes usage patterns
+3. Storage: Data stored in SQLite Cloud with user isolation and team relationships
+4. API: RESTful endpoints serve user-specific and team data
+5. Dashboard: React app visualizes usage patterns and team analytics
 
 ## Automation Scripts
 - Built-in cron configuration via `promptpulse setup` command

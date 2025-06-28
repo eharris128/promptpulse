@@ -262,7 +262,7 @@ export default function Settings() {
             <CardHeader>
               <CardTitle>Email Notifications</CardTitle>
               <CardDescription>
-                Configure which email notifications you'd like to receive
+                Configure which email notifications you would like to receive
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -327,7 +327,7 @@ export default function Settings() {
                       Team Invitations
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      Notifications when you're invited to join teams
+                      Notifications when you are invited to join teams
                     </p>
                   </div>
                   <Switch

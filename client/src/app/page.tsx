@@ -6,6 +6,7 @@ import { UsageChart } from '@/components/dashboard/usage-chart'
 import { MachinesTable } from '@/components/dashboard/machines-table'
 import { FixedPlanComparison } from '@/components/dashboard/fixed-plan-comparison'
 import { ProjectsWidget } from '@/components/dashboard/projects-widget'
+import { EmptyState } from '@/components/dashboard/empty-state'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { apiClient } from '@/lib/api'
@@ -97,69 +98,67 @@ export default function Dashboard() {
 
       {!dataLoading && usageData && usageData.totals && planSettings && (
         <>
-          <StatsCards data={usageData} />
-          <FixedPlanComparison 
-            actualCost={usageData.totals?.total_cost || 0} 
-            userPlan={planSettings.claude_plan} 
-          />
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <div className="lg:col-span-4">
-              <ProjectsWidget data={projectsData} />
-            </div>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <UsageChart data={usageData} type="cost" />
-            <MachinesTable machines={machines} />
-          </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <UsageChart data={usageData} type="tokens" />
-            {leaderboardData && leaderboardData.user_rank && (
-              <Card className="col-span-3">
-                <CardHeader>
-                  <CardTitle>Your Leaderboard Ranking</CardTitle>
-                  <CardDescription>Daily performance vs other users</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Daily Rank</span>
-                      <span className="font-semibold">#{leaderboardData.user_rank}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Total Participants</span>
-                      <span className="font-semibold">{leaderboardData.total_participants}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Top Percentile</span>
-                      <span className="font-semibold">
-                        {Math.round(((leaderboardData.total_participants - leaderboardData.user_rank + 1) / leaderboardData.total_participants) * 100)}%
-                      </span>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      className="w-full mt-4"
-                      onClick={() => window.location.href = '/leaderboard'}
-                    >
-                      View Full Leaderboard
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+          {/* Check if user has any usage data - more robust condition */}
+          {(!usageData.totals.total_cost && !usageData.totals.total_tokens) || 
+           (usageData.totals.total_cost <= 0 && usageData.totals.total_tokens <= 0) ? (
+            <EmptyState />
+          ) : (
+            <>
+              <StatsCards data={usageData} />
+              <FixedPlanComparison 
+                actualCost={usageData.totals?.total_cost || 0} 
+                userPlan={planSettings.claude_plan} 
+              />
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                <UsageChart data={usageData} type="cost" />
+                <MachinesTable machines={machines} />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                <UsageChart data={usageData} type="tokens" />
+                {leaderboardData && leaderboardData.user_rank && (
+                  <Card className="col-span-3">
+                    <CardHeader>
+                      <CardTitle>Your Leaderboard Ranking</CardTitle>
+                      <CardDescription>Daily performance vs other users</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Daily Rank</span>
+                          <span className="font-semibold">#{leaderboardData.user_rank}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Total Participants</span>
+                          <span className="font-semibold">{leaderboardData.total_participants}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Top Percentile</span>
+                          <span className="font-semibold">
+                            {Math.round(((leaderboardData.total_participants - leaderboardData.user_rank + 1) / leaderboardData.total_participants) * 100)}%
+                          </span>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          className="w-full mt-4"
+                          onClick={() => window.location.href = '/leaderboard'}
+                        >
+                          View Full Leaderboard
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+              <div className="grid gap-4 md:grid-cols-1">
+                <ProjectsWidget data={projectsData} />
+              </div>
+            </>
+          )}
         </>
       )}
 
       {!dataLoading && !usageData && !error && (
-        <div className="flex items-center justify-center py-8">
-          <div className="text-center space-y-4">
-            <p className="text-lg">No usage data found</p>
-            <p className="text-muted-foreground">
-              Run <code className="bg-muted px-1 rounded">promptpulse collect</code> to upload your usage data
-            </p>
-            <Button onClick={() => loadDashboardData()}>Check Again</Button>
-          </div>
-        </div>
+        <EmptyState />
       )}
       </div>
   )

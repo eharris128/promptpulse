@@ -40,8 +40,12 @@ export function ProjectsWidget({ data }: ProjectsWidgetProps) {
         <CardContent>
           <div className="text-center text-muted-foreground py-8">
             <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No project data available</p>
-            <p className="text-sm">Projects will appear here once you start using Claude Code</p>
+            <p className="font-medium">No project data available</p>
+            <p className="text-sm mt-2">Projects will appear here once you start using Claude Code</p>
+            <div className="mt-4 space-y-2">
+              <p className="text-sm">Start collecting data with:</p>
+              <code className="bg-muted px-2 py-1 rounded text-xs">promptpulse collect</code>
+            </div>
           </div>
         </CardContent>
       </Card>

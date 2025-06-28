@@ -84,8 +84,12 @@ export function BlocksWidget({ data }: BlocksWidgetProps) {
         <CardContent>
           <div className="text-center text-muted-foreground py-8">
             <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No sessions available</p>
-            <p className="text-sm">Sessions will appear here once you start using Claude Code</p>
+            <p className="font-medium">No sessions available</p>
+            <p className="text-sm mt-2">Sessions will appear here once you start using Claude Code</p>
+            <div className="mt-4 space-y-2">
+              <p className="text-sm">Get started by running:</p>
+              <code className="bg-muted px-2 py-1 rounded text-xs">promptpulse setup</code>
+            </div>
           </div>
         </CardContent>
       </Card>

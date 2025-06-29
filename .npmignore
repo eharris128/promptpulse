@@ -83,3 +83,9 @@ Makefile
 docker-compose*.yml
 Dockerfile
 DEVELOPMENT.md
+
+# Hugo documentation (served separately)
+docs/
+go.mod
+go.sum
+hugo_extended_*.tar.gz

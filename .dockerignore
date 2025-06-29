@@ -48,3 +48,9 @@ tests/
 
 # Scripts (not needed for production API)
 scripts/
+
+# Hugo documentation (served separately)
+docs/
+go.mod
+go.sum
+hugo_extended_*.tar.gz

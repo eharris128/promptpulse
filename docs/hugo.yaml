@@ -1,0 +1,81 @@
+baseURL: https://docs.promptpulse.dev/
+languageCode: en-us
+title: PromptPulse Documentation
+
+module:
+  imports:
+    - path: github.com/google/docsy
+      disable: false
+    - path: github.com/google/docsy/dependencies
+      disable: false
+
+params:
+  github_repo: https://github.com/eharris128/promptpulse
+  github_branch: master
+  
+  # Enable offline search
+  offlineSearch: true
+  
+  # Enable syntax highlighting
+  prism_syntax_highlighting: true
+  
+  # UI config
+  ui:
+    # Enable breadcrumb navigation
+    breadcrumb_disable: false
+    # Enable sidebar search
+    sidebar_search_disable: false
+    # Enable navbar logo
+    navbar_logo: true
+    # Enable footer links
+    footer_about_enable: true
+    
+  # Version config
+  version_menu: v1.0
+  version: v1.0
+  
+  # Links for header/footer
+  links:
+    user:
+      - name: "GitHub"
+        url: "https://github.com/eharris128/promptpulse"
+        icon: "fab fa-github"
+        desc: "Development happens here!"
+    developer:
+      - name: "GitHub"
+        url: "https://github.com/eharris128/promptpulse"
+        icon: "fab fa-github"
+        desc: "Development happens here!"
+      - name: "NPM"
+        url: "https://www.npmjs.com/package/promptpulse"
+        icon: "fab fa-npm"
+        desc: "NPM Package"
+
+markup:
+  goldmark:
+    renderer:
+      unsafe: true
+  highlight:
+    style: github
+    lineNos: true
+
+# SEO and GitHub Pages optimization
+enableRobotsTXT: true
+enableGitInfo: true
+enableEmoji: true
+
+# Minification for production
+minify:
+  disableXML: false
+  disableHTML: false
+  disableCSS: false
+  disableJS: false
+  disableJSON: false
+  disableSVG: false
+
+# Security headers
+security:
+  funcs:
+    getenv:
+      - ^HUGO_
+      - ^CI$

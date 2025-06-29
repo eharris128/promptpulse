@@ -53,13 +53,6 @@ npm run migrate     # Apply database migrations
 node check-db.js    # Test database connectivity
 ```
 
-### Documentation Commands
-```bash
-npm run docs:dev     # Serve documentation locally with live reload
-npm run docs:serve   # Serve documentation locally
-npm run docs:build   # Build documentation for production
-```
-
 ### CLI Diagnostic Commands
 ```bash
 promptpulse status   # Check collection status and health

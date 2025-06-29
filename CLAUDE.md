@@ -39,19 +39,30 @@ go install github.com/pressly/goose/v3/cmd/goose@latest
 - Files follow format: `YYYYMMDDHHMMSS_description.sql`
 - Each file contains `-- +goose Up` and `-- +goose Down` sections
 
-### Database Migration from Legacy System
-Use the provided migration script to transfer data from the legacy system:
+### SQLite Cloud Migration Support
+For SQLite Cloud deployments, use the custom migration runner:
 ```bash
-# 1. Backup current database
-cp production.db production.db.backup
+# Run migrations on SQLite Cloud (recommended)
+npm run migrate
 
-# 2. Create new database with Goose migrations
-goose -dir goose_migrations sqlite3 new_database.db up
+# Show migration status
+make migrate-status
 
-# 3. Transfer data from old to new database
-node scripts/migrate-to-goose.js production.db new_database.db
+# Create new migration file
+make migrate-create
+```
 
-# 4. Verify migration success and switch to new database
+### Legacy System Migration (One-time)
+If migrating from the old custom migration system to Goose:
+```bash
+# Transfer migration tracking data to Goose
+node scripts/migrate-to-goose.js
+
+# Verify successful transfer
+npm run migrate
+
+# Archive old migration system (after verification)
+mv migrations migrations.old
 ```
 
 ## CLI Commands
@@ -123,7 +134,7 @@ promptpulse setup    # Set up automatic collection with cron
 - `lib/` - Core CLI and server utilities
 - `bin/` - CLI entry point and executable
 - `client/src/` - Next.js application source
-- `migrations/` - Modular database schema migrations (6 focused files)
+- `goose_migrations/` - Goose database schema migrations with Up/Down sections
 - `logs/` - Application logs and upload tracking
 
 ### Database Schema (Modernized)
@@ -184,7 +195,7 @@ export PROJECT_PATH_PRIVACY=hash      # Analytics-friendly privacy
 - Use SQLite Cloud for hosted database access
 - All tables include user_id for data isolation
 - KSUID-based primary keys for teams (string IDs instead of integers)
-- Modular migration system with focused, sequential migration files
+- Goose migration system with rollback support and sequential migration files
 - Implement proper indexes for query performance
 - Use migrations for schema changes with rollback support
 

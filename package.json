@@ -13,7 +13,7 @@
     "server:dev": "node --watch server.js",
     "server:test": "node server-test.js",
     "client:dev": "cd client && npm run dev",
-    "migrate": "node scripts/migrate.js",
+    "migrate": "node scripts/run-goose-migrations.js",
     "test": "npm run test:e2e",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",

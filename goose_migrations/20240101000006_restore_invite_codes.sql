@@ -1,3 +1,4 @@
+-- +goose Up
 -- Add invite_code field back to teams table for simple team joining
 -- This restores the original simple invitation system
 
@@ -8,3 +9,8 @@ UPDATE teams SET invite_code = lower(hex(randomblob(8))) WHERE invite_code IS NU
 
 -- Create index for invite code lookups (will be unique in practice)
 CREATE INDEX idx_teams_invite_code ON teams(invite_code) WHERE is_active = 1;
+
+-- +goose Down
+-- Remove invite code functionality
+DROP INDEX IF EXISTS idx_teams_invite_code;
+ALTER TABLE teams DROP COLUMN invite_code;

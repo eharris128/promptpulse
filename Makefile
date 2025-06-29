@@ -34,6 +34,7 @@ help:
 	@echo "  make migrate         - Run database migrations"
 	@echo "  make migrate-status  - Show migration status"
 	@echo "  make migrate-create  - Create new migration file"
+	@echo "  make migrate-transfer- Transfer from legacy migration system (one-time)"
 	@echo "  make migrate-down    - Rollback last migration (local only)"
 	@echo ""
 
@@ -122,6 +123,11 @@ migrate-create:
 	echo "-- +goose Down" >> $$filename && \
 	echo "-- SQL statements for rollback" >> $$filename && \
 	echo "✅ Created $$filename"
+
+# Transfer from legacy migration system (one-time)
+migrate-transfer:
+	@echo "🔄 Transferring migration data from legacy system to Goose..."
+	@node scripts/migrate-to-goose.js
 
 # Rollback last migration (local SQLite only)
 migrate-down:

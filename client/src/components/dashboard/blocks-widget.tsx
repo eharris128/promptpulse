@@ -51,7 +51,7 @@ export function BlocksWidget({ data }: BlocksWidgetProps) {
     }
     // Filter out synthetic models and map to badges
     return modelsUsed
-      .filter(model => !model.includes('synthetic'))
+      .filter(model => !model.includes('synthetic') && model)
       .map(model => {
         let variant: "default" | "secondary" | "destructive" | "outline" = "default"
         let displayName = model

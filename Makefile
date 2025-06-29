@@ -31,8 +31,10 @@ help:
 	@echo "  make clean       - Clean up processes and temporary files"
 	@echo ""
 	@echo "Database:"
-	@echo "  make migrate     - Run database migrations"
-	@echo "  make db-reset    - Reset database (development only)"
+	@echo "  make migrate         - Run database migrations"
+	@echo "  make migrate-status  - Show migration status"
+	@echo "  make migrate-create  - Create new migration file"
+	@echo "  make migrate-down    - Rollback last migration (local only)"
 	@echo ""
 
 # Check system dependencies
@@ -102,15 +104,33 @@ clean: stop
 # Run database migrations
 migrate:
 	@echo "🗄️  Running database migrations..."
-	@npm run migrate
+	@node scripts/run-goose-migrations.js
 
-# Reset database (development only)
-db-reset:
-	@echo "⚠️  Resetting database (development only)..."
-	@read -p "Are you sure? This will delete all data [y/N]: " confirm && [ "$$confirm" = "y" ]
-	@rm -f promptpulse.db
-	@npm run migrate
-	@echo "✅ Database reset complete"
+# Show migration status
+migrate-status:
+	@echo "📊 Checking migration status..."
+	@node scripts/run-goose-migrations.js status || true
+
+# Create new migration
+migrate-create:
+	@read -p "Migration name (e.g., add_user_preferences): " name && \
+	timestamp=$$(date +%Y%m%d%H%M%S) && \
+	filename="goose_migrations/$${timestamp}_$${name}.sql" && \
+	echo "-- +goose Up" > $$filename && \
+	echo "-- SQL statements for forward migration" >> $$filename && \
+	echo "" >> $$filename && \
+	echo "-- +goose Down" >> $$filename && \
+	echo "-- SQL statements for rollback" >> $$filename && \
+	echo "✅ Created $$filename"
+
+# Rollback last migration (local SQLite only)
+migrate-down:
+	@echo "⏪ Rolling back last migration..."
+	@echo "Note: This command only works with local SQLite files."
+	@echo "For SQLite Cloud, manually run the Down SQL statements."
+	@goose -dir goose_migrations sqlite3 local.db down 2>/dev/null || echo "❌ Rollback not available for SQLite Cloud"
+
+
 
 # Development shortcuts
 api: start-api

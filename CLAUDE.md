@@ -8,10 +8,47 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run dev` - Start both server and client in development mode
 - `npm run server:dev` - Start only the API server with watch mode
 - `npm run client:dev` - Start only the Next.js dashboard in development
-- `npm run migrate` - Run database migrations
+- `npm run migrate` - Run database migrations 
 - `npm test` - Run tests (placeholder - extend as needed)
 - `npm pack` - Create package tarball for testing
 - `npm publish` - Publish public package to npm
+
+## Database Migration Commands (Goose)
+
+### Installation
+```bash
+go install github.com/pressly/goose/v3/cmd/goose@latest
+```
+
+### Core Migration Commands
+- `goose sqlite3 database.db status` - Show migration status
+- `goose sqlite3 database.db up` - Apply all pending migrations
+- `goose sqlite3 database.db up-by-one` - Apply next migration only
+- `goose sqlite3 database.db down` - Rollback last migration
+- `goose sqlite3 database.db down-to VERSION` - Rollback to specific version
+- `goose sqlite3 database.db reset` - Rollback all migrations
+- `goose sqlite3 database.db version` - Show current migration version
+- `goose sqlite3 database.db create MIGRATION_NAME sql` - Create new migration
+
+### Migration Directory
+- Migration files are located in `goose_migrations/`
+- Files follow format: `YYYYMMDDHHMMSS_description.sql`
+- Each file contains `-- +goose Up` and `-- +goose Down` sections
+
+### Database Migration from Legacy System
+Use the provided migration script to transfer data from the legacy system:
+```bash
+# 1. Backup current database
+cp production.db production.db.backup
+
+# 2. Create new database with Goose migrations
+goose -dir goose_migrations sqlite3 new_database.db up
+
+# 3. Transfer data from old to new database
+node scripts/migrate-to-goose.js production.db new_database.db
+
+# 4. Verify migration success and switch to new database
+```
 
 ## CLI Commands
 

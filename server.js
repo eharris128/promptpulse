@@ -209,8 +209,7 @@ app.get('/api/auth/validate', authenticateApiKey, async (req, res) => {
     user: {
       id: req.user.id,
       email: req.user.email,
-      username: req.user.username,
-      full_name: req.user.full_name
+      username: req.user.username
     }
   });
 });

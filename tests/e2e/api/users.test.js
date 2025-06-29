@@ -14,8 +14,7 @@ test.describe('User Management API', () => {
       expect(response.body.user).toMatchObject({
         id: process.env.TEST_USER_1_ID,
         username: 'testuser1',
-        email: 'test1@example.com',
-        full_name: 'Test User 1'
+        email: 'test1@example.com'
       });
     });
 
@@ -45,8 +44,7 @@ test.describe('User Management API', () => {
     test('should create a new user', async () => {
       const newUser = {
         username: `testuser_${Date.now()}`,
-        email: `test_${Date.now()}@example.com`,
-        full_name: 'New Test User'
+        email: `test_${Date.now()}@example.com`
       };
 
       const response = await apiHelper.post('/api/users', { data: newUser });
@@ -58,8 +56,7 @@ test.describe('User Management API', () => {
       // Verify user properties
       expect(response.body.user).toMatchObject({
         username: newUser.username,
-        email: newUser.email,
-        full_name: newUser.full_name
+        email: newUser.email
       });
       expect(response.body.user).toHaveProperty('id');
       expect(response.body.user).toHaveProperty('created_at');
@@ -72,8 +69,7 @@ test.describe('User Management API', () => {
     test('should reject duplicate usernames', async () => {
       const duplicateUser = {
         username: 'testuser1', // Already exists
-        email: 'newemail@example.com',
-        full_name: 'Duplicate User'
+        email: 'newemail@example.com'
       };
 
       const response = await apiHelper.post('/api/users', { data: duplicateUser });
@@ -86,8 +82,7 @@ test.describe('User Management API', () => {
     test('should reject duplicate emails', async () => {
       const duplicateUser = {
         username: 'newusername',
-        email: 'test1@example.com', // Already exists
-        full_name: 'Duplicate Email User'
+        email: 'test1@example.com' // Already exists
       };
 
       const response = await apiHelper.post('/api/users', { data: duplicateUser });
@@ -99,9 +94,8 @@ test.describe('User Management API', () => {
 
     test('should validate required fields', async () => {
       const testCases = [
-        { email: 'test@example.com', full_name: 'Test' }, // Missing username
-        { username: 'testuser', full_name: 'Test' }, // Missing email
-        { username: 'testuser', email: 'test@example.com' }, // Missing full_name
+        { email: 'test@example.com' }, // Missing username
+        { username: 'testuser' }, // Missing email
       ];
 
       for (const testCase of testCases) {
@@ -118,8 +112,7 @@ test.describe('User Management API', () => {
         const response = await apiHelper.post('/api/users', {
           data: {
             username: `user_${Date.now()}`,
-            email,
-            full_name: 'Test User'
+            email
           }
         });
         

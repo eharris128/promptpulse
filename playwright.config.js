@@ -38,11 +38,11 @@ export default defineConfig({
 
   webServer: process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('your-test-host') ? {
     command: 'npm run server:test',
-    port: 3000,
+    port: parseInt(process.env.PORT) || 3002,
     reuseExistingServer: !process.env.CI,
     env: {
       NODE_ENV: 'test',
-      PORT: '3000',
+      PORT: process.env.PORT || '3002',
     },
   } : undefined,
 });

@@ -12,8 +12,7 @@ test.describe('Authentication API', () => {
     expect(response.body.user).toMatchObject({
       id: process.env.TEST_USER_1_ID,
       email: 'test1@example.com',
-      username: 'testuser1',
-      full_name: 'Test User 1'
+      username: 'testuser1'
     });
   });
 

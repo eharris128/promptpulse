@@ -218,6 +218,11 @@ async function main() {
     process.exit(1);
   }
   
+  // Special handling for test environment
+  if (process.env.NODE_ENV === 'test') {
+    console.log('🧪 Running migrations in TEST environment');
+  }
+  
   // Check if status command was requested
   if (process.argv[2] === 'status') {
     const runner = new GooseMigrationRunner();

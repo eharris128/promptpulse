@@ -16,6 +16,7 @@
     "migrate": "node scripts/run-goose-migrations.js",
     "test": "npm run test:e2e",
     "test:e2e": "playwright test",
+    "test:setup": "npm run migrate",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "postinstall": "node -e \"console.log('\\nPromptPulse installed successfully!\\n\\nGet started:\\n  promptpulse user init\\n  promptpulse collect\\n')\"",

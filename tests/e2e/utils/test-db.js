@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { Database } from '@sqlitecloud/drivers';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
+import { initializeDbManager } from '../../../lib/db-manager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,33 +43,73 @@ class TestDatabase {
       return;
     }
     
-    const db = await this.connect();
-    
-    // Try to run migrations using Goose if available
-    const migrationsPath = path.join(__dirname, '../../../goose_migrations');
+    // Run proper migrations using the project's migration runner
     try {
-      // Check if goose is available
-      execSync('which goose', { stdio: 'ignore' });
-      
       console.log('Running database migrations...');
-      // First, reset the database
-      execSync(`goose -dir ${migrationsPath} sqlite3 "${process.env.DATABASE_URL}" reset`, {
-        stdio: 'inherit'
-      });
-      
-      // Then apply all migrations
-      execSync(`goose -dir ${migrationsPath} sqlite3 "${process.env.DATABASE_URL}" up`, {
-        stdio: 'inherit'
-      });
-      
-      console.log('Migrations applied successfully');
+      await this.runMigrations();
+      console.log('✅ Migrations applied successfully');
     } catch (error) {
-      console.warn('⚠️  Goose not available or migration failed, setting up tables manually...');
-      await this.setupTablesManually(db);
+      console.error('❌ Migration failed:', error.message);
+      throw error;
     }
 
     // Create test users
     await this.createTestUsers();
+  }
+
+  async runMigrations() {
+    // Use the project's migration runner for consistency
+    const migrationsScript = path.join(__dirname, '../../../scripts/run-goose-migrations.js');
+    
+    try {
+      // First, clear any existing data
+      await this.clearDatabase();
+      
+      // Run migrations using Node.js script (works with SQLite Cloud)
+      execSync(`node "${migrationsScript}"`, {
+        stdio: 'inherit',
+        env: { ...process.env, NODE_ENV: 'test' }
+      });
+    } catch (error) {
+      throw new Error(`Migration execution failed: ${error.message}`);
+    }
+  }
+
+  async clearDatabase() {
+    const db = await this.connect();
+    
+    // Get all tables except sqlite system tables and goose version table
+    const tables = await db.sql`
+      SELECT name FROM sqlite_master 
+      WHERE type='table' 
+      AND name NOT LIKE 'sqlite_%' 
+      AND name != 'goose_db_version'
+      ORDER BY name
+    `;
+    
+    // Disable foreign keys for cleanup
+    try {
+      await db.sql`PRAGMA foreign_keys = OFF`;
+    } catch (error) {
+      console.warn('Could not disable foreign keys:', error.message);
+    }
+    
+    // Drop all tables to ensure clean slate
+    for (const table of tables) {
+      try {
+        await db.sql`DROP TABLE IF EXISTS ${table.name}`;
+        console.log(`Dropped table: ${table.name}`);
+      } catch (error) {
+        console.warn(`Warning: Could not drop table ${table.name}:`, error.message);
+      }
+    }
+    
+    // Re-enable foreign keys
+    try {
+      await db.sql`PRAGMA foreign_keys = ON`;
+    } catch (error) {
+      console.warn('Could not re-enable foreign keys:', error.message);
+    }
   }
 
   async setupTablesManually(db) {
@@ -78,7 +119,6 @@ class TestDatabase {
         id TEXT PRIMARY KEY,
         username TEXT UNIQUE NOT NULL,
         email TEXT UNIQUE NOT NULL,
-        full_name TEXT NOT NULL,
         api_key_hash TEXT NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
@@ -171,7 +211,6 @@ class TestDatabase {
       id: 'test-user-1',
       username: 'testuser1',
       email: 'test1@example.com',
-      full_name: 'Test User 1',
       api_key: 'test-api-key-1',
       api_key_hash: await bcrypt.hash('test-api-key-1', 10),
       created_at: new Date().toISOString(),
@@ -183,7 +222,6 @@ class TestDatabase {
       id: 'test-user-2',
       username: 'testuser2',
       email: 'test2@example.com',
-      full_name: 'Test User 2',
       api_key: 'test-api-key-2',
       api_key_hash: await bcrypt.hash('test-api-key-2', 10),
       created_at: new Date().toISOString(),
@@ -195,28 +233,38 @@ class TestDatabase {
       id: 'test-user-3',
       username: 'leaderboarduser',
       email: 'leaderboard@example.com',
-      full_name: 'Leaderboard User',
       api_key: 'test-api-key-3',
       api_key_hash: await bcrypt.hash('test-api-key-3', 10),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
 
-    // Insert users
+    // Insert users with conflict handling
     for (const user of [mainUser, secondUser, leaderboardUser]) {
-      await db.sql`
-        INSERT INTO users (id, username, email, full_name, api_key_hash, created_at, updated_at)
-        VALUES (${user.id}, ${user.username}, ${user.email}, ${user.full_name}, 
-                ${user.api_key_hash}, ${user.created_at}, ${user.updated_at})
-      `;
-      this.testUsers.push(user);
+      try {
+        await db.sql`
+          INSERT OR REPLACE INTO users (id, username, email, api_key_hash, created_at, updated_at)
+          VALUES (${user.id}, ${user.username}, ${user.email}, 
+                  ${user.api_key_hash}, ${user.created_at}, ${user.updated_at})
+        `;
+        this.testUsers.push(user);
+        console.log(`Created test user: ${user.username} (${user.id})`);
+      } catch (error) {
+        console.warn(`Warning: Could not create user ${user.id}:`, error.message);
+        // Still add to testUsers array for consistency
+        this.testUsers.push(user);
+      }
     }
 
-    // Set up leaderboard settings for the third user
-    await db.sql`
-      INSERT INTO user_leaderboard_settings (user_id, is_public, display_name, is_team_visible, team_display_name)
-      VALUES (${leaderboardUser.id}, true, 'LeaderboardDisplay', true, 'TeamLeaderboard')
-    `;
+    // Set up leaderboard settings for the third user (with conflict handling)
+    try {
+      await db.sql`
+        INSERT OR REPLACE INTO user_leaderboard_settings (user_id, is_public, display_name, is_team_visible, team_display_name)
+        VALUES (${leaderboardUser.id}, true, 'LeaderboardDisplay', true, 'TeamLeaderboard')
+      `;
+    } catch (error) {
+      console.warn('Warning: Could not create leaderboard settings:', error.message);
+    }
 
     // Add some test usage data
     await this.seedUsageData();
@@ -277,20 +325,41 @@ class TestDatabase {
     
     const db = await this.connect();
     
-    // Clean up all test data
-    const tables = [
-      'usage_data', 'daily_usage', 'user_sessions', 'billing_blocks',
-      'upload_history', 'team_members', 'team_invitations', 'teams',
-      'user_email_preferences', 'user_leaderboard_settings', 'users'
-    ];
+    // Get all tables except sqlite system tables and goose version table
+    const tables = await db.sql`
+      SELECT name FROM sqlite_master 
+      WHERE type='table' 
+      AND name NOT LIKE 'sqlite_%' 
+      AND name != 'goose_db_version'
+      ORDER BY name
+    `;
 
+    // First, try to disable foreign key constraints
+    try {
+      await db.sql`PRAGMA foreign_keys = OFF`;
+    } catch (error) {
+      console.warn('Could not disable foreign keys:', error.message);
+    }
+
+    // Clean all data from tables (keep schema intact)
     for (const table of tables) {
       try {
-        await db.sql`DELETE FROM ${table}`;
+        await db.sql`DELETE FROM ${table.name}`;
+        console.log(`Cleaned table: ${table.name}`);
       } catch (error) {
-        console.warn(`Warning: Could not clean table ${table}:`, error.message);
+        console.warn(`Warning: Could not clean table ${table.name}:`, error.message);
       }
     }
+
+    // Re-enable foreign key constraints
+    try {
+      await db.sql`PRAGMA foreign_keys = ON`;
+    } catch (error) {
+      console.warn('Could not re-enable foreign keys:', error.message);
+    }
+
+    // Clear the test users array
+    this.testUsers = [];
   }
 
   async close() {

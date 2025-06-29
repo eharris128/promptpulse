@@ -42,6 +42,32 @@ export default function EnvironmentPage() {
     reasoning: false
   }) : null
 
+  // Calculate what impact would be if all tokens were treated as regular tokens (for comparison)
+  const naiveImpact = usageData ? calculateClaude4Impact({
+    model: 'claude-4-sonnet',
+    inputTokens: usageData.totals.total_tokens || 0,
+    outputTokens: 0,
+    cacheCreationTokens: 0,
+    cacheReadTokens: 0,
+    reasoning: false
+  }) : null
+
+  // Debug logging
+  if (usageData && environmentalImpact) {
+    console.log('=== ENVIRONMENTAL DEBUG ===')
+    console.log('Token inputs:', {
+      inputTokens: usageData.totals.total_input_tokens,
+      outputTokens: usageData.totals.total_output_tokens,
+      cacheCreationTokens: usageData.totals.total_cache_creation_tokens,
+      cacheReadTokens: usageData.totals.total_cache_read_tokens,
+      totalTokens: usageData.totals.total_tokens
+    })
+    console.log('AI-Carbon result:', environmentalImpact)
+    console.log('Cache tokens represent:', Math.round(((usageData.totals.total_cache_read_tokens || 0) / usageData.totals.total_tokens) * 100) + '% of total tokens')
+    console.log('Cache tokens have 0.12x environmental impact of regular tokens')
+    console.log('===========================')
+  }
+
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
@@ -117,12 +143,26 @@ export default function EnvironmentPage() {
                     <strong>Water Usage:</strong> {environmentalImpact.waterLiters.toFixed(3)}L
                   </p>
                   
-                  <div className="border-t pt-4">
+                  <div className="border-t pt-4 space-y-2">
                     <p className="text-xs">
                       These estimates are based on datacenter energy usage, grid carbon intensity, 
                       and cooling requirements. Calculations use industry-standard metrics for 
                       AI model inference environmental impact.
                     </p>
+                    {usageData && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">
+                          <strong>Note:</strong> Cache reads ({Math.round(((usageData.totals.total_cache_read_tokens || 0) / usageData.totals.total_tokens) * 100)}% of your tokens) 
+                          have 88% lower environmental impact than regular token processing.
+                        </p>
+                        {naiveImpact && (
+                          <p className="text-xs text-muted-foreground">
+                            If all {(usageData.totals.total_tokens / 1000000).toFixed(1)}M tokens were processed normally: 
+                            {naiveImpact.co2Grams < 1000 ? `${naiveImpact.co2Grams.toFixed(1)}g` : `${(naiveImpact.co2Grams / 1000).toFixed(2)}kg`} CO₂
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardContent>

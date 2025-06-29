@@ -55,3 +55,12 @@ __pycache__/
 Makefile
 docker-compose*.yml
 DEVELOPMENT.md
+
+# E2E Test files and infrastructure
+tests/
+playwright.config.js
+.env.test
+
+# Test artifacts (already in .gitignore but explicit for deployment)
+playwright-report/
+test-results/

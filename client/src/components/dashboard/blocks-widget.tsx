@@ -75,12 +75,6 @@ export function BlocksWidget({ data }: BlocksWidgetProps) {
   if (!data || data.length === 0) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Sessions
-          </CardTitle>
-        </CardHeader>
         <CardContent>
           <div className="text-center text-muted-foreground py-8">
             <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -98,16 +92,7 @@ export function BlocksWidget({ data }: BlocksWidgetProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          <Activity className="h-5 w-5" />
-          Sessions
-          <span className="text-sm font-normal text-muted-foreground ml-auto">
-            Recent activity
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <div className="space-y-3">
           {data.map((block) => (
             <div 

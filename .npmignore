@@ -89,3 +89,11 @@ docs/
 go.mod
 go.sum
 hugo_extended_*.tar.gz
+
+# E2E Test configuration and artifacts
+playwright.config.js
+.env.test
+
+# Test artifacts (already in .gitignore)
+playwright-report/
+test-results/

@@ -7,16 +7,7 @@ import { Activity } from 'lucide-react'
 export function BlocksWidgetSkeleton() {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          <Activity className="h-5 w-5" />
-          Session Blocks
-          <span className="text-sm font-normal text-muted-foreground ml-auto">
-            Recent activity
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, index) => (
             <div key={index} className="flex items-center justify-between p-3 rounded-lg border bg-card">

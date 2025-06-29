@@ -7,9 +7,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm start` - Start the API server (production)
 - `npm run dev` - Start both server and client in development mode
 - `npm run server:dev` - Start only the API server with watch mode
+- `npm run server:test` - Start API server with test environment
 - `npm run client:dev` - Start only the Next.js dashboard in development
 - `npm run migrate` - Run database migrations 
-- `npm test` - Run tests (placeholder - extend as needed)
+- `npm test` - Run E2E test suite
+- `npm run test:e2e` - Run E2E tests with Playwright
+- `npm run test:e2e:ui` - Run E2E tests with Playwright UI
+- `npm run test:e2e:debug` - Run E2E tests in debug mode
 - `npm pack` - Create package tarball for testing
 - `npm publish` - Publish public package to npm
 
@@ -210,6 +214,39 @@ export PROJECT_PATH_PRIVACY=hash      # Analytics-friendly privacy
 3. Add CLI commands if applicable
 4. Update dashboard UI components
 5. Test end-to-end functionality
+
+### E2E API Testing
+```bash
+npm test                    # Run full E2E test suite
+npm run test:e2e           # Run E2E tests with Playwright
+npm run test:e2e:ui        # Run tests with Playwright UI
+npm run test:e2e:debug     # Run tests in debug mode
+```
+
+#### Test Coverage
+The E2E test suite covers all 35+ API endpoints:
+- **Authentication**: API key validation, user lookup
+- **Health & Metrics**: Server health, database connectivity, metrics
+- **User Management**: User creation, settings, email preferences
+- **Usage Data**: Collection, aggregation, sessions, projects, analytics
+- **Team Management**: Creation, invitations, member management, roles
+- **Leaderboards**: Public and team leaderboards with privacy controls
+- **Machines**: Multi-device usage tracking
+
+#### Test Environment Setup
+1. Configure `.env.test` with test database credentials
+2. Tests automatically set up/tear down test database
+3. Isolated test users with known API keys
+4. Database migrations applied automatically
+5. Test data seeded for consistent scenarios
+
+#### Adding New Tests
+When adding new API endpoints:
+1. Add test cases to appropriate file in `tests/e2e/api/`
+2. Follow existing patterns for authentication and validation
+3. Test both success and error scenarios
+4. Verify user data isolation
+5. Run full test suite to ensure no regressions
 
 ### Testing Data Collection
 ```bash

@@ -4,7 +4,7 @@ import cors from 'cors';
 import crypto from 'crypto';
 import KSUID from 'ksuid';
 import rateLimit from 'express-rate-limit';
-import { authenticateApiKey, createUser, listUsers } from './lib/server-auth.js';
+import { authenticateUser, createUser, listUsers } from './lib/server-auth.js';
 import { initializeDbManager, getDbManager } from './lib/db-manager.js';
 import { logger, requestLogger, logDatabaseQuery, logError, log } from './lib/logger.js';
 import emailService from './lib/email-service.js';
@@ -203,7 +203,7 @@ app.get('/api/metrics', async (req, res) => {
 });
 
 // Authentication validation endpoint
-app.get('/api/auth/validate', authenticateApiKey, async (req, res) => {
+app.get('/api/auth/validate', authenticateUser, async (req, res) => {
   // If we get here, the API key is valid (middleware already validated)
   res.json({ 
     user: {
@@ -278,7 +278,7 @@ app.post('/api/users', async (req, res) => {
 });
 
 // API key validation endpoint
-app.get('/api/auth/validate', authenticateApiKey, async (req, res) => {
+app.get('/api/auth/validate', authenticateUser, async (req, res) => {
   try {
     // If we reach here, authentication was successful
     res.json({
@@ -296,7 +296,7 @@ app.get('/api/auth/validate', authenticateApiKey, async (req, res) => {
   }
 });
 
-app.get('/api/users', authenticateApiKey, async (req, res) => {
+app.get('/api/users', authenticateUser, async (req, res) => {
   try {
     const users = await listUsers();
     res.json(users);
@@ -306,7 +306,7 @@ app.get('/api/users', authenticateApiKey, async (req, res) => {
   }
 });
 
-app.post('/api/usage', authenticateApiKey, async (req, res) => {
+app.post('/api/usage', authenticateUser, async (req, res) => {
   const { machineId, data } = req.body;
   const userId = req.user.id;
   
@@ -350,7 +350,7 @@ app.post('/api/usage', authenticateApiKey, async (req, res) => {
   }
 });
 
-app.get('/api/usage/aggregate', authenticateApiKey, CommonValidators.usageQuery, async (req, res) => {
+app.get('/api/usage/aggregate', authenticateUser, CommonValidators.usageQuery, async (req, res) => {
   const { since, until, machineId } = req.query;
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('usage_aggregate', userId);
@@ -626,7 +626,7 @@ app.get('/api/usage/aggregate', authenticateApiKey, CommonValidators.usageQuery,
   }
 });
 
-app.get('/api/machines', authenticateApiKey, async (req, res) => {
+app.get('/api/machines', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('fetch_machines', userId);
   
@@ -656,7 +656,7 @@ app.get('/api/machines', authenticateApiKey, async (req, res) => {
 
 
 // Session data endpoints
-app.get('/api/usage/sessions', authenticateApiKey, CommonValidators.usageQuery, async (req, res) => {
+app.get('/api/usage/sessions', authenticateUser, CommonValidators.usageQuery, async (req, res) => {
   const { machineId, projectPath, since, until, limit = 50 } = req.query;
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('fetch_sessions', userId);
@@ -785,7 +785,7 @@ app.get('/api/usage/sessions', authenticateApiKey, CommonValidators.usageQuery, 
 });
 
 // Projects data endpoint
-app.get('/api/usage/projects', authenticateApiKey, CommonValidators.usageQuery, async (req, res) => {
+app.get('/api/usage/projects', authenticateUser, CommonValidators.usageQuery, async (req, res) => {
   const { since, limit = 10 } = req.query;
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('fetch_projects', userId);
@@ -914,7 +914,7 @@ app.get('/api/usage/projects', authenticateApiKey, CommonValidators.usageQuery, 
 });
 
 // Enhanced flattened project overview endpoint
-app.get('/api/usage/projects/flattened', authenticateApiKey, CommonValidators.usageQuery, async (req, res) => {
+app.get('/api/usage/projects/flattened', authenticateUser, CommonValidators.usageQuery, async (req, res) => {
   const { since, limit = 20 } = req.query;
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('fetch_flattened_projects', userId);
@@ -1036,7 +1036,7 @@ app.get('/api/usage/projects/flattened', authenticateApiKey, CommonValidators.us
 });
 
 // Block data endpoints
-app.get('/api/usage/blocks', authenticateApiKey, CommonValidators.usageQuery, async (req, res) => {
+app.get('/api/usage/blocks', authenticateUser, CommonValidators.usageQuery, async (req, res) => {
   const { machineId, since, until, activeOnly } = req.query;
   const userId = req.user.id;
   
@@ -1144,7 +1144,7 @@ app.get('/api/usage/blocks', authenticateApiKey, CommonValidators.usageQuery, as
 });
 
 // Batch upload endpoints for CLI
-app.post('/api/usage/daily/batch', authenticateApiKey, async (req, res) => {
+app.post('/api/usage/daily/batch', authenticateUser, async (req, res) => {
   const { records } = req.body;
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('upload_daily_batch', userId);
@@ -1219,7 +1219,7 @@ app.post('/api/usage/daily/batch', authenticateApiKey, async (req, res) => {
   }
 });
 
-app.post('/api/usage/sessions/batch', authenticateApiKey, async (req, res) => {
+app.post('/api/usage/sessions/batch', authenticateUser, async (req, res) => {
   const { records } = req.body;
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('upload_sessions_batch', userId);
@@ -1306,7 +1306,7 @@ app.post('/api/usage/sessions/batch', authenticateApiKey, async (req, res) => {
   }
 });
 
-app.post('/api/usage/blocks/batch', authenticateApiKey, async (req, res) => {
+app.post('/api/usage/blocks/batch', authenticateUser, async (req, res) => {
   const { records } = req.body;
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('upload_blocks_batch', userId);
@@ -1404,7 +1404,7 @@ app.post('/api/usage/blocks/batch', authenticateApiKey, async (req, res) => {
 });
 
 // Upload history check endpoint for client-side deduplication
-app.post('/api/upload-history/check', authenticateApiKey, async (req, res) => {
+app.post('/api/upload-history/check', authenticateUser, async (req, res) => {
   const { machine_id, records } = req.body;
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('check_upload_history', userId);
@@ -1467,7 +1467,7 @@ app.post('/api/upload-history/check', authenticateApiKey, async (req, res) => {
 });
 
 // Analytics endpoint - usage patterns
-app.get('/api/usage/analytics/patterns', authenticateApiKey, async (req, res) => {
+app.get('/api/usage/analytics/patterns', authenticateUser, async (req, res) => {
   const { machineId, period = 'day' } = req.query;
   const userId = req.user.id;
   
@@ -1527,7 +1527,7 @@ app.get('/api/usage/analytics/patterns', authenticateApiKey, async (req, res) =>
 
 
 // Leaderboard endpoints
-app.get('/api/leaderboard/:period', authenticateApiKey, CommonValidators.leaderboardParams, async (req, res) => {
+app.get('/api/leaderboard/:period', authenticateUser, CommonValidators.leaderboardParams, async (req, res) => {
   const { period } = req.params; // 'daily' or 'weekly'
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('fetch_leaderboard', userId);
@@ -1591,7 +1591,7 @@ app.get('/api/leaderboard/:period', authenticateApiKey, CommonValidators.leaderb
   }
 });
 
-app.get('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) => {
+app.get('/api/user/leaderboard-settings', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('get_leaderboard_settings', userId);
   
@@ -1634,7 +1634,7 @@ function sanitizeDisplayName(input) {
   return sanitized || null;
 }
 
-app.put('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) => {
+app.put('/api/user/leaderboard-settings', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const { leaderboard_enabled, display_name, team_leaderboard_enabled, team_display_name } = req.body;
   const queryContext = logDatabaseQuery('update_leaderboard_settings', userId);
@@ -1675,7 +1675,7 @@ app.put('/api/user/leaderboard-settings', authenticateApiKey, async (req, res) =
 });
 
 // Email preferences endpoints
-app.get('/api/user/email-preferences', authenticateApiKey, async (req, res) => {
+app.get('/api/user/email-preferences', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('get_email_preferences', userId);
   
@@ -1731,7 +1731,7 @@ app.get('/api/user/email-preferences', authenticateApiKey, async (req, res) => {
   }
 });
 
-app.put('/api/user/email-preferences', authenticateApiKey, async (req, res) => {
+app.put('/api/user/email-preferences', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const { 
     daily_digest, 
@@ -1791,7 +1791,7 @@ app.put('/api/user/email-preferences', authenticateApiKey, async (req, res) => {
   }
 });
 
-app.put('/api/user/email', authenticateApiKey, async (req, res) => {
+app.put('/api/user/email', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const { email } = req.body;
   const queryContext = logDatabaseQuery('update_user_email', userId);
@@ -1844,7 +1844,7 @@ app.put('/api/user/email', authenticateApiKey, async (req, res) => {
   }
 });
 
-app.post('/api/user/test-email', authenticateApiKey, async (req, res) => {
+app.post('/api/user/test-email', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('send_test_email', userId);
   
@@ -1905,7 +1905,7 @@ app.post('/api/user/test-email', authenticateApiKey, async (req, res) => {
   }
 });
 
-app.get('/api/user/plan-settings', authenticateApiKey, async (req, res) => {
+app.get('/api/user/plan-settings', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('get_plan_settings', userId);
   
@@ -1932,7 +1932,7 @@ app.get('/api/user/plan-settings', authenticateApiKey, async (req, res) => {
   }
 });
 
-app.put('/api/user/plan-settings', authenticateApiKey, async (req, res) => {
+app.put('/api/user/plan-settings', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const { claude_plan } = req.body;
   const queryContext = logDatabaseQuery('update_plan_settings', userId);
@@ -1971,7 +1971,7 @@ app.put('/api/user/plan-settings', authenticateApiKey, async (req, res) => {
 
 // Team management endpoints
 
-app.get('/api/teams', authenticateApiKey, async (req, res) => {
+app.get('/api/teams', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('get_user_teams', userId);
   
@@ -1997,7 +1997,7 @@ app.get('/api/teams', authenticateApiKey, async (req, res) => {
   }
 });
 
-app.post('/api/teams', authenticateApiKey, async (req, res) => {
+app.post('/api/teams', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const { name, description } = req.body;
   const queryContext = logDatabaseQuery('create_team', userId);
@@ -2051,7 +2051,7 @@ app.post('/api/teams', authenticateApiKey, async (req, res) => {
 });
 
 
-app.get('/api/teams/:teamId/members', authenticateApiKey, async (req, res) => {
+app.get('/api/teams/:teamId/members', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const teamId = req.params.teamId;
   const queryContext = logDatabaseQuery('get_team_members', userId);
@@ -2093,7 +2093,7 @@ app.get('/api/teams/:teamId/members', authenticateApiKey, async (req, res) => {
   }
 });
 
-app.get('/api/teams/:teamId/leaderboard/:period', authenticateApiKey, async (req, res) => {
+app.get('/api/teams/:teamId/leaderboard/:period', authenticateUser, async (req, res) => {
   const { teamId, period } = req.params; // teamId and 'daily' or 'weekly'
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('fetch_team_leaderboard', userId);
@@ -2229,7 +2229,7 @@ app.get('/api/teams/join/:inviteCode/preview', async (req, res) => {
   }
 });
 
-app.post('/api/teams/join/:inviteCode', authenticateApiKey, async (req, res) => {
+app.post('/api/teams/join/:inviteCode', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const inviteCode = req.params.inviteCode;
   const queryContext = logDatabaseQuery('join_team', userId);
@@ -2300,7 +2300,7 @@ app.post('/api/teams/join/:inviteCode', authenticateApiKey, async (req, res) => 
 });
 
 // Update team name (admin only)
-app.put('/api/teams/:teamId', authenticateApiKey, async (req, res) => {
+app.put('/api/teams/:teamId', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const teamId = req.params.teamId;
   const { name, description } = req.body;
@@ -2354,7 +2354,7 @@ app.put('/api/teams/:teamId', authenticateApiKey, async (req, res) => {
 });
 
 // Leave team
-app.delete('/api/teams/:teamId/members/me', authenticateApiKey, async (req, res) => {
+app.delete('/api/teams/:teamId/members/me', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const teamId = req.params.teamId;
   const queryContext = logDatabaseQuery('leave_team', userId);
@@ -2422,7 +2422,7 @@ app.delete('/api/teams/:teamId/members/me', authenticateApiKey, async (req, res)
 });
 
 // Remove team member (admin or owner only)
-app.delete('/api/teams/:teamId/members/:targetUserId', authenticateApiKey, async (req, res) => {
+app.delete('/api/teams/:teamId/members/:targetUserId', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const teamId = req.params.teamId;
   const targetUserId = req.params.targetUserId;
@@ -2480,7 +2480,7 @@ app.delete('/api/teams/:teamId/members/:targetUserId', authenticateApiKey, async
 });
 
 // Promote member to admin (admin or owner only)
-app.put('/api/teams/:teamId/members/:targetUserId/promote', authenticateApiKey, async (req, res) => {
+app.put('/api/teams/:teamId/members/:targetUserId/promote', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const teamId = req.params.teamId;
   const targetUserId = req.params.targetUserId;
@@ -2541,7 +2541,7 @@ app.put('/api/teams/:teamId/members/:targetUserId/promote', authenticateApiKey, 
   }
 });
 
-app.get('/api/usage/analytics/costs', authenticateApiKey, async (req, res) => {
+app.get('/api/usage/analytics/costs', authenticateUser, async (req, res) => {
   const { machineId, groupBy = 'day' } = req.query;
   const userId = req.user.id;
   

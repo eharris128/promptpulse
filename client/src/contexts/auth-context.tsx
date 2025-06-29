@@ -1,16 +1,14 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
-import { apiClient } from '@/lib/api'
-import { sanitizeApiKey } from '@/lib/utils'
+import { createContext, useContext, ReactNode } from 'react'
+import { useUser } from '@auth0/nextjs-auth0'
 
 interface AuthContextType {
   isAuthenticated: boolean
   loading: boolean
-  login: (apiKey: string) => Promise<boolean>
+  login: () => void
   logout: () => void
-  checkAuth: () => Promise<void>
+  user: any
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -28,77 +26,27 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const { user, error, isLoading } = useUser()
 
-  const checkAuth = async () => {
-    const apiKey = apiClient.getApiKey()
-    if (apiKey) {
-      try {
-        await apiClient.getMachines()
-        setIsAuthenticated(true)
-      } catch (error) {
-        console.error('Auth check failed:', error)
-        apiClient.clearApiKey()
-        setIsAuthenticated(false)
-      }
-    } else {
-      setIsAuthenticated(false)
-    }
-    setLoading(false)
-  }
-
-  const login = async (apiKey: string): Promise<boolean> => {
-    try {
-      // Sanitize API key before setting it
-      const sanitizedApiKey = sanitizeApiKey(apiKey)
-      apiClient.setApiKey(sanitizedApiKey)
-      await apiClient.getMachines()
-      setIsAuthenticated(true)
-      
-      // Check for pending team invitation
-      if (typeof window !== 'undefined') {
-        const pendingInvite = sessionStorage.getItem('pendingTeamInvite')
-        if (pendingInvite) {
-          sessionStorage.removeItem('pendingTeamInvite')
-          // Join the team automatically after successful login
-          try {
-            await apiClient.joinTeam(pendingInvite)
-            router.push('/teams')
-          } catch (error) {
-            console.error('Failed to join team after login:', error)
-            // Still redirect to the invitation page so user can see the error
-            router.push(`/teams/join/${pendingInvite}`)
-          }
-        }
-      }
-      
-      return true
-    } catch (error) {
-      console.error('Login failed:', error)
-      apiClient.clearApiKey()
-      setIsAuthenticated(false)
-      return false
-    }
+  const login = () => {
+    // Redirect to Auth0 login
+    window.location.href = '/auth/login'
   }
 
   const logout = () => {
-    apiClient.clearApiKey()
-    setIsAuthenticated(false)
+    // Redirect to Auth0 logout
+    window.location.href = '/auth/logout'
   }
 
-  useEffect(() => {
-    checkAuth()
-  }, [])
+  const isAuthenticated = !!user && !error
 
   return (
     <AuthContext.Provider value={{
       isAuthenticated,
-      loading,
+      loading: isLoading,
       login,
       logout,
-      checkAuth
+      user
     }}>
       {children}
     </AuthContext.Provider>

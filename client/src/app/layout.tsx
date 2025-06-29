@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
+import { Auth0Provider } from '@auth0/nextjs-auth0'
 import { AuthProvider } from '@/contexts/auth-context'
 import { AppLayoutWrapper } from '@/components/layout/app-layout-wrapper'
 import './globals.css'
@@ -26,11 +27,13 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>
-            <AppLayoutWrapper>
-              {children}
-            </AppLayoutWrapper>
-          </AuthProvider>
+          <Auth0Provider>
+            <AuthProvider>
+              <AppLayoutWrapper>
+                {children}
+              </AppLayoutWrapper>
+            </AuthProvider>
+          </Auth0Provider>
         </ThemeProvider>
       </body>
     </html>

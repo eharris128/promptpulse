@@ -3,49 +3,16 @@ import { AggregateData, Machine, SessionData, BlockData, ProjectData, ApiRespons
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://exciting-patience-production.up.railway.app';
 
 class ApiClient {
-  private apiKey: string | null = null;
-
-  setApiKey(apiKey: string) {
-    this.apiKey = apiKey;
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('promptpulse_api_key', apiKey);
-    }
-  }
-
-  getApiKey(): string | null {
-    if (this.apiKey) return this.apiKey;
-    
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('promptpulse_api_key');
-      // Handle case where localStorage returns "undefined" as a string
-      this.apiKey = (stored && stored !== 'undefined') ? stored : null;
-    }
-    
-    return this.apiKey;
-  }
-
-  clearApiKey() {
-    this.apiKey = null;
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('promptpulse_api_key');
-    }
-  }
-
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const apiKey = this.getApiKey();
-    
     const headers = new Headers({
       'Content-Type': 'application/json',
       ...options.headers,
     });
 
-    if (apiKey) {
-      headers.set('X-API-Key', apiKey);
-    }
-
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
+      credentials: 'include', // Include cookies for session-based auth
     });
 
     if (!response.ok) {

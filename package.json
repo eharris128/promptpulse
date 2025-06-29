@@ -16,7 +16,7 @@
     "migrate": "node scripts/run-goose-migrations.js",
     "test": "npm run test:e2e",
     "test:e2e": "playwright test",
-    "test:setup": "npm run migrate",
+    "test:setup": "node scripts/run-test-migrations.js",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "postinstall": "node -e \"console.log('\\nPromptPulse installed successfully!\\n\\nGet started:\\n  promptpulse user init\\n  promptpulse collect\\n')\"",
@@ -58,6 +58,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@auth0/nextjs-auth0": "^4.7.0",
     "@sqlitecloud/drivers": "^1.0.507",
     "bcrypt": "^6.0.0",
     "ccusage": "^15.0.0",

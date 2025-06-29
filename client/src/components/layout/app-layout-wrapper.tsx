@@ -36,7 +36,7 @@ export function AppLayoutWrapper({ children }: AppLayoutWrapperProps) {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <LoginForm onLogin={login} />
+        <LoginForm />
       </div>
     )
   }

@@ -71,7 +71,7 @@ jobs:
       - name: Install Node.js dependencies
         if: env.SKIP_HUGO == 'false'
         working-directory: docs
-        run: "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && npm ci || true"
+        run: "[[ -f package.json ]] && npm install || true"
 
       - name: Download Hugo modules
         if: env.SKIP_HUGO == 'false'

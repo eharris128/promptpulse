@@ -77,7 +77,7 @@ When creating a team, you can configure:
 
 **Invite Link Example:**
 ```
-https://dashboard.promptpulse.dev/teams/join/abc123def456
+https://www.promptpulse.dev/teams/join/2714bc442e351gca
 ```
 
 ### Managing Members

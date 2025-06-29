@@ -143,7 +143,7 @@ export function EmptyState() {
       </Card>
 
       <div className="text-center text-sm text-muted-foreground">
-        <p>Need help? Check out the <a href="https://github.com/anthropics/promptpulse" className="underline">documentation</a></p>
+        <p>Need help? Check out the <a href="https://www.docs.promptpulse.dev" className="underline">documentation</a></p>
       </div>
     </div>
   )

@@ -12,6 +12,8 @@ module:
 params:
   github_repo: https://github.com/eharris128/promptpulse
   github_branch: master
+  github_subdir: docs  # Specify the docs subdirectory for proper edit links
+  github_project_repo: https://github.com/eharris128/promptpulse  # For issue creation links
   
   # Enable offline search
   offlineSearch: true

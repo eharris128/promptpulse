@@ -90,6 +90,9 @@ export interface AggregateData {
     total_cache_read_tokens: number;
     total_tokens: number;
     total_cost: number;
+    total_thinking_tokens: number;
+    thinking_sessions_count: number;
+    average_thinking_percentage: number;
   };
 }
 

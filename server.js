@@ -548,13 +548,21 @@ app.get('/api/usage/aggregate', authenticateApiKey, CommonValidators.usageQuery,
             SUM(cache_creation_tokens) as total_cache_creation_tokens,
             SUM(cache_read_tokens) as total_cache_read_tokens,
             SUM(total_tokens) as total_tokens,
-            SUM(total_cost) as total_cost
+            SUM(total_cost) as total_cost,
+            SUM(thinking_tokens) as total_thinking_tokens,
+            COUNT(CASE WHEN thinking_mode_detected = 1 THEN 1 END) as thinking_sessions_count,
+            AVG(CASE WHEN thinking_mode_detected = 1 THEN thinking_percentage ELSE NULL END) as average_thinking_percentage
           FROM usage_data
           WHERE user_id = ${userId}
         `;
       }
       
       const totals = totalsArray[0] || {};
+      
+      // Ensure thinking mode fields have default values
+      totals.total_thinking_tokens = totals.total_thinking_tokens || 0;
+      totals.thinking_sessions_count = totals.thinking_sessions_count || 0;
+      totals.average_thinking_percentage = totals.average_thinking_percentage || 0;
       
       // Ensure daily is always an array
       const dailyResults = Array.isArray(daily) ? daily : [];
@@ -1160,7 +1168,8 @@ app.post('/api/usage/daily/batch', authenticateApiKey, async (req, res) => {
           INSERT OR REPLACE INTO usage_data (
             machine_id, user_id, date, input_tokens, output_tokens, 
             cache_creation_tokens, cache_read_tokens, total_tokens,
-            total_cost, models_used, model_breakdowns
+            total_cost, models_used, model_breakdowns,
+            thinking_mode_detected, thinking_tokens, thinking_percentage
           ) VALUES (
             ${record.machine_id},
             ${record.user_id},
@@ -1172,7 +1181,10 @@ app.post('/api/usage/daily/batch', authenticateApiKey, async (req, res) => {
             ${record.total_tokens},
             ${record.total_cost},
             ${JSON.stringify(record.models_used)},
-            ${JSON.stringify(record.model_breakdowns)}
+            ${JSON.stringify(record.model_breakdowns)},
+            ${(record.thinking_mode_detected || false) ? 1 : 0},
+            ${record.thinking_tokens || 0},
+            ${record.thinking_percentage || 0}
           )
         `;
         
@@ -1232,7 +1244,8 @@ app.post('/api/usage/sessions/batch', authenticateApiKey, async (req, res) => {
             machine_id, user_id, session_id, project_path, start_time, end_time,
             duration_minutes, input_tokens, output_tokens, 
             cache_creation_tokens, cache_read_tokens, total_tokens,
-            total_cost, models_used, model_breakdowns
+            total_cost, models_used, model_breakdowns,
+            thinking_mode_detected, thinking_tokens, thinking_percentage
           ) VALUES (
             ${record.machine_id},
             ${record.user_id},
@@ -1248,7 +1261,10 @@ app.post('/api/usage/sessions/batch', authenticateApiKey, async (req, res) => {
             ${record.total_tokens},
             ${record.total_cost},
             ${JSON.stringify(record.models_used)},
-            ${JSON.stringify(record.model_breakdowns)}
+            ${JSON.stringify(record.model_breakdowns)},
+            ${(record.thinking_mode_detected || false) ? 1 : 0},
+            ${record.thinking_tokens || 0},
+            ${record.thinking_percentage || 0}
           )
         `;
         
@@ -1325,7 +1341,8 @@ app.post('/api/usage/blocks/batch', authenticateApiKey, async (req, res) => {
             machine_id, user_id, block_id, start_time, end_time, actual_end_time,
             is_active, entry_count, input_tokens, output_tokens, 
             cache_creation_tokens, cache_read_tokens, total_tokens,
-            total_cost, models_used
+            total_cost, models_used,
+            thinking_mode_detected, thinking_tokens, thinking_percentage
           ) VALUES (
             ${record.machine_id},
             ${record.user_id},
@@ -1341,7 +1358,10 @@ app.post('/api/usage/blocks/batch', authenticateApiKey, async (req, res) => {
             ${record.cache_read_tokens},
             ${record.total_tokens},
             ${record.total_cost},
-            ${JSON.stringify(record.models_used || [])}
+            ${JSON.stringify(record.models_used || [])},
+            ${(record.thinking_mode_detected || false) ? 1 : 0},
+            ${record.thinking_tokens || 0},
+            ${record.thinking_percentage || 0}
           )
         `;
         

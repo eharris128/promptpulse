@@ -32,15 +32,58 @@ export default function EnvironmentPage() {
     }
   }
 
-  // Calculate environmental impact from usage data
-  const environmentalImpact = usageData ? calculateClaude4Impact({
-    model: 'claude-4-sonnet', // Default to Sonnet for calculation
-    inputTokens: usageData.totals.total_input_tokens || 0,
-    outputTokens: usageData.totals.total_output_tokens || 0,
-    cacheCreationTokens: usageData.totals.total_cache_creation_tokens || 0,
-    cacheReadTokens: usageData.totals.total_cache_read_tokens || 0,
-    reasoning: false
-  }) : null
+  // Calculate environmental impact from usage data with thinking mode detection
+  const environmentalImpact = usageData ? (() => {
+    // Check if we have thinking mode data
+    const hasThinkingData = usageData.totals.total_thinking_tokens > 0;
+    const thinkingPercentage = usageData.totals.average_thinking_percentage || 0;
+    
+    if (hasThinkingData && thinkingPercentage > 0) {
+      // Calculate impact for thinking and non-thinking tokens separately
+      const thinkingTokens = usageData.totals.total_thinking_tokens || 0;
+      const regularTokens = usageData.totals.total_tokens - thinkingTokens;
+      
+      // Calculate thinking impact (with reasoning=true for 2.5x multiplier)
+      const thinkingImpact = calculateClaude4Impact({
+        model: 'claude-4-sonnet',
+        inputTokens: Math.round(thinkingTokens * 0.5), // Rough estimate of input/output split
+        outputTokens: Math.round(thinkingTokens * 0.5),
+        cacheCreationTokens: 0,
+        cacheReadTokens: 0,
+        reasoning: true // This applies the 2.5x multiplier
+      });
+      
+      // Calculate regular impact 
+      const regularImpact = calculateClaude4Impact({
+        model: 'claude-4-sonnet',
+        inputTokens: usageData.totals.total_input_tokens - Math.round(thinkingTokens * 0.5),
+        outputTokens: usageData.totals.total_output_tokens - Math.round(thinkingTokens * 0.5),
+        cacheCreationTokens: usageData.totals.total_cache_creation_tokens || 0,
+        cacheReadTokens: usageData.totals.total_cache_read_tokens || 0,
+        reasoning: false
+      });
+      
+      // Combine the impacts
+      return {
+        ...regularImpact,
+        co2Grams: thinkingImpact.co2Grams + regularImpact.co2Grams,
+        energyWh: thinkingImpact.energyWh + regularImpact.energyWh,
+        waterLiters: thinkingImpact.waterLiters + regularImpact.waterLiters,
+        thinkingTokens: thinkingTokens,
+        thinkingPercentage: thinkingPercentage
+      };
+    } else {
+      // Fallback to original calculation if no thinking data
+      return calculateClaude4Impact({
+        model: 'claude-4-sonnet',
+        inputTokens: usageData.totals.total_input_tokens || 0,
+        outputTokens: usageData.totals.total_output_tokens || 0,
+        cacheCreationTokens: usageData.totals.total_cache_creation_tokens || 0,
+        cacheReadTokens: usageData.totals.total_cache_read_tokens || 0,
+        reasoning: false
+      });
+    }
+  })() : null
 
   // Calculate what impact would be if all tokens were treated as regular tokens (for comparison)
   const naiveImpact = usageData ? calculateClaude4Impact({
@@ -60,11 +103,18 @@ export default function EnvironmentPage() {
       outputTokens: usageData.totals.total_output_tokens,
       cacheCreationTokens: usageData.totals.total_cache_creation_tokens,
       cacheReadTokens: usageData.totals.total_cache_read_tokens,
-      totalTokens: usageData.totals.total_tokens
+      totalTokens: usageData.totals.total_tokens,
+      thinkingTokens: usageData.totals.total_thinking_tokens,
+      thinkingSessions: usageData.totals.thinking_sessions_count
     })
     console.log('AI-Carbon result:', environmentalImpact)
     console.log('Cache tokens represent:', Math.round(((usageData.totals.total_cache_read_tokens || 0) / usageData.totals.total_tokens) * 100) + '% of total tokens')
     console.log('Cache tokens have 0.12x environmental impact of regular tokens')
+    if (usageData.totals.total_thinking_tokens > 0) {
+      console.log('Thinking tokens:', usageData.totals.total_thinking_tokens, `(${(usageData.totals.average_thinking_percentage * 100).toFixed(1)}% avg)`)
+      console.log('Thinking mode sessions:', usageData.totals.thinking_sessions_count)
+      console.log('Thinking tokens have 2.5x environmental impact of regular tokens')
+    }
     console.log('===========================')
   }
 
@@ -155,6 +205,13 @@ export default function EnvironmentPage() {
                           <strong>Note:</strong> Cache reads ({Math.round(((usageData.totals.total_cache_read_tokens || 0) / usageData.totals.total_tokens) * 100)}% of your tokens) 
                           have 88% lower environmental impact than regular token processing.
                         </p>
+                        {usageData.totals.total_thinking_tokens > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            <strong>Thinking mode:</strong> {usageData.totals.thinking_sessions_count} sessions used thinking mode 
+                            ({(usageData.totals.average_thinking_percentage * 100).toFixed(1)}% avg thinking content) 
+                            with 2.5x higher environmental impact.
+                          </p>
+                        )}
                         {naiveImpact && (
                           <p className="text-xs text-muted-foreground">
                             If all {(usageData.totals.total_tokens / 1000000).toFixed(1)}M tokens were processed normally: 

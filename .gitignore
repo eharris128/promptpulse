@@ -12,3 +12,5 @@ build/
 
 playwright-report/
 test-results/
+
+docs/public/

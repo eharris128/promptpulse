@@ -28,7 +28,6 @@ concurrency:
 defaults:
   run:
     shell: bash
-    working-directory: docs
 
 jobs:
   # Build job
@@ -37,6 +36,11 @@ jobs:
     env:
       HUGO_VERSION: 0.147.9
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
       - name: Install Hugo CLI
         run: |
           wget -O ${{ runner.temp }}/hugo.deb https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb \
@@ -44,11 +48,6 @@ jobs:
 
       - name: Install Dart Sass
         run: sudo snap install dart-sass
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Setup Go
         uses: actions/setup-go@v4
@@ -59,13 +58,29 @@ jobs:
         id: pages
         uses: actions/configure-pages@v4
 
+      - name: Check if docs directory exists
+        run: |
+          if [ ! -d "docs" ]; then
+            echo "⚠️ docs directory not found, skipping Hugo build"
+            echo "SKIP_HUGO=true" >> $GITHUB_ENV
+          else
+            echo "✅ docs directory found, proceeding with Hugo build"
+            echo "SKIP_HUGO=false" >> $GITHUB_ENV
+          fi
+
       - name: Install Node.js dependencies
+        if: env.SKIP_HUGO == 'false'
+        working-directory: docs
         run: "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && npm ci || true"
 
       - name: Download Hugo modules
+        if: env.SKIP_HUGO == 'false'
+        working-directory: docs
         run: hugo mod tidy
 
       - name: Build with Hugo
+        if: env.SKIP_HUGO == 'false'
+        working-directory: docs
         env:
           # For maximum backward compatibility with Hugo modules
           HUGO_ENVIRONMENT: production
@@ -75,6 +90,12 @@ jobs:
             --gc \
             --minify \
             --baseURL "${{ steps.pages.outputs.base_url }}/"
+
+      - name: Create empty artifact if docs missing
+        if: env.SKIP_HUGO == 'true'
+        run: |
+          mkdir -p docs/public
+          echo "<html><body><h1>Documentation not available</h1><p>The docs directory is not present in this repository.</p></body></html>" > docs/public/index.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

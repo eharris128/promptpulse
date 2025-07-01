@@ -3,16 +3,38 @@ import { AggregateData, Machine, SessionData, BlockData, ProjectData, ApiRespons
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://exciting-patience-production.up.railway.app';
 
 class ApiClient {
+  private async getAccessToken(): Promise<string | null> {
+    try {
+      // Get access token from Auth0 Next.js SDK
+      const response = await fetch('/api/auth/token', {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        return data.accessToken;
+      }
+    } catch (error) {
+      console.warn('Failed to get access token:', error);
+    }
+    return null;
+  }
+
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const headers = new Headers({
       'Content-Type': 'application/json',
       ...options.headers,
     });
 
+    // Try to get and add access token for authentication
+    const accessToken = await this.getAccessToken();
+    if (accessToken) {
+      headers.set('Authorization', `Bearer ${accessToken}`);
+    }
+
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
-      credentials: 'include', // Include cookies for session-based auth
+      credentials: 'include', // Include cookies for Auth0 session-based auth fallback
     });
 
     if (!response.ok) {

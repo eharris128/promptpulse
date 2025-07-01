@@ -1,3 +1,7 @@
-import { Auth0Client } from '@auth0/nextjs-auth0/server'
+import { initAuth0 } from '@auth0/nextjs-auth0';
 
-export const auth0 = new Auth0Client()
+export const auth0 = initAuth0({
+  authorizationParameters: {
+    scope: 'openid profile email',
+  }
+});

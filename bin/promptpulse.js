@@ -45,11 +45,11 @@ program
     await collect(options);
   });
 
-// Login command (API key authentication or interactive account creation)
+// Login command (OAuth Device Flow or legacy API key support)
 program
   .command('login')
-  .description('Login with API key or create new account interactively')
-  .argument('[api-key]', 'API key for existing account (starts with pk_...), or omit for interactive account creation')
+  .description('Login with secure OAuth authentication (or legacy API key)')
+  .argument('[api-key]', 'Optional: legacy API key for backward compatibility (starts with pk_...)')
   .action(async (apiKey) => {
     const { smartLogin } = await import('../lib/auth-cli.js');
     await smartLogin(apiKey);

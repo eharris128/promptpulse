@@ -1,7 +1,6 @@
 'use client'
 
-import { createContext, useContext, ReactNode } from 'react'
-import { useUser } from '@auth0/nextjs-auth0'
+import { createContext, useContext, ReactNode, useEffect, useState } from 'react'
 
 interface AuthContextType {
   isAuthenticated: boolean
@@ -26,16 +25,40 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const { user, error, isLoading } = useUser()
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  // Check authentication status on mount
+  useEffect(() => {
+    checkAuth()
+  }, [])
+
+  const checkAuth = async () => {
+    try {
+      const response = await fetch('/api/auth/me')
+      if (response.ok) {
+        const data = await response.json()
+        setUser(data.user)
+      } else {
+        setUser(null)
+      }
+    } catch (error) {
+      setUser(null)
+      setError(error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const login = () => {
     // Redirect to Auth0 login
-    window.location.href = '/auth/login'
+    window.location.href = '/api/auth/login'
   }
 
   const logout = () => {
     // Redirect to Auth0 logout
-    window.location.href = '/auth/logout'
+    window.location.href = '/api/auth/logout'
   }
 
   const isAuthenticated = !!user && !error
@@ -43,7 +66,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   return (
     <AuthContext.Provider value={{
       isAuthenticated,
-      loading: isLoading,
+      loading,
       login,
       logout,
       user

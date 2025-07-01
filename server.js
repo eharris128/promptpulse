@@ -4,6 +4,7 @@ import cors from 'cors';
 import crypto from 'crypto';
 import KSUID from 'ksuid';
 import rateLimit from 'express-rate-limit';
+import { Auth0Client } from '@auth0/nextjs-auth0/server';
 import { authenticateUser, createUser, listUsers } from './lib/server-auth.js';
 import { initializeDbManager, getDbManager } from './lib/db-manager.js';
 import { logger, requestLogger, logDatabaseQuery, logError, log } from './lib/logger.js';
@@ -100,6 +101,30 @@ app.use('/api/usage/*/batch', batchLimiter);
 app.use(securityHeaders);
 app.use(detectSqlInjectionMiddleware);
 app.use(sanitizeAllInputs);
+
+// Initialize Auth0 client for session validation
+const auth0 = new Auth0Client({
+  domain: process.env.AUTH0_DOMAIN,
+  clientId: process.env.AUTH0_CLIENT_ID,
+  clientSecret: process.env.AUTH0_CLIENT_SECRET,
+  secret: process.env.AUTH0_SECRET,
+  appBaseUrl: process.env.APP_BASE_URL
+});
+
+// Auth0 session middleware for Express API
+app.use(async (req, res, next) => {
+  try {
+    // Get session from Auth0 
+    const session = await auth0.getSession(req, res);
+    if (session && session.user) {
+      req.user = session.user;
+    }
+  } catch (error) {
+    // Session validation failed, but don't block request
+    // Let individual endpoints handle authentication requirements
+  }
+  next();
+});
 
 const DATABASE_URL = process.env.DATABASE_URL;
 

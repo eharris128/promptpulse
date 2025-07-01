@@ -43,9 +43,6 @@ export default function Settings() {
   const [newEmail, setNewEmail] = useState('')
   const [isEditingEmail, setIsEditingEmail] = useState(false)
   const [savingEmail, setSavingEmail] = useState(false)
-  const [apiKey, setApiKey] = useState<string | null>(null)
-  const [generatingApiKey, setGeneratingApiKey] = useState(false)
-  const [showApiKey, setShowApiKey] = useState(false)
 
   useEffect(() => {
     loadSettings()
@@ -141,54 +138,6 @@ export default function Settings() {
       setError(err instanceof Error ? err.message : 'Failed to update email')
     } finally {
       setSavingEmail(false)
-    }
-  }
-
-  const handleGenerateApiKey = async () => {
-    try {
-      setGeneratingApiKey(true)
-      setError(null)
-      setSuccess(null)
-      
-      // Mock Auth0 user - in real implementation this would come from auth context
-      const mockAuth0User = {
-        sub: 'auth0|68631552d816151fc8ea85ff',
-        email: 'evancharris1@gmail.com',
-        nickname: 'evancharris1'
-      }
-      
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/generate-key`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          auth0_user_id: mockAuth0User.sub,
-          email: mockAuth0User.email,
-          username: mockAuth0User.nickname
-        })
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to generate API key')
-      }
-      
-      const data = await response.json()
-      setApiKey(data.api_key)
-      setShowApiKey(true)
-      
-      // Store API key in localStorage for dashboard use
-      localStorage.setItem('promptpulse_api_key', data.api_key)
-      
-      setSuccess('API key generated successfully! This key is now active for your dashboard and CLI access.')
-      
-      // Clear success message after 10 seconds (longer since they need to copy the key)
-      setTimeout(() => setSuccess(null), 10000)
-    } catch (err) {
-      console.error('Failed to generate API key:', err)
-      setError(err instanceof Error ? err.message : 'Failed to generate API key')
-    } finally {
-      setGeneratingApiKey(false)
     }
   }
 
@@ -608,80 +557,6 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>API Key Management</CardTitle>
-              <CardDescription>
-                Generate an API key to use with the PromptPulse CLI tool
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-md p-4">
-                <p className="text-sm">
-                  <strong>How to use:</strong> Generate an API key here, then configure your CLI with:
-                </p>
-                <div className="mt-2 font-mono text-xs bg-blue-100 dark:bg-blue-900 p-2 rounded">
-                  echo "API_KEY=your_key_here" &gt; ~/.promptpulse/config
-                </div>
-              </div>
-              
-              {!showApiKey && (
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Click the button below to generate a new API key for CLI access. 
-                    This will replace any existing key.
-                  </p>
-                  <Button 
-                    onClick={handleGenerateApiKey}
-                    disabled={generatingApiKey}
-                    className="w-full"
-                  >
-                    {generatingApiKey ? 'Generating...' : 'Generate New API Key'}
-                  </Button>
-                </div>
-              )}
-              
-              {showApiKey && apiKey && (
-                <div className="space-y-4">
-                  <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md p-4">
-                    <p className="text-sm text-green-700 dark:text-green-300 font-medium mb-2">
-                      ✅ API Key Generated Successfully
-                    </p>
-                    <p className="text-xs text-green-600 dark:text-green-400 mb-3">
-                      Copy this key now - you won't be able to see it again!
-                    </p>
-                    <div className="bg-green-100 dark:bg-green-900 p-3 rounded font-mono text-sm break-all">
-                      {apiKey}
-                    </div>
-                    <div className="mt-3 flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => navigator.clipboard.writeText(apiKey)}
-                      >
-                        Copy Key
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setShowApiKey(false)
-                          setApiKey(null)
-                        }}
-                      >
-                        Hide
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <p>• Use this key with the PromptPulse CLI to upload usage data</p>
-                    <p>• Store it securely - treat it like a password</p>
-                    <p>• Generate a new key if this one is compromised</p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
           <Card>
             <CardHeader>

@@ -3,20 +3,20 @@ import { AggregateData, Machine, SessionData, BlockData, ProjectData, ApiRespons
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://exciting-patience-production.up.railway.app';
 
 class ApiClient {
-  private async getAccessToken(): Promise<string | null> {
-    try {
-      // Get access token from Auth0 Next.js SDK
-      const response = await fetch('/api/auth/token', {
-        credentials: 'include'
-      });
-      if (response.ok) {
-        const data = await response.json();
-        return data.accessToken;
-      }
-    } catch (error) {
-      console.warn('Failed to get access token:', error);
-    }
-    return null;
+  private async getApiKey(): Promise<string | null> {
+    // Get API key from localStorage
+    const storedApiKey = localStorage.getItem('promptpulse_api_key');
+    return storedApiKey;
+  }
+
+  // Helper method to set API key
+  setApiKey(apiKey: string): void {
+    localStorage.setItem('promptpulse_api_key', apiKey);
+  }
+
+  // Helper method to clear API key
+  clearApiKey(): void {
+    localStorage.removeItem('promptpulse_api_key');
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -25,10 +25,10 @@ class ApiClient {
       ...options.headers,
     });
 
-    // Try to get and add access token for authentication
-    const accessToken = await this.getAccessToken();
-    if (accessToken) {
-      headers.set('Authorization', `Bearer ${accessToken}`);
+    // Try to get and add API key for authentication
+    const apiKey = await this.getApiKey();
+    if (apiKey) {
+      headers.set('X-API-Key', apiKey);
     }
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {

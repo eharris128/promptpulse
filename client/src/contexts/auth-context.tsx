@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, ReactNode, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 
 interface AuthContextType {
   isAuthenticated: boolean
@@ -28,28 +29,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const searchParams = useSearchParams()
 
-  // Check authentication status on mount
+  // Check for auth success from callback
   useEffect(() => {
-    checkAuth()
-  }, [])
-
-  const checkAuth = async () => {
-    try {
-      const response = await fetch('/api/auth/me')
-      if (response.ok) {
-        const data = await response.json()
-        setUser(data.user)
-      } else {
-        setUser(null)
-      }
-    } catch (error) {
-      setUser(null)
-      setError(error)
-    } finally {
-      setLoading(false)
+    const authSuccess = searchParams.get('auth')
+    if (authSuccess === 'success') {
+      // Simulate user - for now just set a basic user object
+      // Later we'll implement proper token handling
+      setUser({
+        name: 'Test User',
+        email: 'user@example.com'
+      })
+      setError(null)
     }
-  }
+    setLoading(false)
+  }, [searchParams])
 
   const login = () => {
     // Redirect to Auth0 login

@@ -331,6 +331,74 @@ app.get('/api/users', authenticateUser, async (req, res) => {
   }
 });
 
+// Generate API key for Auth0 authenticated users
+app.post('/api/auth/generate-key', async (req, res) => {
+  const { auth0_user_id, email, username } = req.body;
+  
+  if (!auth0_user_id) {
+    return res.status(400).json({ error: 'Auth0 user ID is required' });
+  }
+
+  try {
+    // Check if user already exists with this Auth0 ID
+    const existingUser = await dbManager.executeQuery(async (db) => {
+      return await db.sql`
+        SELECT id, email, username, auth0_id 
+        FROM users 
+        WHERE auth0_id = ${auth0_user_id} 
+        LIMIT 1
+      `;
+    });
+
+    let user;
+    if (existingUser.length > 0) {
+      // User exists, generate new API key
+      const { generateApiKey, hashApiKey } = await import('./lib/server-auth.js');
+      const apiKey = generateApiKey();
+      const apiKeyHash = await hashApiKey(apiKey);
+      
+      await dbManager.executeQuery(async (db) => {
+        await db.sql`
+          UPDATE users 
+          SET api_key_hash = ${apiKeyHash}
+          WHERE auth0_id = ${auth0_user_id}
+        `;
+      });
+      
+      user = { ...existingUser[0], api_key: apiKey };
+    } else {
+      // Create new user with Auth0 ID
+      const { generateApiKey, hashApiKey } = await import('./lib/server-auth.js');
+      const apiKey = generateApiKey();
+      const apiKeyHash = await hashApiKey(apiKey);
+      const ksuid = KSUID.randomSync().string;
+      
+      const newUser = await dbManager.executeQuery(async (db) => {
+        return await db.sql`
+          INSERT INTO users (id, email, username, api_key_hash, auth0_id)
+          VALUES (${ksuid}, ${email || null}, ${username || null}, ${apiKeyHash}, ${auth0_user_id})
+          RETURNING id, email, username, auth0_id, created_at
+        `;
+      });
+      
+      user = { ...newUser[0], api_key: apiKey };
+    }
+    
+    res.json({ 
+      message: 'API key generated successfully',
+      api_key: user.api_key,
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username
+      }
+    });
+  } catch (error) {
+    console.error('Error generating API key:', error);
+    res.status(500).json({ error: 'Failed to generate API key' });
+  }
+});
+
 app.post('/api/usage', authenticateUser, async (req, res) => {
   const { machineId, data } = req.body;
   const userId = req.user.id;

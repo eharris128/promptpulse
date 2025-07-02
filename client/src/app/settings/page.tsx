@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Select } from '@/components/ui/select'
-import { sanitizeDisplayName } from '@/lib/utils'
+import { validateDisplayName } from '@/lib/utils'
 import { apiClient } from '@/lib/api'
 import { LeaderboardSettings, EmailPreferences, PlanSettings, ClaudePlan } from '@/types'
 
@@ -72,20 +72,35 @@ export default function Settings() {
       setError(null)
       setSuccess(null)
       
-      // Sanitize display name before saving
-      const sanitizedSettings = {
+      // Validate display names before saving (server will handle sanitization)
+      const publicNameValidation = validateDisplayName(settings.display_name || '')
+      if (settings.display_name && !publicNameValidation.isValid) {
+        setError(`Public display name: ${publicNameValidation.error}`)
+        setSaving(false)
+        return
+      }
+      
+      const teamNameValidation = validateDisplayName(settings.team_display_name || '')
+      if (settings.team_display_name && !teamNameValidation.isValid) {
+        setError(`Team display name: ${teamNameValidation.error}`)
+        setSaving(false)
+        return
+      }
+      
+      const validatedSettings = {
         ...settings,
-        display_name: sanitizeDisplayName(settings.display_name || '')
+        display_name: (settings.display_name || '').trim(),
+        team_display_name: (settings.team_display_name || '').trim()
       }
       
       // Save leaderboard settings, email preferences, and plan settings
       await Promise.all([
-        apiClient.updateLeaderboardSettings(sanitizedSettings),
+        apiClient.updateLeaderboardSettings(validatedSettings),
         apiClient.updateEmailPreferences(emailPreferences),
         apiClient.updatePlanSettings(planSettings)
       ])
       
-      setSettings(sanitizedSettings) // Update local state with sanitized version
+      setSettings(validatedSettings) // Update local state with validated version
       setSuccess('Settings saved successfully!')
       
       // Clear success message after 3 seconds
@@ -199,8 +214,8 @@ export default function Settings() {
                     value={settings.display_name || ''}
                     maxLength={50}
                     onChange={(e) => {
-                      const sanitized = sanitizeDisplayName(e.target.value)
-                      setSettings(prev => ({ ...prev, display_name: sanitized }))
+                      // Just store the raw value - validation happens on save
+                      setSettings(prev => ({ ...prev, display_name: e.target.value }))
                     }}
                   />
                   <p className="text-sm text-muted-foreground">
@@ -246,8 +261,8 @@ export default function Settings() {
                     value={settings.team_display_name || ''}
                     maxLength={50}
                     onChange={(e) => {
-                      const sanitized = sanitizeDisplayName(e.target.value)
-                      setSettings(prev => ({ ...prev, team_display_name: sanitized }))
+                      // Just store the raw value - validation happens on save
+                      setSettings(prev => ({ ...prev, team_display_name: e.target.value }))
                     }}
                   />
                   <p className="text-sm text-muted-foreground">

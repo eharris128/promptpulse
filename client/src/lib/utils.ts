@@ -40,77 +40,40 @@ export function formatNumber(num: number): string {
   return new Intl.NumberFormat('en-US').format(num)
 }
 
-// Input sanitization with SQL injection protection
-export function sanitizeDisplayName(input: string): string {
-  if (!input) return ''
+// Basic input validation (client-side only for UX)
+// Note: All security sanitization is handled server-side
+export function validateDisplayName(input: string): { isValid: boolean; error?: string } {
+  if (!input || input.trim().length === 0) {
+    return { isValid: false, error: 'Display name is required' }
+  }
   
-  // Trim whitespace and limit length
-  let sanitized = input.trim().slice(0, 50)
+  if (input.trim().length > 50) {
+    return { isValid: false, error: 'Display name must be 50 characters or less' }
+  }
   
-  // Remove HTML tags and dangerous characters
-  sanitized = sanitized.replace(/<[^>]*>/g, '')
-  sanitized = sanitized.replace(/[<>'\"&]/g, '')
-  
-  // SQL injection protection - escape SQL special characters
-  sanitized = escapeSqlCharacters(sanitized)
-  
-  return sanitized
+  return { isValid: true }
 }
 
-// SQL injection protection utilities
-export function escapeSqlCharacters(input: string): string {
-  if (!input) return ''
+export function validateSearchInput(input: string): { isValid: boolean; error?: string } {
+  if (!input) return { isValid: true } // Search can be empty
   
-  return input
-    .replace(/'/g, "''")        // Escape single quotes
-    .replace(/\\/g, '\\\\')     // Escape backslashes
-    .replace(/\0/g, '\\0')      // Escape null bytes
-    .replace(/\n/g, '\\n')      // Escape newlines
-    .replace(/\r/g, '\\r')      // Escape carriage returns
-    .replace(/\x1a/g, '\\Z')    // Escape Control+Z
+  if (input.length > 100) {
+    return { isValid: false, error: 'Search term must be 100 characters or less' }
+  }
+  
+  return { isValid: true }
 }
 
-export function sanitizeSearchInput(input: string): string {
-  if (!input) return ''
+export function validateGenericInput(input: string, maxLength: number = 255): { isValid: boolean; error?: string } {
+  if (!input || input.trim().length === 0) {
+    return { isValid: false, error: 'Input is required' }
+  }
   
-  // Trim and limit length
-  let sanitized = input.trim().slice(0, 100)
+  if (input.trim().length > maxLength) {
+    return { isValid: false, error: `Input must be ${maxLength} characters or less` }
+  }
   
-  // Remove HTML tags
-  sanitized = sanitized.replace(/<[^>]*>/g, '')
-  
-  // Remove dangerous SQL patterns
-  sanitized = sanitized.replace(/(\b(ALTER|CREATE|DELETE|DROP|EXEC|INSERT|MERGE|SELECT|UPDATE|UNION|INTO|FROM|WHERE)\b)/gi, '')
-  
-  // Escape SQL characters
-  sanitized = escapeSqlCharacters(sanitized)
-  
-  return sanitized
-}
-
-export function sanitizeGenericInput(input: string, maxLength: number = 255): string {
-  if (!input) return ''
-  
-  // Trim and limit length
-  let sanitized = input.trim().slice(0, maxLength)
-  
-  // Remove HTML tags and scripts
-  sanitized = sanitized.replace(/<[^>]*>/g, '')
-  sanitized = sanitized.replace(/javascript:/gi, '')
-  sanitized = sanitized.replace(/on\w+\s*=/gi, '')
-  
-  // Remove dangerous characters
-  sanitized = sanitized.replace(/[<>'\"&]/g, '')
-  
-  // SQL injection protection
-  sanitized = escapeSqlCharacters(sanitized)
-  
-  return sanitized
-}
-
-export function validateSqlIdentifier(identifier: string): boolean {
-  // Only allow alphanumeric characters, underscores, and hyphens
-  return /^[a-zA-Z0-9_-]+$/.test(identifier)
+  return { isValid: true }
 }
 
 // Smart labeling for time periods

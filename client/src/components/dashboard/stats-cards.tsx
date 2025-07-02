@@ -10,7 +10,6 @@ interface StatsCardsProps {
 }
 
 export function StatsCards({ data }: StatsCardsProps) {
-  console.log('StatsCards received data:', data)
   const { totals } = data
 
   // Ensure totals exists with default values and handle NaN

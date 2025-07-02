@@ -12,9 +12,6 @@ interface UsageChartProps {
 }
 
 export function UsageChart({ data, type }: UsageChartProps) {
-  console.log(`UsageChart ${type} received data:`, data)
-  console.log(`UsageChart ${type} daily array:`, data.daily)
-  
   // Robust check for data.daily being a valid array
   if (!data || !data.daily || !Array.isArray(data.daily) || data.daily.length === 0) {
     return (

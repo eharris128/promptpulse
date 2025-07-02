@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, ReactNode, useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 
 interface AuthContextType {
@@ -32,7 +32,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const pathname = usePathname()
 
   // Handle pending team invites after authentication
-  const handlePendingTeamInvite = useCallback(() => {
+  const handlePendingTeamInvite = () => {
     // Don't redirect if we're already on a join page to prevent loops
     if (pathname && pathname.startsWith('/teams/join/')) {
       return
@@ -43,10 +43,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       sessionStorage.removeItem('pendingTeamInvite')
       router.push(`/teams/join/${pendingInvite}`)
     }
-  }, [pathname, router])
+  }
 
   // Custom function to fetch user profile from Express server
-  const fetchUserProfile = useCallback(async () => {
+  const fetchUserProfile = async () => {
     const wasAuthenticated = !!user
     
     try {
@@ -72,7 +72,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setLoading(false)
     }
-  }, [user, setUser, setLoading, handlePendingTeamInvite])
+  }
 
   // Check authentication status on mount and periodically
   useEffect(() => {
@@ -81,7 +81,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Check auth status every 30 seconds to handle session expiration
     const interval = setInterval(fetchUserProfile, 30000)
     return () => clearInterval(interval)
-  }, [fetchUserProfile])
+  }, [])
 
   const login = () => {
     // Redirect to Express server login endpoint

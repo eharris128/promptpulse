@@ -4,6 +4,7 @@ logs/
 .claude/
 client/.next/
 *.tgz
+.vscode
 
 # Only ignore client's package-lock for now
 client/package-lock.json

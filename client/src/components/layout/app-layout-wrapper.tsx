@@ -10,7 +10,7 @@ interface AppLayoutWrapperProps {
 }
 
 export function AppLayoutWrapper({ children }: AppLayoutWrapperProps) {
-  const { isAuthenticated, loading, login, logout } = useAuth()
+  const { isAuthenticated, loading, logout } = useAuth()
   const pathname = usePathname()
   
   // Routes that don't require authentication

@@ -258,14 +258,14 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card style={{ display: 'none' }}>
             <CardHeader>
               <CardTitle>Email Notifications</CardTitle>
               <CardDescription>
                 Configure which email notifications you would like to receive
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6" style={{ display: 'none' }}>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">

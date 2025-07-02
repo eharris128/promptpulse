@@ -1,14 +1,14 @@
-'use client'
+"use client";
 
-import { use } from 'react'
-import { UsageChart } from './usage-chart'
+import { use } from "react";
+import { UsageChart } from "./usage-chart";
 
 interface UsageChartDataProps {
   usageDataPromise: Promise<any>
-  type: 'cost' | 'tokens'
+  type: "cost" | "tokens"
 }
 
 export function UsageChartData({ usageDataPromise, type }: UsageChartDataProps) {
-  const usageData = use(usageDataPromise)
-  return <UsageChart data={usageData} type={type} />
+  const usageData = use(usageDataPromise);
+  return <UsageChart data={usageData} type={type} />;
 }

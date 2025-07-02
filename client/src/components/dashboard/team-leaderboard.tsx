@@ -1,13 +1,13 @@
-'use client'
+"use client";
 
-import { useEffect, useState, useCallback } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { formatCost, formatTokens, getAverageLabel } from '@/lib/utils'
-import { apiClient } from '@/lib/api'
-import { TeamLeaderboardData, TeamLeaderboardEntry } from '@/types'
-import { Trophy, Users } from 'lucide-react'
+import { useEffect, useState, useCallback } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { formatCost, formatTokens, getAverageLabel } from "@/lib/utils";
+import { apiClient } from "@/lib/api";
+import { TeamLeaderboardData, TeamLeaderboardEntry } from "@/types";
+import { Trophy, Users } from "lucide-react";
 
 interface TeamLeaderboardProps {
   teamId: string // KSUID
@@ -15,42 +15,42 @@ interface TeamLeaderboardProps {
 }
 
 export function TeamLeaderboard({ teamId, teamName }: TeamLeaderboardProps) {
-  const [dataLoading, setDataLoading] = useState(false)
-  const [leaderboardData, setLeaderboardData] = useState<TeamLeaderboardData | null>(null)
-  const [period, setPeriod] = useState<'daily' | 'weekly'>('daily')
-  const [error, setError] = useState<string | null>(null)
+  const [dataLoading, setDataLoading] = useState(false);
+  const [leaderboardData, setLeaderboardData] = useState<TeamLeaderboardData | null>(null);
+  const [period, setPeriod] = useState<"daily" | "weekly">("daily");
+  const [error, setError] = useState<string | null>(null);
 
   const loadTeamLeaderboard = useCallback(async () => {
     try {
-      setDataLoading(true)
-      setError(null)
-      const data = await apiClient.getTeamLeaderboard(teamId, period)
-      setLeaderboardData(data)
+      setDataLoading(true);
+      setError(null);
+      const data = await apiClient.getTeamLeaderboard(teamId, period);
+      setLeaderboardData(data);
     } catch (err) {
-      console.error('Failed to load team leaderboard:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load team leaderboard')
+      console.error("Failed to load team leaderboard:", err);
+      setError(err instanceof Error ? err.message : "Failed to load team leaderboard");
     } finally {
-      setDataLoading(false)
+      setDataLoading(false);
     }
-  }, [teamId, period])
+  }, [teamId, period]);
 
   useEffect(() => {
-    loadTeamLeaderboard()
-  }, [loadTeamLeaderboard])
+    loadTeamLeaderboard();
+  }, [loadTeamLeaderboard]);
 
   const getRankColor = (rank: number) => {
-    if (rank === 1) return 'text-yellow-600 dark:text-yellow-400'
-    if (rank === 2) return 'text-slate-600 dark:text-slate-400'
-    if (rank === 3) return 'text-amber-600 dark:text-amber-400'
-    return 'text-muted-foreground'
-  }
+    if (rank === 1) return "text-yellow-600 dark:text-yellow-400";
+    if (rank === 2) return "text-slate-600 dark:text-slate-400";
+    if (rank === 3) return "text-amber-600 dark:text-amber-400";
+    return "text-muted-foreground";
+  };
 
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return '🥇'
-    if (rank === 2) return '🥈'
-    if (rank === 3) return '🥉'
-    return `#${rank}`
-  }
+    if (rank === 1) return "🥇";
+    if (rank === 2) return "🥈";
+    if (rank === 3) return "🥉";
+    return `#${rank}`;
+  };
 
   return (
     <Card>
@@ -68,20 +68,20 @@ export function TeamLeaderboard({ teamId, teamName }: TeamLeaderboardProps) {
               )}
             </CardDescription>
           </div>
-          
+
           <div className="flex space-x-2">
             <Button
               size="sm"
-              variant={period === 'daily' ? 'default' : 'outline'}
-              onClick={() => setPeriod('daily')}
+              variant={period === "daily" ? "default" : "outline"}
+              onClick={() => setPeriod("daily")}
               disabled={dataLoading}
             >
               Daily
             </Button>
             <Button
               size="sm"
-              variant={period === 'weekly' ? 'default' : 'outline'}
-              onClick={() => setPeriod('weekly')}
+              variant={period === "weekly" ? "default" : "outline"}
+              onClick={() => setPeriod("weekly")}
               disabled={dataLoading}
             >
               Weekly
@@ -89,7 +89,7 @@ export function TeamLeaderboard({ teamId, teamName }: TeamLeaderboardProps) {
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent>
         {error && (
           <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-md p-4 mb-4">
@@ -123,9 +123,9 @@ export function TeamLeaderboard({ teamId, teamName }: TeamLeaderboardProps) {
                   <div
                     key={entry.user_id}
                     className={`flex items-center justify-between p-3 border rounded-lg ${
-                      entry.is_current_user 
-                        ? 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800' 
-                        : ''
+                      entry.is_current_user
+                        ? "bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800"
+                        : ""
                     }`}
                   >
                     <div className="flex items-center space-x-3">
@@ -148,7 +148,7 @@ export function TeamLeaderboard({ teamId, teamName }: TeamLeaderboardProps) {
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="text-right">
                       <p className="font-semibold text-sm">
                         {formatTokens(entry.total_tokens)}
@@ -165,5 +165,5 @@ export function TeamLeaderboard({ teamId, teamName }: TeamLeaderboardProps) {
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

@@ -1,26 +1,24 @@
-'use client'
+"use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
-import { apiClient } from '@/lib/api'
-import { sanitizeApiKey } from '@/lib/utils'
+import { createContext, useContext, ReactNode, useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 
 interface AuthContextType {
   isAuthenticated: boolean
   loading: boolean
-  login: (apiKey: string) => Promise<boolean>
+  login: () => void
   logout: () => void
-  checkAuth: () => Promise<void>
+  user: any
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function useAuth() {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error("useAuth must be used within an AuthProvider");
   }
-  return context
+  return context;
 }
 
 interface AuthProviderProps {
@@ -28,69 +26,82 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const pathname = usePathname();
 
-  const checkAuth = async () => {
-    const apiKey = apiClient.getApiKey()
-    if (apiKey) {
-      try {
-        await apiClient.getMachines()
-        setIsAuthenticated(true)
-      } catch (error) {
-        console.error('Auth check failed:', error)
-        apiClient.clearApiKey()
-        setIsAuthenticated(false)
-      }
-    } else {
-      setIsAuthenticated(false)
+  // Handle pending team invites after authentication
+  const handlePendingTeamInvite = () => {
+    // Don't redirect if we're already on a join page to prevent loops
+    if (pathname && pathname.startsWith("/teams/join/")) {
+      return;
     }
-    setLoading(false)
-  }
 
-  const login = async (apiKey: string): Promise<boolean> => {
+    const pendingInvite = sessionStorage.getItem("pendingTeamInvite");
+    if (pendingInvite) {
+      sessionStorage.removeItem("pendingTeamInvite");
+      router.push(`/teams/join/${pendingInvite}`);
+    }
+  };
+
+  // Custom function to fetch user profile from Express server
+  const fetchUserProfile = async (isBackgroundPoll = false) => {
+    const wasAuthenticated = !!user;
+
     try {
-      // Sanitize API key before setting it
-      const sanitizedApiKey = sanitizeApiKey(apiKey)
-      apiClient.setApiKey(sanitizedApiKey)
-      await apiClient.getMachines()
-      setIsAuthenticated(true)
-      
-      // Check for pending team invitation
-      if (typeof window !== 'undefined') {
-        const pendingInvite = sessionStorage.getItem('pendingTeamInvite')
-        if (pendingInvite) {
-          sessionStorage.removeItem('pendingTeamInvite')
-          // Join the team automatically after successful login
-          try {
-            await apiClient.joinTeam(pendingInvite)
-            router.push('/teams')
-          } catch (error) {
-            console.error('Failed to join team after login:', error)
-            // Still redirect to the invitation page so user can see the error
-            router.push(`/teams/join/${pendingInvite}`)
-          }
-        }
+      // Only show loading spinner for initial auth check, not background polling
+      if (!isBackgroundPoll) {
+        setLoading(true);
       }
-      
-      return true
+
+      const response = await fetch("/auth/profile", {
+        credentials: "include" // Include cookies for session
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+
+        // If user just became authenticated, check for pending invites
+        if (!wasAuthenticated && userData) {
+          setTimeout(handlePendingTeamInvite, 100); // Small delay to ensure router is ready
+        }
+      } else {
+        setUser(null);
+      }
     } catch (error) {
-      console.error('Login failed:', error)
-      apiClient.clearApiKey()
-      setIsAuthenticated(false)
-      return false
+      console.error("Error fetching user profile:", error);
+      setUser(null);
+    } finally {
+      // Only clear loading spinner if we set it
+      if (!isBackgroundPoll) {
+        setLoading(false);
+      }
     }
-  }
+  };
+
+  // Check authentication status on mount and periodically
+  useEffect(() => {
+    fetchUserProfile();
+
+    // Check auth status every 30 seconds to handle session expiration
+    // Use background polling to avoid showing loading spinners
+    const interval = setInterval(() => fetchUserProfile(true), 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const login = () => {
+    // Redirect to Express server login endpoint
+    window.location.href = "/auth/login";
+  };
 
   const logout = () => {
-    apiClient.clearApiKey()
-    setIsAuthenticated(false)
-  }
+    // Redirect to Express server logout endpoint
+    window.location.href = "/auth/logout";
+  };
 
-  useEffect(() => {
-    checkAuth()
-  }, [])
+  const isAuthenticated = !!user;
 
   return (
     <AuthContext.Provider value={{
@@ -98,9 +109,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       loading,
       login,
       logout,
-      checkAuth
+      user
     }}>
       {children}
     </AuthContext.Provider>
-  )
+  );
 }

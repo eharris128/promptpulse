@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function UsageChartSkeleton() {
   return (
@@ -13,8 +13,8 @@ export function UsageChartSkeleton() {
           {/* Simulate chart bars with varying heights */}
           {Array.from({ length: 7 }).map((_, i) => (
             <div key={i} className="flex flex-col items-center space-y-2">
-              <Skeleton 
-                className="w-8 rounded-sm" 
+              <Skeleton
+                className="w-8 rounded-sm"
                 style={{ height: `${Math.random() * 200 + 50}px` }}
               />
               <Skeleton className="h-3 w-6" />
@@ -23,5 +23,5 @@ export function UsageChartSkeleton() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

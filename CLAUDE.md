@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Overview
+
+PromptPulse v1.1.2 is a comprehensive analytics and leaderboard platform for Claude Code usage tracking. It provides:
+- CLI tool for data collection and management
+- Web dashboard for analytics and team collaboration
+- API server for data processing and storage
+- Team management with role-based permissions
+- Privacy-focused usage analytics
+
 ## Build Commands
 
 - `npm start` - Start the API server (production)

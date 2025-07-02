@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Mail, X } from 'lucide-react'
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Mail, X } from "lucide-react";
 
 interface ContactModalProps {
   isOpen: boolean
@@ -10,20 +10,20 @@ interface ContactModalProps {
 }
 
 export function ContactModal({ isOpen, onClose }: ContactModalProps) {
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const handleEmailClick = () => {
-    window.open('mailto:echarris@smcm.edu?subject=PromptPulse Inquiry', '_blank')
-  }
+    window.open("mailto:echarris@smcm.edu?subject=PromptPulse Inquiry", "_blank");
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
-      
+
       {/* Modal */}
       <div className="relative rounded-lg shadow-xl p-6 w-full max-w-md mx-4 bg-background border border-border">
         {/* Close button */}
@@ -33,33 +33,33 @@ export function ContactModal({ isOpen, onClose }: ContactModalProps) {
         >
           <X size={20} />
         </button>
-        
+
         {/* Content */}
         <div className="text-center">
           <div className="mb-4">
             <Mail className="mx-auto h-12 w-12 text-primary" />
           </div>
-          
+
           <h2 className="text-xl font-semibold mb-2 text-foreground">Get in Touch</h2>
           <p className="text-muted-foreground mb-6">
             Have questions or feedback about PromptPulse? I would love to hear from you!
           </p>
-          
+
           <div className="space-y-4">
-            <Button 
+            <Button
               onClick={handleEmailClick}
               className="w-full"
             >
               <Mail className="mr-2 h-4 w-4" />
               Send Email
             </Button>
-            
+
             <div className="text-sm text-muted-foreground">
               echarris@smcm.edu
             </div>
-            
-            <Button 
-              variant="outline" 
+
+            <Button
+              variant="outline"
               onClick={onClose}
               className="w-full"
             >
@@ -69,5 +69,5 @@ export function ContactModal({ isOpen, onClose }: ContactModalProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

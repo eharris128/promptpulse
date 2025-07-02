@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
 const Select = React.forwardRef<
   HTMLSelectElement,
@@ -14,8 +14,8 @@ const Select = React.forwardRef<
     >
       {children}
     </select>
-  )
-})
-Select.displayName = "Select"
+  );
+});
+Select.displayName = "Select";
 
-export { Select }
+export { Select };

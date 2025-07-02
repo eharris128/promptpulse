@@ -2,9 +2,16 @@
 const nextConfig = {
   // Optimized for Vercel deployment
   poweredByHeader: false,
-  
-  // API calls will use NEXT_PUBLIC_API_URL environment variable
-  // No rewrites needed for production
-}
 
-module.exports = nextConfig
+  // Proxy auth routes to Express server in development
+  async rewrites() {
+    return [
+      {
+        source: "/auth/:path*",
+        destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/auth/:path*`
+      }
+    ];
+  }
+};
+
+module.exports = nextConfig;

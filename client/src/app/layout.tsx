@@ -1,16 +1,12 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import { ThemeProvider } from '@/components/theme-provider'
-import { AuthProvider } from '@/contexts/auth-context'
-import { AppLayoutWrapper } from '@/components/layout/app-layout-wrapper'
-import './globals.css'
+"use client";
 
-const inter = Inter({ subsets: ['latin'] })
+import { Inter } from "next/font/google";
+import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/contexts/auth-context";
+import { AppLayoutWrapper } from "@/components/layout/app-layout-wrapper";
+import "./globals.css";
 
-export const metadata: Metadata = {
-  title: 'PromptPulse Dashboard',
-  description: 'Track and analyze your Claude Code usage across multiple machines',
-}
+const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({
   children,
@@ -19,6 +15,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <title>PromptPulse Dashboard</title>
+        <meta name="description" content="Track and analyze your Claude Code usage across multiple machines" />
+      </head>
       <body className={inter.className}>
         <ThemeProvider
           attribute="class"
@@ -34,5 +34,5 @@ export default function RootLayout({
         </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }

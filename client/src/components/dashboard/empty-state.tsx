@@ -1,9 +1,9 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { CheckCircle2, Copy, Terminal, Clock, BarChart3 } from 'lucide-react'
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, Copy, Terminal, Clock, BarChart3 } from "lucide-react";
 
 interface Step {
   number: number
@@ -14,38 +14,38 @@ interface Step {
 }
 
 export function EmptyState() {
-  const [copiedStep, setCopiedStep] = useState<number | null>(null)
+  const [copiedStep, setCopiedStep] = useState<number | null>(null);
 
   const steps: Step[] = [
     {
       number: 1,
-      title: 'Install PromptPulse CLI',
-      description: 'Install the CLI tool globally via npm',
-      command: 'npm install -g promptpulse'
+      title: "Install PromptPulse CLI",
+      description: "Install the CLI tool globally via npm",
+      command: "npm install -g promptpulse"
     },
     {
       number: 2,
-      title: 'Set up automatic collection',
-      description: 'Configure automatic usage data collection every 15 minutes',
-      command: 'promptpulse setup'
+      title: "Set up automatic collection",
+      description: "Configure automatic usage data collection every 15 minutes",
+      command: "promptpulse setup"
     },
     {
       number: 3,
-      title: 'Collect initial data',
-      description: 'Run your first collection to populate the dashboard',
-      command: 'promptpulse collect'
+      title: "Collect initial data",
+      description: "Run your first collection to populate the dashboard",
+      command: "promptpulse collect"
     }
-  ]
+  ];
 
   const handleCopy = async (command: string, stepNumber: number) => {
     try {
-      await navigator.clipboard.writeText(command)
-      setCopiedStep(stepNumber)
-      setTimeout(() => setCopiedStep(null), 2000)
+      await navigator.clipboard.writeText(command);
+      setCopiedStep(stepNumber);
+      setTimeout(() => setCopiedStep(null), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err)
+      console.error("Failed to copy:", err);
     }
-  }
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -146,5 +146,5 @@ export function EmptyState() {
         <p>Need help? Check out the <a href="https://www.docs.promptpulse.dev" className="underline">documentation</a></p>
       </div>
     </div>
-  )
+  );
 }

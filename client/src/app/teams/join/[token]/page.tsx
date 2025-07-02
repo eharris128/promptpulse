@@ -1,10 +1,11 @@
-'use client'
+"use client";
 
-import { use, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Loader2, Users } from 'lucide-react'
-import { apiClient } from '@/lib/api'
+import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Loader2, Users } from "lucide-react";
+import { apiClient } from "@/lib/api";
+import { useAuth } from "@/contexts/auth-context";
 
 interface JoinTeamPageProps {
   params: Promise<{
@@ -13,69 +14,60 @@ interface JoinTeamPageProps {
 }
 
 export default function JoinTeamPage({ params }: JoinTeamPageProps) {
-  const resolvedParams = use(params)
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(true)
-  const [isJoining, setIsJoining] = useState(false)
-  const [teamName, setTeamName] = useState('')
-  const [error, setError] = useState('')
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-
-  // Check authentication status
-  useEffect(() => {
-    const apiKey = apiClient.getApiKey()
-    setIsAuthenticated(!!apiKey)
-  }, [])
+  const resolvedParams = use(params);
+  const router = useRouter();
+  const { isAuthenticated, login, loading: authLoading } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isJoining, setIsJoining] = useState(false);
+  const [teamName, setTeamName] = useState("");
+  const [error, setError] = useState("");
 
   // Fetch team preview
   useEffect(() => {
     const fetchTeamPreview = async () => {
       try {
-        setIsLoading(true)
-        console.log('Fetching team preview for token:', resolvedParams.token)
-        const { teamName } = await apiClient.getTeamPreview(resolvedParams.token)
-        console.log('Team preview response:', { teamName })
-        setTeamName(teamName)
+        setIsLoading(true);
+        const { teamName } = await apiClient.getTeamPreview(resolvedParams.token);
+        setTeamName(teamName);
       } catch (error) {
-        console.error('Error fetching team preview:', error)
-        setError('Invalid or expired invitation')
+        console.error("Error fetching team preview:", error);
+        setError("Invalid or expired invitation");
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchTeamPreview()
-  }, [resolvedParams.token])
+    fetchTeamPreview();
+  }, [resolvedParams.token]);
 
   const handleJoin = async () => {
     if (!isAuthenticated) {
-      // Redirect to home page where they can authenticate
-      sessionStorage.setItem('pendingTeamInvite', resolvedParams.token)
-      router.push('/')
-      return
+      sessionStorage.setItem("pendingTeamInvite", resolvedParams.token);
+      login();
+      return;
     }
 
     try {
-      setIsJoining(true)
-      const result = await apiClient.joinTeam(resolvedParams.token)
-      // Redirect to teams page after successful join
-      router.push('/teams')
+      setIsJoining(true);
+      await apiClient.joinTeam(resolvedParams.token);
+      sessionStorage.removeItem("pendingTeamInvite");
+      router.push("/");
     } catch (error) {
       if (error instanceof Error) {
-        setError(error.message)
+        setError(error.message);
       } else {
-        setError('Failed to join team')
+        setError("Failed to join team");
       }
-      setIsJoining(false)
+      setIsJoining(false);
     }
-  }
+  };
 
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
   if (error && !teamName) {
@@ -87,12 +79,12 @@ export default function JoinTeamPage({ params }: JoinTeamPageProps) {
           </div>
           <h1 className="text-2xl font-semibold">Invalid Invitation</h1>
           <p className="text-muted-foreground">{error}</p>
-          <Button onClick={() => router.push('/')} variant="outline">
+          <Button onClick={() => router.push("/")} variant="outline">
             Go to Dashboard
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -130,9 +122,9 @@ export default function JoinTeamPage({ params }: JoinTeamPageProps) {
             )}
 
             {/* Action button */}
-            <Button 
-              onClick={handleJoin} 
-              className="w-full" 
+            <Button
+              onClick={handleJoin}
+              className="w-full"
               size="lg"
               disabled={isJoining}
             >
@@ -142,22 +134,22 @@ export default function JoinTeamPage({ params }: JoinTeamPageProps) {
                   Joining...
                 </>
               ) : isAuthenticated ? (
-                'Join Team'
+                "Join Team"
               ) : (
-                'Sign in to Join'
+                "Sign in to Join"
               )}
             </Button>
 
             {/* Alternative actions */}
             {!isAuthenticated && (
               <p className="text-center text-sm text-muted-foreground">
-                No account?{' '}
-                <Button 
-                  variant="link" 
+                No account?{" "}
+                <Button
+                  variant="link"
                   className="p-0 h-auto font-normal"
                   onClick={() => {
-                    sessionStorage.setItem('pendingTeamInvite', resolvedParams.token)
-                    router.push('/')
+                    sessionStorage.setItem("pendingTeamInvite", resolvedParams.token);
+                    login();
                   }}
                 >
                   Create one first
@@ -169,16 +161,16 @@ export default function JoinTeamPage({ params }: JoinTeamPageProps) {
 
         {/* Footer link */}
         <p className="text-center text-sm text-muted-foreground">
-          Changed your mind?{' '}
-          <Button 
-            variant="link" 
+          Changed your mind?{" "}
+          <Button
+            variant="link"
             className="p-0 h-auto font-normal text-muted-foreground"
-            onClick={() => router.push('/')}
+            onClick={() => router.push("/")}
           >
             Go back
           </Button>
         </p>
       </div>
     </div>
-  )
+  );
 }

@@ -1,59 +1,59 @@
-'use client'
+"use client";
 
-import { useEffect, useState, useCallback } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { formatCost, formatTokens, getAverageLabel } from '@/lib/utils'
-import { apiClient } from '@/lib/api'
-import { LeaderboardData, LeaderboardEntry } from '@/types'
+import { useEffect, useState, useCallback } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { formatCost, formatTokens, getAverageLabel } from "@/lib/utils";
+import { apiClient } from "@/lib/api";
+import { LeaderboardData, LeaderboardEntry } from "@/types";
 
 export default function Leaderboard() {
-  const [dataLoading, setDataLoading] = useState(false)
-  const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null)
-  const [period, setPeriod] = useState<'daily' | 'weekly'>('daily')
-  const [error, setError] = useState<string | null>(null)
+  const [dataLoading, setDataLoading] = useState(false);
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null);
+  const [period, setPeriod] = useState<"daily" | "weekly">("daily");
+  const [error, setError] = useState<string | null>(null);
 
   const loadLeaderboard = useCallback(async () => {
     try {
-      setDataLoading(true)
-      setError(null)
-      const data = await apiClient.getLeaderboard(period)
-      setLeaderboardData(data)
+      setDataLoading(true);
+      setError(null);
+      const data = await apiClient.getLeaderboard(period);
+      setLeaderboardData(data);
     } catch (err) {
-      console.error('Failed to load leaderboard:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load leaderboard')
+      console.error("Failed to load leaderboard:", err);
+      setError(err instanceof Error ? err.message : "Failed to load leaderboard");
     } finally {
-      setDataLoading(false)
+      setDataLoading(false);
     }
-  }, [period])
+  }, [period]);
 
   useEffect(() => {
-    loadLeaderboard()
-  }, [loadLeaderboard])
+    loadLeaderboard();
+  }, [loadLeaderboard]);
 
 
 
   const getRankColor = (rank: number) => {
-    if (rank === 1) return 'text-yellow-600 dark:text-yellow-400'
-    if (rank === 2) return 'text-slate-600 dark:text-slate-400'
-    if (rank === 3) return 'text-amber-600 dark:text-amber-400'
-    return 'text-muted-foreground'
-  }
+    if (rank === 1) return "text-yellow-600 dark:text-yellow-400";
+    if (rank === 2) return "text-slate-600 dark:text-slate-400";
+    if (rank === 3) return "text-amber-600 dark:text-amber-400";
+    return "text-muted-foreground";
+  };
 
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return '🥇'
-    if (rank === 2) return '🥈'
-    if (rank === 3) return '🥉'
-    return `#${rank}`
-  }
+    if (rank === 1) return "🥇";
+    if (rank === 2) return "🥈";
+    if (rank === 3) return "🥉";
+    return `#${rank}`;
+  };
 
   if (dataLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-lg">Loading...</div>
       </div>
-    )
+    );
   }
 
 
@@ -66,18 +66,18 @@ export default function Leaderboard() {
               See how you stack up against other PromptPulse users
             </p>
           </div>
-          
+
           <div className="flex space-x-2">
             <Button
-              variant={period === 'daily' ? 'default' : 'outline'}
-              onClick={() => setPeriod('daily')}
+              variant={period === "daily" ? "default" : "outline"}
+              onClick={() => setPeriod("daily")}
               disabled={dataLoading}
             >
               Daily
             </Button>
             <Button
-              variant={period === 'weekly' ? 'default' : 'outline'}
-              onClick={() => setPeriod('weekly')}
+              variant={period === "weekly" ? "default" : "outline"}
+              onClick={() => setPeriod("weekly")}
               disabled={dataLoading}
             >
               Weekly
@@ -112,7 +112,7 @@ export default function Leaderboard() {
                   </Badge>
                 </CardTitle>
                 <CardDescription>
-                  You are in the top{' '}
+                  You are in the top{" "}
                   {Math.round(((leaderboardData.total_participants - leaderboardData.user_rank + 1) / leaderboardData.total_participants) * 100)}%
                 </CardDescription>
               </CardHeader>
@@ -122,7 +122,7 @@ export default function Leaderboard() {
           <Card>
             <CardHeader>
               <CardTitle>
-                {period === 'daily' ? 'Daily' : 'Weekly'} Top Performers
+                {period === "daily" ? "Daily" : "Weekly"} Top Performers
               </CardTitle>
               <CardDescription>
                 {leaderboardData.total_participants} participants • Ranked by total tokens
@@ -156,7 +156,7 @@ export default function Leaderboard() {
                           </p>
                         </div>
                       </div>
-                      
+
                       <div className="text-right">
                         <p className="font-semibold">
                           {formatTokens(entry.total_tokens)} tokens
@@ -181,7 +181,7 @@ export default function Leaderboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button onClick={() => window.location.href = '/settings'}>
+                <Button onClick={() => window.location.href = "/settings"}>
                   Go to Settings
                 </Button>
               </CardContent>
@@ -190,5 +190,5 @@ export default function Leaderboard() {
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -1,52 +1,52 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { Select } from '@/components/ui/select'
-import { sanitizeDisplayName } from '@/lib/utils'
-import { apiClient } from '@/lib/api'
-import { LeaderboardSettings, EmailPreferences, PlanSettings, ClaudePlan } from '@/types'
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Select } from "@/components/ui/select";
+import { validateDisplayName } from "@/lib/utils";
+import { apiClient } from "@/lib/api";
+import { LeaderboardSettings, EmailPreferences, PlanSettings, ClaudePlan } from "@/types";
 
 const PLAN_OPTIONS = [
-  { value: 'pro_17', label: 'Pro ($17/month)', description: 'Standard Claude usage' },
-  { value: 'max_100', label: 'Max 5x ($100/month)', description: '5x higher usage limits' },
-  { value: 'max_200', label: 'Max 20x ($200/month)', description: '20x higher usage limits' }
-] as const
+  { value: "pro_17", label: "Pro ($17/month)", description: "Standard Claude usage" },
+  { value: "max_100", label: "Max 5x ($100/month)", description: "5x higher usage limits" },
+  { value: "max_200", label: "Max 20x ($200/month)", description: "20x higher usage limits" }
+] as const;
 
 export default function Settings() {
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<LeaderboardSettings>({
     leaderboard_enabled: false,
-    display_name: '',
+    display_name: "",
     team_leaderboard_enabled: true,
-    team_display_name: ''
-  })
+    team_display_name: ""
+  });
   const [emailPreferences, setEmailPreferences] = useState<EmailPreferences>({
     daily_digest: true,
     weekly_summary: true,
     leaderboard_updates: true,
     team_invitations: true,
     security_alerts: true,
-    email_frequency: 'daily',
-    timezone_for_emails: 'UTC'
-  })
+    email_frequency: "daily",
+    timezone_for_emails: "UTC"
+  });
   const [planSettings, setPlanSettings] = useState<PlanSettings>({
-    claude_plan: 'max_100'
-  })
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-  const [testEmailLoading, setTestEmailLoading] = useState(false)
-  const [newEmail, setNewEmail] = useState('')
-  const [isEditingEmail, setIsEditingEmail] = useState(false)
-  const [savingEmail, setSavingEmail] = useState(false)
+    claude_plan: "max_100"
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [testEmailLoading, setTestEmailLoading] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [savingEmail, setSavingEmail] = useState(false);
 
   useEffect(() => {
-    loadSettings()
-  }, [])
+    loadSettings();
+  }, []);
 
 
 
@@ -56,90 +56,105 @@ export default function Settings() {
         apiClient.getLeaderboardSettings(),
         apiClient.getEmailPreferences(),
         apiClient.getPlanSettings()
-      ])
-      setSettings(leaderboardData)
-      setEmailPreferences(emailData)
-      setPlanSettings(planData)
+      ]);
+      setSettings(leaderboardData);
+      setEmailPreferences(emailData);
+      setPlanSettings(planData);
     } catch (err) {
-      console.error('Failed to load settings:', err)
-      setError('Failed to load settings')
+      console.error("Failed to load settings:", err);
+      setError("Failed to load settings");
     }
-  }
+  };
 
   const handleSave = async () => {
     try {
-      setSaving(true)
-      setError(null)
-      setSuccess(null)
-      
-      // Sanitize display name before saving
-      const sanitizedSettings = {
-        ...settings,
-        display_name: sanitizeDisplayName(settings.display_name || '')
+      setSaving(true);
+      setError(null);
+      setSuccess(null);
+
+      // Validate display names before saving (server will handle sanitization)
+      const publicNameValidation = validateDisplayName(settings.display_name || "");
+      if (settings.display_name && !publicNameValidation.isValid) {
+        setError(`Public display name: ${publicNameValidation.error}`);
+        setSaving(false);
+        return;
       }
-      
+
+      const teamNameValidation = validateDisplayName(settings.team_display_name || "");
+      if (settings.team_display_name && !teamNameValidation.isValid) {
+        setError(`Team display name: ${teamNameValidation.error}`);
+        setSaving(false);
+        return;
+      }
+
+      const validatedSettings = {
+        ...settings,
+        display_name: (settings.display_name || "").trim(),
+        team_display_name: (settings.team_display_name || "").trim()
+      };
+
       // Save leaderboard settings, email preferences, and plan settings
       await Promise.all([
-        apiClient.updateLeaderboardSettings(sanitizedSettings),
+        apiClient.updateLeaderboardSettings(validatedSettings),
         apiClient.updateEmailPreferences(emailPreferences),
         apiClient.updatePlanSettings(planSettings)
-      ])
-      
-      setSettings(sanitizedSettings) // Update local state with sanitized version
-      setSuccess('Settings saved successfully!')
-      
+      ]);
+
+      setSettings(validatedSettings); // Update local state with validated version
+      setSuccess("Settings saved successfully!");
+
       // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(null), 3000)
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      console.error('Failed to save settings:', err)
-      setError(err instanceof Error ? err.message : 'Failed to save settings')
+      console.error("Failed to save settings:", err);
+      setError(err instanceof Error ? err.message : "Failed to save settings");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleTestEmail = async () => {
     try {
-      setTestEmailLoading(true)
-      setError(null)
-      setSuccess(null)
-      
-      await apiClient.sendTestEmail()
-      setSuccess('Test email sent successfully! Check your inbox.')
-      
+      setTestEmailLoading(true);
+      setError(null);
+      setSuccess(null);
+
+      await apiClient.sendTestEmail();
+      setSuccess("Test email sent successfully! Check your inbox.");
+
       // Clear success message after 5 seconds
-      setTimeout(() => setSuccess(null), 5000)
+      setTimeout(() => setSuccess(null), 5000);
     } catch (err) {
-      console.error('Failed to send test email:', err)
-      setError(err instanceof Error ? err.message : 'Failed to send test email')
+      console.error("Failed to send test email:", err);
+      setError(err instanceof Error ? err.message : "Failed to send test email");
     } finally {
-      setTestEmailLoading(false)
+      setTestEmailLoading(false);
     }
-  }
+  };
 
   const handleUpdateEmail = async () => {
     try {
-      setSavingEmail(true)
-      setError(null)
-      setSuccess(null)
-      
-      const response = await apiClient.updateUserEmail(newEmail)
-      
+      setSavingEmail(true);
+      setError(null);
+      setSuccess(null);
+
+      const response = await apiClient.updateUserEmail(newEmail);
+
       // Update email preferences with new email
-      setEmailPreferences(prev => ({ ...prev, email: response.email }))
-      setIsEditingEmail(false)
-      setNewEmail('')
-      setSuccess('Email updated successfully!')
-      
+      setEmailPreferences(prev => ({ ...prev, email: response.email }));
+      setIsEditingEmail(false);
+      setNewEmail("");
+      setSuccess("Email updated successfully!");
+
       // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(null), 3000)
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      console.error('Failed to update email:', err)
-      setError(err instanceof Error ? err.message : 'Failed to update email')
+      console.error("Failed to update email:", err);
+      setError(err instanceof Error ? err.message : "Failed to update email");
     } finally {
-      setSavingEmail(false)
+      setSavingEmail(false);
     }
-  }
+  };
 
 
   return (
@@ -184,7 +199,7 @@ export default function Settings() {
                 <Switch
                   id="public-leaderboard-enabled"
                   checked={settings.leaderboard_enabled}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     setSettings(prev => ({ ...prev, leaderboard_enabled: checked }))
                   }
                 />
@@ -196,11 +211,11 @@ export default function Settings() {
                   <Input
                     id="public-display-name"
                     placeholder="Leave empty to stay anonymous on public leaderboards"
-                    value={settings.display_name || ''}
+                    value={settings.display_name || ""}
                     maxLength={50}
                     onChange={(e) => {
-                      const sanitized = sanitizeDisplayName(e.target.value)
-                      setSettings(prev => ({ ...prev, display_name: sanitized }))
+                      // Just store the raw value - validation happens on save
+                      setSettings(prev => ({ ...prev, display_name: e.target.value }));
                     }}
                   />
                   <p className="text-sm text-muted-foreground">
@@ -231,7 +246,7 @@ export default function Settings() {
                 <Switch
                   id="team-leaderboard-enabled"
                   checked={settings.team_leaderboard_enabled}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     setSettings(prev => ({ ...prev, team_leaderboard_enabled: checked }))
                   }
                 />
@@ -243,11 +258,11 @@ export default function Settings() {
                   <Input
                     id="team-display-name"
                     placeholder="What should teammates call you?"
-                    value={settings.team_display_name || ''}
+                    value={settings.team_display_name || ""}
                     maxLength={50}
                     onChange={(e) => {
-                      const sanitized = sanitizeDisplayName(e.target.value)
-                      setSettings(prev => ({ ...prev, team_display_name: sanitized }))
+                      // Just store the raw value - validation happens on save
+                      setSettings(prev => ({ ...prev, team_display_name: e.target.value }));
                     }}
                   />
                   <p className="text-sm text-muted-foreground">
@@ -258,14 +273,14 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card style={{ display: "none" }}>
             <CardHeader>
               <CardTitle>Email Notifications</CardTitle>
               <CardDescription>
                 Configure which email notifications you would like to receive
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6" style={{ display: "none" }}>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
@@ -279,7 +294,7 @@ export default function Settings() {
                   <Switch
                     id="daily-digest"
                     checked={emailPreferences.daily_digest}
-                    onCheckedChange={(checked) => 
+                    onCheckedChange={(checked) =>
                       setEmailPreferences(prev => ({ ...prev, daily_digest: checked }))
                     }
                   />
@@ -297,7 +312,7 @@ export default function Settings() {
                   <Switch
                     id="weekly-summary"
                     checked={emailPreferences.weekly_summary}
-                    onCheckedChange={(checked) => 
+                    onCheckedChange={(checked) =>
                       setEmailPreferences(prev => ({ ...prev, weekly_summary: checked }))
                     }
                   />
@@ -315,7 +330,7 @@ export default function Settings() {
                   <Switch
                     id="leaderboard-updates"
                     checked={emailPreferences.leaderboard_updates}
-                    onCheckedChange={(checked) => 
+                    onCheckedChange={(checked) =>
                       setEmailPreferences(prev => ({ ...prev, leaderboard_updates: checked }))
                     }
                   />
@@ -333,7 +348,7 @@ export default function Settings() {
                   <Switch
                     id="team-invitations"
                     checked={emailPreferences.team_invitations}
-                    onCheckedChange={(checked) => 
+                    onCheckedChange={(checked) =>
                       setEmailPreferences(prev => ({ ...prev, team_invitations: checked }))
                     }
                   />
@@ -351,7 +366,7 @@ export default function Settings() {
                   <Switch
                     id="security-alerts"
                     checked={emailPreferences.security_alerts}
-                    onCheckedChange={(checked) => 
+                    onCheckedChange={(checked) =>
                       setEmailPreferences(prev => ({ ...prev, security_alerts: checked }))
                     }
                   />
@@ -367,8 +382,8 @@ export default function Settings() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      setIsEditingEmail(true)
-                      setNewEmail(emailPreferences.email || '')
+                      setIsEditingEmail(true);
+                      setNewEmail(emailPreferences.email || "");
                     }}
                   >
                     Change Email
@@ -385,7 +400,7 @@ export default function Settings() {
                       </p>
                     </div>
                   )}
-                  
+
                   {(!emailPreferences.email || isEditingEmail) && (
                     <div className="space-y-3">
                       <div className="space-y-2">
@@ -405,15 +420,15 @@ export default function Settings() {
                           disabled={savingEmail || !newEmail}
                           size="sm"
                         >
-                          {savingEmail ? 'Saving...' : 'Save Email'}
+                          {savingEmail ? "Saving..." : "Save Email"}
                         </Button>
                         {isEditingEmail && (
                           <Button
                             variant="outline"
                             onClick={() => {
-                              setIsEditingEmail(false)
-                              setNewEmail('')
-                              setError(null)
+                              setIsEditingEmail(false);
+                              setNewEmail("");
+                              setError(null);
                             }}
                             size="sm"
                           >
@@ -434,10 +449,10 @@ export default function Settings() {
                       <Select
                         id="email-frequency"
                         value={emailPreferences.email_frequency}
-                        onChange={(e) => 
-                          setEmailPreferences(prev => ({ 
-                            ...prev, 
-                            email_frequency: e.target.value as 'immediate' | 'daily' | 'weekly' | 'none'
+                        onChange={(e) =>
+                          setEmailPreferences(prev => ({
+                            ...prev,
+                            email_frequency: e.target.value as "immediate" | "daily" | "weekly" | "none"
                           }))
                         }
                       >
@@ -453,7 +468,7 @@ export default function Settings() {
                       <Select
                         id="timezone-for-emails"
                         value={emailPreferences.timezone_for_emails}
-                        onChange={(e) => 
+                        onChange={(e) =>
                           setEmailPreferences(prev => ({ ...prev, timezone_for_emails: e.target.value }))
                         }
                       >
@@ -493,13 +508,13 @@ export default function Settings() {
 
                   {emailPreferences.email && (
                     <div className="flex justify-start">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         onClick={handleTestEmail}
                         disabled={testEmailLoading}
                         size="sm"
                       >
-                        {testEmailLoading ? 'Sending...' : 'Send Test Email'}
+                        {testEmailLoading ? "Sending..." : "Send Test Email"}
                       </Button>
                     </div>
                   )}
@@ -533,7 +548,7 @@ export default function Settings() {
                 <select
                   id="claude-plan"
                   value={planSettings.claude_plan}
-                  onChange={(e) => 
+                  onChange={(e) =>
                     setPlanSettings(prev => ({ ...prev, claude_plan: e.target.value as ClaudePlan }))
                   }
                   className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
@@ -548,7 +563,7 @@ export default function Settings() {
                   {PLAN_OPTIONS.find(p => p.value === planSettings.claude_plan)?.description}
                 </p>
               </div>
-              
+
               <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-md p-3">
                 <p className="text-sm">
                   <strong>Why this matters:</strong> Setting your correct plan helps calculate your ROI by comparing your actual usage costs against your fixed monthly subscription fee. This shows how much you are saving (or overspending) with your current plan.
@@ -576,7 +591,7 @@ export default function Settings() {
                   <li>Your ranking position and percentile are calculated</li>
                   <li>No other personal information is shared</li>
                 </ul>
-                
+
                 <p className="mt-4">
                   <strong>When leaderboard is disabled:</strong>
                 </p>
@@ -591,10 +606,10 @@ export default function Settings() {
 
           <div className="flex justify-end">
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Settings'}
+              {saving ? "Saving..." : "Save Settings"}
             </Button>
           </div>
         </div>
       </div>
-  )
+  );
 }

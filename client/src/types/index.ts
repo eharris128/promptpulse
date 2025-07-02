@@ -110,7 +110,7 @@ export interface LeaderboardEntry {
 }
 
 export interface LeaderboardData {
-  period: 'daily' | 'weekly';
+  period: "daily" | "weekly";
   entries: LeaderboardEntry[];
   user_rank?: number;
   total_participants: number;
@@ -130,11 +130,11 @@ export interface EmailPreferences {
   leaderboard_updates: boolean;
   team_invitations: boolean;
   security_alerts: boolean;
-  email_frequency: 'immediate' | 'daily' | 'weekly' | 'none';
+  email_frequency: "immediate" | "daily" | "weekly" | "none";
   timezone_for_emails: string;
 }
 
-export type ClaudePlan = 'pro_17' | 'max_100' | 'max_200';
+export type ClaudePlan = "pro_17" | "max_100" | "max_200";
 
 export interface PlanSettings {
   claude_plan: ClaudePlan;
@@ -162,8 +162,8 @@ export interface Team {
 }
 
 export interface TeamWithRole extends Team {
-  role: 'owner' | 'admin' | 'member';
-  status: 'active' | 'inactive' | 'removed';
+  role: "owner" | "admin" | "member";
+  status: "active" | "inactive" | "removed";
   joined_at: string;
 }
 
@@ -174,8 +174,8 @@ export interface TeamMember {
   username: string;
   display_name?: string;
   email?: string;
-  role: 'owner' | 'admin' | 'member';
-  status: 'active' | 'inactive' | 'removed';
+  role: "owner" | "admin" | "member";
+  status: "active" | "inactive" | "removed";
   joined_at: string;
   invited_by?: string; // KSUID
 }
@@ -188,9 +188,9 @@ export interface TeamInvitation {
   invited_by: string; // KSUID
   invited_by_username?: string;
   token: string;
-  role: 'owner' | 'admin' | 'member';
+  role: "owner" | "admin" | "member";
   message?: string;
-  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  status: "pending" | "accepted" | "declined" | "expired";
   expires_at: string;
   used_at?: string;
   used_by?: string; // KSUID
@@ -217,7 +217,7 @@ export interface TeamLeaderboardEntry {
 export interface TeamLeaderboardData {
   team_id: string; // KSUID
   team_name: string;
-  period: 'daily' | 'weekly';
+  period: "daily" | "weekly";
   entries: TeamLeaderboardEntry[];
   user_rank?: number;
   total_participants: number;

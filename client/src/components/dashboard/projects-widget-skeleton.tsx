@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { FolderOpen } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { FolderOpen } from "lucide-react";
 
 export function ProjectsWidgetSkeleton() {
   return (
@@ -39,5 +39,5 @@ export function ProjectsWidgetSkeleton() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

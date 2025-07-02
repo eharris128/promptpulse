@@ -1,18 +1,18 @@
-'use client'
+"use client";
 
-import { use } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { use } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 interface LeaderboardCardDataProps {
   leaderboardDataPromise: Promise<any>
 }
 
 export function LeaderboardCardData({ leaderboardDataPromise }: LeaderboardCardDataProps) {
-  const leaderboardData = use(leaderboardDataPromise)
-  
+  const leaderboardData = use(leaderboardDataPromise);
+
   if (!leaderboardData?.user_rank) {
-    return null
+    return null;
   }
 
   return (
@@ -37,15 +37,15 @@ export function LeaderboardCardData({ leaderboardDataPromise }: LeaderboardCardD
               {Math.round(((leaderboardData.total_participants - leaderboardData.user_rank + 1) / leaderboardData.total_participants) * 100)}%
             </span>
           </div>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full mt-4"
-            onClick={() => window.location.href = '/leaderboard'}
+            onClick={() => window.location.href = "/leaderboard"}
           >
             View Full Leaderboard
           </Button>
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

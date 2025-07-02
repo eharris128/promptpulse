@@ -1,36 +1,36 @@
-'use client'
+"use client";
 
-import { useState, useRef, useEffect } from 'react'
-import { LogOut, User } from 'lucide-react'
+import { useState, useRef, useEffect } from "react";
+import { LogOut, User } from "lucide-react";
 
 interface UserMenuProps {
   onLogout: () => void
 }
 
 export function UserMenu({ onLogout }: UserMenuProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+        setIsOpen(false);
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleLogout = () => {
-    setIsOpen(false)
-    onLogout()
-  }
+    setIsOpen(false);
+    onLogout();
+  };
 
   // Get initials for avatar
   const getInitials = () => {
-    return 'U'
-  }
+    return "U";
+  };
 
   return (
     <div className="relative" ref={menuRef}>
@@ -70,5 +70,5 @@ export function UserMenu({ onLogout }: UserMenuProps) {
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -1,30 +1,36 @@
 #!/usr/bin/env node
 
 /**
- * Run Goose Migrations on SQLite Cloud
+ * Run Goose Migrations for Test Environment
  *
- * This script applies Goose-formatted migrations to SQLite Cloud database
- * since Goose CLI doesn't natively support SQLite Cloud connection strings.
+ * This script loads .env.test and applies migrations to the test database.
+ * Ensures proper test environment isolation.
  */
 
-import { initializeDbManager, getDbManager } from "../lib/db-manager.js";
+import { initializeDbManager } from "../lib/db-manager.js";
 import { readFileSync, readdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-class GooseMigrationRunner {
+// Load test environment variables explicitly
+dotenv.config({ path: join(__dirname, "..", ".env.test") });
+
+// Ensure we're in test mode
+process.env.NODE_ENV = "test";
+
+class TestGooseMigrationRunner {
   constructor() {
     this.dbManager = null;
   }
 
   async run() {
-    console.log("🦆 Starting Goose migrations on SQLite Cloud...\n");
+    console.log("🧪 Starting TEST database migrations...\n");
+    console.log(`📋 Database: ${process.env.DATABASE_URL ? process.env.DATABASE_URL.split("?")[0] : "Not configured"}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV}\n`);
 
     // Initialize database manager
     this.dbManager = await initializeDbManager(process.env.DATABASE_URL);
@@ -95,7 +101,7 @@ class GooseMigrationRunner {
         }
       }
 
-      console.log("\n✨ All migrations completed successfully!");
+      console.log("\n✨ All TEST migrations completed successfully!");
 
       // Show final status
       await this.showStatus(db);
@@ -175,7 +181,7 @@ class GooseMigrationRunner {
   }
 
   async showStatus(db) {
-    console.log("\n📊 Migration Status:");
+    console.log("\n📊 TEST Database Migration Status:");
 
     const versions = await db.sql`
       SELECT version_id, tstamp 
@@ -196,7 +202,7 @@ class GooseMigrationRunner {
       ORDER BY name
     `;
 
-    console.log("\n📋 Tables created:");
+    console.log("\n📋 Tables created in TEST database:");
     for (const t of tables) {
       console.log(`  - ${t.name}`);
     }
@@ -208,7 +214,8 @@ async function main() {
   const connectionString = process.env.DATABASE_URL;
 
   if (!connectionString) {
-    console.error("❌ DATABASE_URL not found in environment variables");
+    console.error("❌ DATABASE_URL not found in .env.test");
+    console.error("   Please configure DATABASE_URL in .env.test file");
     process.exit(1);
   }
 
@@ -218,35 +225,25 @@ async function main() {
     process.exit(1);
   }
 
-  // Special handling for test environment
-  if (process.env.NODE_ENV === "test") {
-    console.log("🧪 Running migrations in TEST environment");
+  // Verify we're using test database
+  if (!connectionString.includes("/test")) {
+    console.error("❌ WARNING: DATABASE_URL does not appear to be a test database");
+    console.error(`   Current URL: ${connectionString.split("?")[0]}`);
+    console.error('   Expected URL to contain "/test"');
+    process.exit(1);
   }
 
-  // Check if status command was requested
-  if (process.argv[2] === "status") {
-    const runner = new GooseMigrationRunner();
-    const dbManager = await initializeDbManager(connectionString);
-    const db = await dbManager.getConnection();
+  console.log("🧪 TEST ENVIRONMENT DETECTED");
+  console.log(`📍 Target Database: ${connectionString.split("?")[0]}`);
+  console.log("");
 
-    try {
-      await runner.createVersionTable(db);
-      await runner.showStatus(db);
-    } finally {
-      await dbManager.releaseConnection(db);
-      await dbManager.shutdown();
-    }
-
-    process.exit(0);
-  }
-
-  const runner = new GooseMigrationRunner();
+  const runner = new TestGooseMigrationRunner();
 
   try {
     await runner.run();
     process.exit(0); // Explicitly exit after success
   } catch (error) {
-    console.error("\n❌ Migration failed:", error);
+    console.error("\n❌ TEST migration failed:", error);
     process.exit(1);
   }
 }

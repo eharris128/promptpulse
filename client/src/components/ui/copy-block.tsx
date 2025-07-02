@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Check, Copy } from 'lucide-react'
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Check, Copy } from "lucide-react";
 
 interface CopyBlockProps {
   children: React.ReactNode
@@ -10,21 +10,21 @@ interface CopyBlockProps {
   className?: string
 }
 
-export function CopyBlock({ children, value, className = '' }: CopyBlockProps) {
-  const [copied, setCopied] = useState(false)
+export function CopyBlock({ children, value, className = "" }: CopyBlockProps) {
+  const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(value)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy text: ', err)
+      console.error("Failed to copy text: ", err);
     }
-  }
+  };
 
   return (
-    <div 
+    <div
       className={`relative group cursor-pointer ${className}`}
       onClick={handleCopy}
     >
@@ -39,5 +39,5 @@ export function CopyBlock({ children, value, className = '' }: CopyBlockProps) {
         )}
       </div>
     </div>
-  )
+  );
 }

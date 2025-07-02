@@ -33,8 +33,8 @@ params:
     footer_about_enable: true
     
   # Version config
-  version_menu: v1.0
-  version: v1.0
+  version_menu: v1.1.2
+  version: v1.1.2
   
   # Links for header/footer
   links:

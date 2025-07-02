@@ -1,213 +1,267 @@
-# PromptPulse - Claude Code Usage Tracking & Team Collaboration Platform
+# PromptPulse - Claude Code Usage Analytics Platform
 
-## Overview
-Multi-user platform for tracking and analyzing Claude Code usage across multiple machines. Features automatic data collection, user authentication, team collaboration, and a beautiful web dashboard for visualizing usage patterns and team leaderboards.
+PromptPulse v1.1.2 is a comprehensive analytics and leaderboard platform designed specifically for Claude Code usage tracking. It provides detailed insights into AI coding productivity across multiple machines with team collaboration features.
 
-## Key Features
-- Multi-user support with API key authentication
-- **Team collaboration** - create teams and compare usage with colleagues
-- **Team leaderboards** - compete within teams with role-based permissions
-- Beautiful dashboard built with Next.js and Recharts
-- Multi-machine tracking - aggregate usage across all devices
-- Automatic collection via cron job configuration
-- Detailed analytics - daily costs, token usage, session tracking
-- Project-based insights and cost tracking
-- Granular email preferences with 5 individual notification controls
+## Core Components
 
-## Project Structure
+### CLI Tool (`promptpulse` / `ppulse`)
+Command-line interface for data collection, authentication, and system management.
 
-### CLI Interface
-- `bin/promptpulse.js` - Main CLI entry point
-- `lib/` - CLI library code
-  - `lib/auth.js` - Authentication utilities and getUserByApiKey
-  - `lib/auth-cli.js` - CLI authentication commands (login, logout, whoami)
-  - `lib/collect.js` - Data collection logic
-  - `lib/config.js` - Configuration management
-  - `lib/db-manager.js` - Database connection pooling and retry logic
-  - `lib/logger.js` - Winston-based structured logging system
-  - `lib/setup.js` - Cron setup utilities
-  - `lib/user-cli.js` - User management CLI (deprecated commands)
-  - `lib/user-management.js` - User management backend
-  - `lib/server-auth.js` - Server-side authentication middleware
+**Authentication Commands:**
+- `promptpulse login` - Create account or login with API key
+- `promptpulse logout` - Clear authentication
+- `promptpulse whoami` - Show current user information
 
-### API Server
-- `server.js` - Express.js API server with authentication and team management
-- `migrations/` - Modular database schema migrations
-  - `001_create_migrations_table.sql` - Migration tracking table
-  - `002_create_users_table.sql` - KSUID-based users with secure API keys
-  - `003_create_usage_tables.sql` - Usage data, sessions, blocks, upload history
-  - `004_create_email_tables.sql` - Granular email preferences and send logging
-  - `005_create_teams_tables.sql` - KSUID teams with member roles and invitations
-  - `006_restore_invite_codes.sql` - Simple team invite code system
+**Data Collection:**
+- `promptpulse collect` - Collect usage data (all granularities)
+- `promptpulse collect --granularity [daily|session|blocks|all]` - Specific data collection
+- `promptpulse setup` - Configure automatic collection with cron
+- `promptpulse setup --interval [15|30|60|daily]` - Set collection frequency
+- `promptpulse setup --remove` - Remove automatic collection
+
+**Monitoring & Diagnostics:**
+- `promptpulse status` - Collection health and status
+- `promptpulse doctor` - Diagnose common issues
+- `promptpulse dashboard` - Open web dashboard
 
 ### Web Dashboard
-- `client/` - Next.js dashboard application with team management
-  - `client/src/app/` - Next.js app directory
-    - `client/src/app/page.tsx` - Dashboard home page
-    - `client/src/app/leaderboard/page.tsx` - Public leaderboard view
-    - `client/src/app/teams/page.tsx` - Team management and team leaderboards
-    - `client/src/app/teams/join/[token]/page.tsx` - Team invite acceptance
-    - `client/src/app/settings/page.tsx` - Settings with email preferences
-    - `client/src/app/layout.tsx` - Root layout
-  - `client/src/components/` - React components
-    - `client/src/components/auth/login-form.tsx` - Authentication form
-    - `client/src/components/dashboard/` - Dashboard components
-      - `stats-cards.tsx` - Usage statistics cards
-      - `usage-chart.tsx` - Interactive usage charts
-      - `machines-table.tsx` - Machine overview table
-      - `team-leaderboard.tsx` - Team-specific leaderboard component
-      - `fixed-plan-comparison.tsx` - Plan comparison analytics
-    - `client/src/components/layout/` - Layout components
-      - `app-layout.tsx` - Main application layout
-      - `side-nav.tsx` - Navigation sidebar
-      - `top-header.tsx` - Header component
-      - `user-menu.tsx` - User account menu
-    - `client/src/components/ui/` - UI components
-      - `button.tsx`, `card.tsx`, `input.tsx`, etc.
-  - `client/src/contexts/auth-context.tsx` - Authentication context
-  - `client/src/lib/api.ts` - API client utilities
-  - `client/src/types/index.ts` - TypeScript type definitions
+Next.js-based dashboard providing:
+- Real-time usage analytics and charts
+- Team management and collaboration
+- Leaderboard participation (opt-in)
+- Privacy controls and settings
+- Multi-machine usage tracking
 
-## CLI Commands
+### API Server
+Express.js backend with:
+- API key authentication
+- SQLite Cloud database integration
+- Rate limiting and security measures
+- RESTful endpoints for all operations
+- Team management with role-based permissions
 
-### Authentication
-- `promptpulse login` - Create new account (interactive)
-- `promptpulse login <api-key>` - Login with existing API key
-- `promptpulse logout` - Clear authentication and log out
-- `promptpulse whoami` - Show current user information
-- `promptpulse user config show` - Show configuration (debugging)
+## Architecture
 
-### Team Management (Dashboard Only)
-Team features are accessed through the web dashboard:
-- Create and manage teams with custom names and descriptions
-- Generate and share team invite links
-- Manage team member roles (owner, admin, member)
-- View team usage leaderboards and analytics
-- Join teams using invite codes
+### Database Schema
+**Users Table:**
+- KSUID-based user IDs
+- Secure API key authentication
+- Email preference management (5 granular controls)
 
-### Data Collection
-- `promptpulse collect` - Collect and upload Claude Code usage data
-- `promptpulse collect --granularity daily` - Only daily aggregates
-- `promptpulse collect --granularity session` - Only session data
-- `promptpulse collect --granularity blocks` - Only 5-hour blocks
-- `promptpulse collect --granularity all` - Everything (default)
+**Usage Data:**
+- Token usage statistics (input, output, cache creation/read)
+- Cost calculations and billing blocks
+- Session tracking and project analytics
+- Machine identification for multi-device support
 
-### Setup & Dashboard
-- `promptpulse setup` - Set up cron job for automatic collection
-- `promptpulse status` - Check collection status and health
-- `promptpulse doctor` - Diagnose common collection issues
-- `promptpulse dashboard` - Open web dashboard in browser (includes team management)
+**Teams System:**
+- KSUID-based team IDs
+- Role hierarchy: owner > admin > member
+- Invitation system with secure invite codes
+- Team leaderboards separate from public rankings
 
-### Aliases
-- `ppulse` - Short alias for `promptpulse`
+### Data Sources
+PromptPulse reads Claude Code usage from:
+- `~/.claude/projects/**/*.jsonl` (standard location)
+- `$CLAUDE_CONFIG_DIR/projects/**/*.jsonl` (custom paths)
+
+**Data Collected:**
+- Usage statistics: token counts, costs, timestamps, model information
+- Project paths: configurable privacy levels (basename/full/hash/none)
+- Machine identifiers: hostname or custom MACHINE_ID
+- Session data: timestamps, duration, project information
+
+**Never Collected:**
+- Prompt content or conversations
+- Code snippets or file contents
+- Personal information beyond usage statistics
+
+## Privacy Controls
+
+### Project Path Privacy (`PROJECT_PATH_PRIVACY`)
+- `basename` (default): Only project folder names
+- `full`: Complete project paths  
+- `hash`: Hashed paths for analytics
+- `none`: No project path collection
+
+### Leaderboard Privacy
+- Public leaderboard: completely opt-in
+- Team leaderboards: separate privacy controls
+- Custom display names for anonymity
+- Granular data sharing preferences
+
+## Team Features
+
+### Team Management
+- Create teams with custom names/descriptions
+- Generate secure invite links with expiration
+- Role-based permissions (owner/admin/member)
+- Team usage analytics and leaderboards
+
+### Team Collaboration
+- Aggregate team usage statistics
+- Compare member productivity (privacy-respecting)
+- Team-specific leaderboards and rankings
+- Separate team and public display names
+
+## Installation & Setup
+
+```bash
+# Install globally
+npm install -g promptpulse
+
+# Create account
+promptpulse login
+
+# Start collecting data
+promptpulse collect
+
+# Set up automatic collection
+promptpulse setup
+```
+
+## Development Environment
+
+### Build Commands
+- `npm run dev` - Full development (server + client)
+- `npm run server:dev` - API server only (port 3000)
+- `npm run client:dev` - Dashboard only (port 3001)
+- `npm run migrate` - Apply database migrations
+- `npm test` - E2E test suite with Playwright
+
+### Database Management (Goose)
+- `goose sqlite3 database.db status` - Migration status
+- `goose sqlite3 database.db up` - Apply migrations
+- `goose sqlite3 database.db down` - Rollback migration
+- `npm run migrate` - Apply migrations via custom runner
+
+### Testing
+Comprehensive E2E test suite covering:
+- All 35+ API endpoints
+- Authentication and user management
+- Data collection and aggregation
+- Team management and invitations
+- Leaderboard functionality
+- Privacy controls
+
+## Environment Variables
+
+**Required:**
+- `DATABASE_URL` - SQLite Cloud connection string
+
+**Optional:**
+- `MACHINE_ID` - Custom machine identifier
+- `PROJECT_PATH_PRIVACY` - Privacy level for project paths
+- `PORT` - API server port (default: 3000)
+- `NODE_ENV` - Environment mode
+- `RESEND_API_KEY` - Email functionality
+- `EMAIL_FROM_DOMAIN` - Email sender domain
+- `LOG_LEVEL` - Logging verbosity
+
+## Configuration Files
+
+### CLI Configuration
+`~/.promptpulse/config.json`:
+```json
+{
+  "apiKey": "secure-api-key",
+  "userId": "ksuid-user-id", 
+  "machine": "hostname-or-custom-id"
+}
+```
+
+### Collection Logs
+`~/.promptpulse/collection.log` - Automatic collection logging
 
 ## API Endpoints
 
-### Authentication Required
-All endpoints require `X-API-Key` header with valid API key.
+### Authentication
+- `POST /api/users` - Create user account
+- `GET /api/users/me` - Get current user info
+- `PUT /api/users/me` - Update user settings
 
-### User Management
-- `POST /api/users` - Create new user
-- `GET /api/users` - List all users (authenticated)
-
-### Usage Data
-- `GET /api/usage/aggregate` - Get aggregated usage data
-- `GET /api/machines` - Get user's machines
-- `GET /api/usage/sessions?limit=50&projectPath=myproject` - Get sessions
-- `GET /api/usage/blocks?activeOnly=true` - Get billing blocks
-
-### Analytics
-- `GET /api/usage/analytics/patterns?period=day` - Usage patterns
-- `GET /api/usage/analytics/costs?groupBy=project` - Cost breakdown
+### Data Collection
+- `POST /api/usage` - Upload usage data
+- `GET /api/usage/stats` - Get usage statistics
+- `GET /api/usage/sessions` - Session analytics
+- `GET /api/usage/projects` - Project analytics
 
 ### Team Management
-- `GET /api/teams` - Get user's teams with roles
-- `POST /api/teams` - Create new team
-- `PUT /api/teams/:id` - Update team details
-- `GET /api/teams/:id/members` - Get team members
-- `POST /api/teams/:id/members/:userId/promote` - Promote member to admin
-- `DELETE /api/teams/:id/members/:userId` - Remove team member
-- `POST /api/teams/join/:inviteCode` - Join team via invite code
-- `GET /api/teams/:id/leaderboard` - Get team leaderboard data
+- `POST /api/teams` - Create team
+- `GET /api/teams` - List user teams
+- `POST /api/teams/:id/invite` - Create invite
+- `POST /api/teams/join/:code` - Join team via invite
+- `GET /api/teams/:id/members` - Team members
+- `PUT /api/teams/:id/members/:userId` - Update member role
 
-### Email & Preferences
-- `GET /api/email-preferences` - Get user email preferences
-- `PUT /api/email-preferences` - Update email notification settings
-- `POST /api/send-test-email` - Send test email
-- `GET /api/leaderboard-settings` - Get leaderboard participation settings
-- `PUT /api/leaderboard-settings` - Update leaderboard and display name settings
+### Leaderboards
+- `GET /api/leaderboard/daily` - Daily public leaderboard
+- `GET /api/leaderboard/weekly` - Weekly public leaderboard  
+- `GET /api/leaderboard/teams/:id` - Team leaderboard
 
-## Configuration
+## Use Cases
 
-### Environment Variables
+**Development Teams:**
+- Track team coding productivity
+- Compare usage across projects
+- Monitor AI tool adoption
+- Budget management for AI coding tools
 
-#### Required
-- `DATABASE_URL` - SQLite Cloud connection string
+**Educational Groups:**
+- Student progress tracking
+- Course completion metrics
+- Learning pattern analysis
+- Collaborative coding projects
 
-#### Optional Server Configuration
-- `MACHINE_ID` - Custom machine identifier (defaults to hostname)
-- `PORT` - API server port (defaults to 3000)
-- `NODE_ENV` - Environment mode (development/production)
+**Organizations:**
+- Department usage analytics
+- Cost optimization insights
+- Productivity measurement
+- Multi-team collaboration
 
-#### Database Connection Pool
-- `DB_MAX_CONNECTIONS` - Maximum database connections (default: 10)
-- `DB_IDLE_TIMEOUT` - Connection idle timeout in ms (default: 30000)
-- `DB_RETRY_ATTEMPTS` - Database retry attempts on failure (default: 3)
-- `DB_RETRY_DELAY` - Base retry delay in ms (default: 1000)
+## Security Features
 
-#### Logging Configuration
-- `LOG_LEVEL` - Logging level: error, warn, info, debug (default: info in production, debug in development)
+- API key authentication for all requests
+- Complete data isolation between users
+- No sensitive data collection (prompts/code)
+- Secure invite system for teams
+- Privacy-first design principles
+- Rate limiting and abuse prevention
 
-#### Email Service (Optional)
-- `RESEND_API_KEY` - Resend API key for email functionality
-- `RESEND_FROM_EMAIL` - From email address for notifications
+## Common Issues & Troubleshooting
 
-### User Configuration
-- `~/.promptpulse/config.json` - User credentials and settings
+**Authentication Problems:**
+```bash
+promptpulse logout
+promptpulse login
+```
 
-### Data Sources
-- `~/.claude/projects/**/*.jsonl` - Claude Code usage data files
-- `$CLAUDE_CONFIG_DIR/projects/**/*.jsonl` - Alternative path if set
+**Collection Issues:**
+```bash
+promptpulse doctor  # Diagnose problems
+promptpulse status  # Check health
+```
 
-## Database Schema (Modernized)
+**No Data Found:**
+- Ensure Claude Code has been used
+- Check `~/.claude/projects/` exists
+- Verify file permissions
 
-### Core Tables
-- **users**: KSUID-based user IDs with secure API key authentication
-- **usage_data**: Daily usage aggregates with token counts and costs
-- **usage_sessions**: Individual Claude Code sessions with project paths
-- **usage_blocks**: 5-hour billing blocks for cost analysis
-- **upload_history**: Deduplication tracking for data uploads
+**Team Invitation Problems:**
+- Check invite link expiration
+- Verify recipient has account
+- Generate new invite if needed
 
-### Email System
-- **user_email_preferences**: Granular notification controls (5 separate preferences)
-- **email_send_log**: Email delivery tracking and analytics
+## Package Information
 
-### Team System (KSUID-based)
-- **teams**: Teams with KSUID string IDs, invite codes, and metadata
-- **team_members**: Many-to-many relationships with role hierarchy (owner/admin/member)
-- **team_invitations**: Secure invitation system with expiring tokens
+- **Name:** promptpulse
+- **Version:** 1.1.2
+- **Type:** ES module
+- **License:** MIT
+- **Repository:** https://github.com/eharris128/promptpulse
+- **NPM:** https://www.npmjs.com/package/promptpulse
+- **Documentation:** https://docs.promptpulse.dev
+- **Dashboard:** https://www.promptpulse.dev
 
-## Data Flow
-1. Collection: CLI reads Claude usage data from ~/.claude/projects/
-2. Authentication: User's API key validates requests
-3. Storage: Data stored in SQLite Cloud with user isolation and team relationships
-4. API: RESTful endpoints serve user-specific and team data
-5. Dashboard: React app visualizes usage patterns and team analytics
-
-## Automation Scripts
-- Built-in cron configuration via `promptpulse setup` command
-- Automatic collection scheduling through CLI
-
-## Key Files
-- `package.json` - NPM package configuration with CLI binaries
-- `README.md` - Comprehensive documentation
-- `scripts/migrate.js` - Database migration runner
-- `.npmignore` - Files excluded from NPM package
-- `railway.json` - Railway deployment configuration
-- `Dockerfile` - Container configuration
-
-## Development
-- Node.js 18+ required
-- SQLite Cloud or local SQLite database
-- Next.js for dashboard development
-- Express.js for API server
+## Keywords
+claude, claude-code, usage-tracking, analytics, cli, productivity, ai, monitoring, team-collaboration, leaderboards, team-management

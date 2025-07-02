@@ -46,11 +46,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }
 
   // Custom function to fetch user profile from Express server
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = async (isBackgroundPoll = false) => {
     const wasAuthenticated = !!user
     
     try {
-      setLoading(true)
+      // Only show loading spinner for initial auth check, not background polling
+      if (!isBackgroundPoll) {
+        setLoading(true)
+      }
+      
       const response = await fetch('/auth/profile', {
         credentials: 'include' // Include cookies for session
       })
@@ -70,7 +74,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error('Error fetching user profile:', error)
       setUser(null)
     } finally {
-      setLoading(false)
+      // Only clear loading spinner if we set it
+      if (!isBackgroundPoll) {
+        setLoading(false)
+      }
     }
   }
 
@@ -79,7 +86,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     fetchUserProfile()
     
     // Check auth status every 30 seconds to handle session expiration
-    const interval = setInterval(fetchUserProfile, 30000)
+    // Use background polling to avoid showing loading spinners
+    const interval = setInterval(() => fetchUserProfile(true), 30000)
     return () => clearInterval(interval)
   }, [])
 

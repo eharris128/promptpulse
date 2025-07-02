@@ -25,12 +25,9 @@ Create a new account or login with an existing API key.
 # Interactive account creation
 promptpulse login
 
-# Login with API key
-promptpulse login --api-key YOUR_API_KEY
+promptpulse login
 ```
 
-**Options:**
-- `--api-key` - Login with existing API key
 
 #### `promptpulse logout`
 

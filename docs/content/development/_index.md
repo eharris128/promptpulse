@@ -157,29 +157,30 @@ npm run test:coverage
 
 ### Migrations
 
-Create new migrations:
+Create new migrations using Goose:
 
 ```bash
 # Create new migration file
-touch migrations/007_new_feature.sql
+goose sqlite3 database.db create new_feature sql
 ```
 
 Migration file structure:
 
 ```sql
--- Migration: 007_new_feature.sql
--- Description: Add new feature support
-
--- Up migration
+-- +goose Up
+-- +goose StatementBegin
 CREATE TABLE new_feature (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
+-- +goose StatementEnd
 
--- Down migration (for rollbacks)
--- DROP TABLE new_feature;
+-- +goose Down
+-- +goose StatementBegin
+DROP TABLE new_feature;
+-- +goose StatementEnd
 ```
 
 ### Database Schema

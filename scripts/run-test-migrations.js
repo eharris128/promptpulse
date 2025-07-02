@@ -7,7 +7,7 @@
  * Ensures proper test environment isolation.
  */
 
-import { initializeDbManager, getDbManager } from '../lib/db-manager.js';
+import { initializeDbManager } from '../lib/db-manager.js';
 import { readFileSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';

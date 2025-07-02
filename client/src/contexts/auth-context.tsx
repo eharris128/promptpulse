@@ -1,7 +1,6 @@
 'use client'
 
-import { createContext, useContext, ReactNode } from 'react'
-import { useUser } from '@auth0/nextjs-auth0'
+import { createContext, useContext, ReactNode, useState, useEffect } from 'react'
 
 interface AuthContextType {
   isAuthenticated: boolean
@@ -26,25 +25,56 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  // Use Auth0 SDK's useUser hook
-  const { user, error, isLoading } = useUser()
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  // Custom function to fetch user profile from Express server
+  const fetchUserProfile = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/auth/profile', {
+        credentials: 'include' // Include cookies for session
+      })
+      
+      if (response.ok) {
+        const userData = await response.json()
+        setUser(userData)
+      } else {
+        setUser(null)
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error)
+      setUser(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Check authentication status on mount and periodically
+  useEffect(() => {
+    fetchUserProfile()
+    
+    // Check auth status every 30 seconds to handle session expiration
+    const interval = setInterval(fetchUserProfile, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   const login = () => {
-    // Use Auth0 SDK login endpoint
-    window.location.href = '/api/auth/login'
+    // Redirect to Express server login endpoint
+    window.location.href = '/auth/login'
   }
 
   const logout = () => {
-    // Use Auth0 SDK logout endpoint
-    window.location.href = '/api/auth/logout'
+    // Redirect to Express server logout endpoint
+    window.location.href = '/auth/logout'
   }
 
-  const isAuthenticated = !!user && !error
+  const isAuthenticated = !!user
 
   return (
     <AuthContext.Provider value={{
       isAuthenticated,
-      loading: isLoading,
+      loading,
       login,
       logout,
       user

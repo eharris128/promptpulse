@@ -4,6 +4,7 @@ import cors from 'cors';
 import crypto from 'crypto';
 import KSUID from 'ksuid';
 import rateLimit from 'express-rate-limit';
+import session from 'express-session';
 import { Auth0Client } from '@auth0/nextjs-auth0/server';
 import { authenticateUser, createUser, listUsers } from './lib/server-auth.js';
 import { initializeDbManager, getDbManager } from './lib/db-manager.js';
@@ -69,6 +70,18 @@ app.use(requestLogger());
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' })); // Limit payload size for cost protection
 
+// Configure express-session for Auth0 session management
+app.use(session({
+  secret: process.env.AUTH0_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
 // Rate limiting for cost protection
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -111,19 +124,171 @@ const auth0 = new Auth0Client({
   appBaseUrl: process.env.APP_BASE_URL
 });
 
-// Auth0 session middleware for Express API
-app.use(async (req, res, next) => {
-  try {
-    // Get session from Auth0 
-    const session = await auth0.getSession(req, res);
-    if (session && session.user) {
-      req.user = session.user;
-    }
-  } catch (error) {
-    // Session validation failed, but don't block request
-    // Let individual endpoints handle authentication requirements
+// Session validation middleware for Express API
+app.use((req, res, next) => {
+  // Check if user is authenticated via express-session
+  if (req.session && req.session.isAuthenticated && req.session.user) {
+    req.user = req.session.user;
   }
   next();
+});
+
+// Auth0 authentication routes for web app
+app.get('/auth/login', (req, res) => {
+  logger.info('🔐 AUTH LOGIN REQUEST', {
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
+    origin: req.get('Origin'),
+    referer: req.get('Referer'),
+    returnTo: req.query.returnTo,
+    allHeaders: req.headers,
+    timestamp: new Date().toISOString()
+  });
+  
+  const returnTo = req.query.returnTo || process.env.APP_BASE_URL;
+  const authUrl = `https://${process.env.AUTH0_DOMAIN}/authorize?` +
+    `response_type=code&` +
+    `client_id=${process.env.AUTH0_CLIENT_ID}&` +
+    `redirect_uri=${encodeURIComponent(process.env.APP_BASE_URL + '/auth/callback')}&` +
+    `scope=openid%20profile%20email&` +
+    `state=${encodeURIComponent(returnTo)}`;
+  
+  logger.info('🔐 AUTH LOGIN REDIRECT', { authUrl, returnTo });
+  res.redirect(authUrl);
+});
+
+app.get('/auth/logout', async (req, res) => {
+  logger.info('🚪 AUTH LOGOUT REQUEST', {
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
+    origin: req.get('Origin'),
+    referer: req.get('Referer'),
+    hasSession: !!req.user,
+    timestamp: new Date().toISOString()
+  });
+  
+  try {
+    const logoutUrl = `https://${process.env.AUTH0_DOMAIN}/v2/logout?` +
+      `client_id=${process.env.AUTH0_CLIENT_ID}&` +
+      `returnTo=${encodeURIComponent(process.env.APP_BASE_URL)}`;
+    
+    // Clear session if it exists
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          logger.warn('🚪 AUTH SESSION CLEAR FAILED', err);
+        } else {
+          logger.info('🚪 AUTH SESSION CLEARED');
+        }
+      });
+    }
+    
+    logger.info('🚪 AUTH LOGOUT REDIRECT', { logoutUrl });
+    res.redirect(logoutUrl);
+  } catch (error) {
+    logger.error('🚪 AUTH LOGOUT ERROR', error);
+    res.redirect(process.env.APP_BASE_URL);
+  }
+});
+
+app.get('/auth/callback', async (req, res) => {
+  logger.info('🔄 AUTH CALLBACK REQUEST', {
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
+    origin: req.get('Origin'),
+    referer: req.get('Referer'),
+    hasCode: !!req.query.code,
+    state: req.query.state,
+    queryParams: req.query,
+    timestamp: new Date().toISOString()
+  });
+  
+  try {
+    const { code, state } = req.query;
+    
+    if (!code) {
+      logger.error('🔄 AUTH CALLBACK ERROR: No authorization code');
+      return res.status(400).send('Authorization code missing');
+    }
+
+    // Exchange code for tokens
+    const tokenResponse = await fetch(`https://${process.env.AUTH0_DOMAIN}/oauth/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'authorization_code',
+        client_id: process.env.AUTH0_CLIENT_ID,
+        client_secret: process.env.AUTH0_CLIENT_SECRET,
+        code,
+        redirect_uri: process.env.APP_BASE_URL + '/auth/callback'
+      })
+    });
+
+    const tokens = await tokenResponse.json();
+    
+    if (!tokenResponse.ok) {
+      logger.error('🔄 AUTH CALLBACK TOKEN EXCHANGE FAILED', tokens);
+      return res.status(400).send('Authentication failed');
+    }
+
+    logger.info('🔄 AUTH CALLBACK TOKEN EXCHANGE SUCCESS');
+
+    // Get user info
+    const userResponse = await fetch(`https://${process.env.AUTH0_DOMAIN}/userinfo`, {
+      headers: { Authorization: `Bearer ${tokens.access_token}` }
+    });
+
+    const userInfo = await userResponse.json();
+    
+    if (!userResponse.ok) {
+      logger.error('🔄 AUTH CALLBACK USER INFO FAILED', userInfo);
+      return res.status(400).send('Failed to get user information');
+    }
+
+    logger.info('🔄 AUTH CALLBACK USER INFO SUCCESS', { email: userInfo.email, sub: userInfo.sub });
+
+    // Create session manually using express-session
+    req.session.user = userInfo;
+    req.session.accessToken = tokens.access_token;
+    req.session.refreshToken = tokens.refresh_token;
+    req.session.idToken = tokens.id_token;
+    req.session.isAuthenticated = true;
+
+    logger.info('🔄 AUTH CALLBACK SESSION CREATED');
+
+    // Redirect to return URL or home
+    const returnTo = state || process.env.APP_BASE_URL;
+    logger.info('🔄 AUTH CALLBACK REDIRECT', { returnTo });
+    res.redirect(returnTo);
+    
+  } catch (error) {
+    logger.error('🔄 AUTH CALLBACK ERROR', error);
+    res.status(500).send('Authentication error');
+  }
+});
+
+app.get('/auth/profile', async (req, res) => {
+  logger.info('👤 AUTH PROFILE REQUEST', {
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
+    origin: req.get('Origin'),
+    referer: req.get('Referer'),
+    hasUser: !!req.user,
+    timestamp: new Date().toISOString()
+  });
+  
+  try {
+    if (!req.session || !req.session.isAuthenticated || !req.session.user) {
+      logger.warn('👤 AUTH PROFILE UNAUTHORIZED - No session or user');
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    logger.info('👤 AUTH PROFILE SUCCESS', { email: req.session.user.email, sub: req.session.user.sub });
+    res.json(req.session.user);
+  } catch (error) {
+    logger.error('👤 AUTH PROFILE ERROR', error);
+    res.status(500).json({ error: 'Failed to fetch profile' });
+  }
 });
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -1174,17 +1339,34 @@ app.post('/api/usage/daily/batch', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('upload_daily_batch', userId);
   
+  // Debug logging for user ID mismatch issue
+  logger.info('🔍 Daily batch upload debug', {
+    authenticatedUserId: req.user.id,
+    authenticatedUserAuth0Id: req.user.auth0_id,
+    recordCount: records?.length,
+    firstRecordUserId: records?.[0]?.user_id,
+    userIdMatch: records?.[0]?.user_id === req.user.id,
+    auth0IdMatch: records?.[0]?.user_id === req.user.auth0_id
+  });
+  
   if (!records || !Array.isArray(records)) {
     return res.status(400).json({ error: 'Records array is required' });
   }
   
   try {
     let processedCount = 0;
+    let skippedCount = 0;
     
     await dbManager.executeQuery(async (db) => {
       for (const record of records) {
-        // Validate user_id matches authenticated user
-        if (record.user_id !== userId) {
+        // Validate user_id matches authenticated user (check both KSUID and Auth0 ID)
+        if (record.user_id !== userId && record.user_id !== req.user.auth0_id) {
+          logger.warn('🚫 Skipping record with mismatched user_id', {
+            recordUserId: record.user_id,
+            authenticatedUserId: userId,
+            authenticatedAuth0Id: req.user.auth0_id
+          });
+          skippedCount++;
           continue; // Skip records not belonging to this user
         }
         
@@ -1196,7 +1378,7 @@ app.post('/api/usage/daily/batch', authenticateUser, async (req, res) => {
             thinking_mode_detected, thinking_tokens, thinking_percentage
           ) VALUES (
             ${record.machine_id},
-            ${record.user_id},
+            ${userId},
             ${record.date},
             ${record.input_tokens},
             ${record.output_tokens},
@@ -1217,7 +1399,7 @@ app.post('/api/usage/daily/batch', authenticateUser, async (req, res) => {
           INSERT OR IGNORE INTO upload_history (
             user_id, machine_id, upload_type, identifier
           ) VALUES (
-            ${record.user_id},
+            ${userId},
             ${record.machine_id},
             'daily',
             ${record.date}
@@ -1231,6 +1413,7 @@ app.post('/api/usage/daily/batch', authenticateUser, async (req, res) => {
     res.json({ 
       message: 'Daily data uploaded successfully',
       processed: processedCount,
+      skipped: skippedCount,
       total: records.length
     });
     
@@ -1249,17 +1432,29 @@ app.post('/api/usage/sessions/batch', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('upload_sessions_batch', userId);
   
+  // Debug logging for user ID mismatch issue
+  logger.info('🔍 Sessions batch upload debug', {
+    authenticatedUserId: req.user.id,
+    authenticatedUserAuth0Id: req.user.auth0_id,
+    recordCount: records?.length,
+    firstRecordUserId: records?.[0]?.user_id,
+    userIdMatch: records?.[0]?.user_id === req.user.id,
+    auth0IdMatch: records?.[0]?.user_id === req.user.auth0_id
+  });
+  
   if (!records || !Array.isArray(records)) {
     return res.status(400).json({ error: 'Records array is required' });
   }
   
   try {
     let processedCount = 0;
+    let skippedCount = 0;
     
     await dbManager.executeQuery(async (db) => {
       for (const record of records) {
-        // Validate user_id matches authenticated user
-        if (record.user_id !== userId) {
+        // Validate user_id matches authenticated user (check both KSUID and Auth0 ID)
+        if (record.user_id !== userId && record.user_id !== req.user.auth0_id) {
+          skippedCount++;
           continue; // Skip records not belonging to this user
         }
         
@@ -1272,7 +1467,7 @@ app.post('/api/usage/sessions/batch', authenticateUser, async (req, res) => {
             thinking_mode_detected, thinking_tokens, thinking_percentage
           ) VALUES (
             ${record.machine_id},
-            ${record.user_id},
+            ${userId},
             ${record.session_id},
             ${record.project_path},
             ${record.start_time},
@@ -1297,7 +1492,7 @@ app.post('/api/usage/sessions/batch', authenticateUser, async (req, res) => {
           INSERT OR IGNORE INTO upload_history (
             user_id, machine_id, upload_type, identifier
           ) VALUES (
-            ${record.user_id},
+            ${userId},
             ${record.machine_id},
             'session',
             ${record.session_id}
@@ -1311,6 +1506,7 @@ app.post('/api/usage/sessions/batch', authenticateUser, async (req, res) => {
     res.json({ 
       message: 'Session data uploaded successfully',
       processed: processedCount,
+      skipped: skippedCount,
       total: records.length
     });
     
@@ -1336,17 +1532,29 @@ app.post('/api/usage/blocks/batch', authenticateUser, async (req, res) => {
   const userId = req.user.id;
   const queryContext = logDatabaseQuery('upload_blocks_batch', userId);
   
+  // Debug logging for user ID mismatch issue
+  logger.info('🔍 Blocks batch upload debug', {
+    authenticatedUserId: req.user.id,
+    authenticatedUserAuth0Id: req.user.auth0_id,
+    recordCount: records?.length,
+    firstRecordUserId: records?.[0]?.user_id,
+    userIdMatch: records?.[0]?.user_id === req.user.id,
+    auth0IdMatch: records?.[0]?.user_id === req.user.auth0_id
+  });
+  
   if (!records || !Array.isArray(records)) {
     return res.status(400).json({ error: 'Records array is required' });
   }
   
   try {
     let processedCount = 0;
+    let skippedCount = 0;
     
     await dbManager.executeQuery(async (db) => {
       for (const record of records) {
-        // Validate user_id matches authenticated user
-        if (record.user_id !== userId) {
+        // Validate user_id matches authenticated user (check both KSUID and Auth0 ID)
+        if (record.user_id !== userId && record.user_id !== req.user.auth0_id) {
+          skippedCount++;
           continue; // Skip records not belonging to this user
         }
         
@@ -1369,7 +1577,7 @@ app.post('/api/usage/blocks/batch', authenticateUser, async (req, res) => {
             thinking_mode_detected, thinking_tokens, thinking_percentage
           ) VALUES (
             ${record.machine_id},
-            ${record.user_id},
+            ${userId},
             ${record.block_id},
             ${record.start_time},
             ${record.end_time},
@@ -1394,7 +1602,7 @@ app.post('/api/usage/blocks/batch', authenticateUser, async (req, res) => {
           INSERT OR IGNORE INTO upload_history (
             user_id, machine_id, upload_type, identifier
           ) VALUES (
-            ${record.user_id},
+            ${userId},
             ${record.machine_id},
             'block',
             ${record.block_id}
@@ -1408,6 +1616,7 @@ app.post('/api/usage/blocks/batch', authenticateUser, async (req, res) => {
     res.json({ 
       message: 'Block data uploaded successfully',
       processed: processedCount,
+      skipped: skippedCount,
       total: records.length
     });
     

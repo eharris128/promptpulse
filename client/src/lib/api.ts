@@ -6,7 +6,7 @@ class ApiClient {
   private async getAccessToken(): Promise<string | null> {
     try {
       // Get access token from Auth0 Next.js SDK
-      const response = await fetch('/api/auth/token', {
+      const response = await fetch('/auth/token', {
         credentials: 'include'
       });
       if (response.ok) {

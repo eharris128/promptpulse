@@ -97,3 +97,12 @@ playwright.config.js
 # Test artifacts (already in .gitignore)
 playwright-report/
 test-results/
+
+.dockerignore                                                 
+.env.example                                                  
+.github/workflows/hugo.yml                                    
+.gitmodules                                                   
+.vercelignore                                                 
+eslint.config.js           
+goose_migrations/
+railway.json                 

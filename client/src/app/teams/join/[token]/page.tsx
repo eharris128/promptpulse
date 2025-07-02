@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Loader2, Users } from 'lucide-react'
 import { apiClient } from '@/lib/api'
+import { useAuth } from '@/contexts/auth-context'
 
 interface JoinTeamPageProps {
   params: Promise<{
@@ -15,17 +16,11 @@ interface JoinTeamPageProps {
 export default function JoinTeamPage({ params }: JoinTeamPageProps) {
   const resolvedParams = use(params)
   const router = useRouter()
+  const { isAuthenticated, login, loading: authLoading } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
   const [isJoining, setIsJoining] = useState(false)
   const [teamName, setTeamName] = useState('')
   const [error, setError] = useState('')
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-
-  // Check authentication status
-  useEffect(() => {
-    const apiKey = apiClient.getApiKey()
-    setIsAuthenticated(!!apiKey)
-  }, [])
 
   // Fetch team preview
   useEffect(() => {
@@ -49,17 +44,16 @@ export default function JoinTeamPage({ params }: JoinTeamPageProps) {
 
   const handleJoin = async () => {
     if (!isAuthenticated) {
-      // Redirect to home page where they can authenticate
       sessionStorage.setItem('pendingTeamInvite', resolvedParams.token)
-      router.push('/')
+      login()
       return
     }
 
     try {
       setIsJoining(true)
-      const result = await apiClient.joinTeam(resolvedParams.token)
-      // Redirect to teams page after successful join
-      router.push('/teams')
+      await apiClient.joinTeam(resolvedParams.token)
+      sessionStorage.removeItem('pendingTeamInvite')
+      router.push('/')
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message)
@@ -70,7 +64,7 @@ export default function JoinTeamPage({ params }: JoinTeamPageProps) {
     }
   }
 
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -157,7 +151,7 @@ export default function JoinTeamPage({ params }: JoinTeamPageProps) {
                   className="p-0 h-auto font-normal"
                   onClick={() => {
                     sessionStorage.setItem('pendingTeamInvite', resolvedParams.token)
-                    router.push('/')
+                    login()
                   }}
                 >
                   Create one first

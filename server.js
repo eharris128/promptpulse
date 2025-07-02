@@ -6,8 +6,8 @@ import KSUID from 'ksuid';
 import rateLimit from 'express-rate-limit';
 import session from 'express-session';
 import { Auth0Client } from '@auth0/nextjs-auth0/server';
-import { authenticateUser, listUsers } from './lib/server-auth.js';
-import { initializeDbManager, getDbManager } from './lib/db-manager.js';
+import { authenticateUser, listUsers, getUserByAuth0Id, getUserByEmail, createUserFromAuth0, linkAuth0ToExistingUser } from './lib/server-auth.js';
+import { initializeDbManager } from './lib/db-manager.js';
 import { logger, requestLogger, logDatabaseQuery, logError, log } from './lib/logger.js';
 import emailService from './lib/email-service.js';
 import reportGenerator from './lib/report-generator.js';
@@ -246,6 +246,39 @@ app.get('/auth/callback', async (req, res) => {
     }
 
     logger.info('🔄 AUTH CALLBACK USER INFO SUCCESS', { email: userInfo.email, sub: userInfo.sub });
+
+    // Ensure user exists in database
+    let dbUser = await getUserByAuth0Id(userInfo.sub);
+    
+    if (!dbUser) {
+      // Try to find by email (for existing users without Auth0 ID)
+      dbUser = await getUserByEmail(userInfo.email);
+      
+      if (dbUser) {
+        // Link existing user to Auth0
+        logger.info('🔗 AUTH CALLBACK LINKING EXISTING USER', { 
+          userId: dbUser.id, 
+          email: userInfo.email, 
+          auth0Id: userInfo.sub 
+        });
+        await linkAuth0ToExistingUser(dbUser.id, userInfo.sub);
+        // Refresh user data to get updated Auth0 ID
+        dbUser = await getUserByAuth0Id(userInfo.sub);
+      } else {
+        // Create new user
+        logger.info('🆕 AUTH CALLBACK CREATING NEW USER', { 
+          email: userInfo.email, 
+          auth0Id: userInfo.sub 
+        });
+        dbUser = await createUserFromAuth0(userInfo);
+      }
+    }
+
+    logger.info('🔄 AUTH CALLBACK DATABASE USER READY', { 
+      userId: dbUser.id, 
+      email: dbUser.email,
+      auth0Id: dbUser.auth0_id 
+    });
 
     // Create session manually using express-session
     req.session.user = userInfo;

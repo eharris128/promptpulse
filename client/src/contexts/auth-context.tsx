@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 
 interface AuthContextType {
   isAuthenticated: boolean
@@ -27,9 +28,27 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
+  const pathname = usePathname()
+
+  // Handle pending team invites after authentication
+  const handlePendingTeamInvite = () => {
+    // Don't redirect if we're already on a join page to prevent loops
+    if (pathname && pathname.startsWith('/teams/join/')) {
+      return
+    }
+    
+    const pendingInvite = sessionStorage.getItem('pendingTeamInvite')
+    if (pendingInvite) {
+      sessionStorage.removeItem('pendingTeamInvite')
+      router.push(`/teams/join/${pendingInvite}`)
+    }
+  }
 
   // Custom function to fetch user profile from Express server
   const fetchUserProfile = async () => {
+    const wasAuthenticated = !!user
+    
     try {
       setLoading(true)
       const response = await fetch('/auth/profile', {
@@ -39,6 +58,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (response.ok) {
         const userData = await response.json()
         setUser(userData)
+        
+        // If user just became authenticated, check for pending invites
+        if (!wasAuthenticated && userData) {
+          setTimeout(handlePendingTeamInvite, 100) // Small delay to ensure router is ready
+        }
       } else {
         setUser(null)
       }

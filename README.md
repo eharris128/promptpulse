@@ -7,7 +7,6 @@ Track and analyze your Claude Code usage with beautiful dashboards and competiti
 
 ## Features
 
-- **Secure API key authentication** for private data access
 - **Beautiful hosted dashboard** built with Next.js and Recharts
 - **Multi-machine tracking** - aggregate usage across all your devices
 - **Team collaboration** - create teams and compare usage with colleagues
@@ -17,7 +16,6 @@ Track and analyze your Claude Code usage with beautiful dashboards and competiti
 - **Detailed analytics** - daily costs, token usage, session tracking
 - **Project-based insights** - see usage by project
 - **Granular email preferences** - control exactly which notifications you receive
-- **Cost tracking** - monitor your Claude API spending
 - **Simple CLI** - easy setup and data collection
 
 ## Installation
@@ -31,11 +29,11 @@ npm install -g promptpulse
 ### 1. Initialize Your Account
 
 ```bash
-# Create your user account and get your API key
+# Create a free user account
 promptpulse login
 ```
 
-This creates your secure user account and provides you with a unique API key.
+This creates your secure user account and provides you with database access.
 
 ### 2. Collect Your Usage Data
 
@@ -47,8 +45,6 @@ promptpulse collect
 ### 3. View Your Dashboard
 
 Visit your personalized dashboard at: [https://www.promptpulse.dev](https://www.promptpulse.dev)
-
-Enter your API key to access your private analytics and insights.
 
 ## Usage
 
@@ -92,12 +88,6 @@ Collection logs are stored in `~/.promptpulse/collection.log` for monitoring and
 ```bash
 # Show current user info
 promptpulse whoami
-
-# View your configuration (debugging)
-promptpulse user config show
-
-# Login with API key
-promptpulse login <your-api-key>
 
 # Create new account
 promptpulse login
@@ -144,14 +134,6 @@ Access your personalized dashboard to view:
 - **Team privacy** - Separate controls for team vs public visibility
 - **Granular email preferences** - 5 individual notification controls
 - **Private by default** - Your data stays private unless you opt in
-
-## Dashboard Authentication
-
-1. Open your dashboard URL
-2. Enter your API key (from `promptpulse login`)
-3. Click "Connect" to access your analytics
-
-Your API key is securely stored for future sessions.
 
 ## Leaderboard Participation
 
@@ -234,7 +216,6 @@ Leaderboard participation is completely **opt-in**:
 
 ### Data Security
 
-- **API Key Authentication**: All data is secured with unique API keys
 - **Data Isolation**: Each user's data is completely isolated
 - **No Sensitive Data**: No conversation content, prompts, or personal information
 - **Secure Storage**: Usage statistics are stored securely with encryption in transit
@@ -242,7 +223,6 @@ Leaderboard participation is completely **opt-in**:
 ## Multi-User & Team Support
 
 ### How It Works
-- Each user has a unique API key for authentication
 - All data is completely isolated between users
 - Team features allow collaboration while maintaining privacy
 - Role-based permissions for team management
@@ -259,10 +239,8 @@ Leaderboard participation is completely **opt-in**:
 ### Authentication Commands
 ```bash
 promptpulse login                                 # Create new account (interactive)
-promptpulse login <api-key>                       # Login with existing API key
 promptpulse logout                                # Clear authentication
 promptpulse whoami                                # Show current user
-promptpulse user config show                      # Show configuration (debugging)
 ```
 
 ### Data Collection
@@ -282,7 +260,6 @@ promptpulse setup --remove                       # Remove automatic collection
 
 ### Health & Diagnostics
 ```bash
-promptpulse status                                # Check collection status and health
 promptpulse doctor                                # Diagnose common issues
 promptpulse dashboard                             # Open web dashboard
 ```
@@ -333,14 +310,12 @@ PromptPulse now supports team features for collaborative Claude Code usage track
 ### Common Issues
 
 1. **"No usage data found"** - Ensure you have used Claude Code and data exists in `~/.claude/projects/`
-2. **"Authentication failed"** - Check your API key with `promptpulse whoami`
+2. **"Authentication failed"** - Check your login session `promptpulse whoami`
 3. **"Connection error"** - Verify your internet connection and try again
 
 ### Getting Help
 
 - Use `promptpulse --help` for command documentation
-- Check your API key is valid with `promptpulse whoami`
-- Check collection health with `promptpulse status`
 - Diagnose issues with `promptpulse doctor`
 - Ensure you have Claude Code usage data in `~/.claude/projects/`
 

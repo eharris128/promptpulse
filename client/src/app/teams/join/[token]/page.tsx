@@ -27,9 +27,7 @@ export default function JoinTeamPage({ params }: JoinTeamPageProps) {
     const fetchTeamPreview = async () => {
       try {
         setIsLoading(true)
-        console.log('Fetching team preview for token:', resolvedParams.token)
         const { teamName } = await apiClient.getTeamPreview(resolvedParams.token)
-        console.log('Team preview response:', { teamName })
         setTeamName(teamName)
       } catch (error) {
         console.error('Error fetching team preview:', error)

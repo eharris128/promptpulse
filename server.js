@@ -6,7 +6,7 @@ import KSUID from 'ksuid';
 import rateLimit from 'express-rate-limit';
 import session from 'express-session';
 import { Auth0Client } from '@auth0/nextjs-auth0/server';
-import { authenticateUser, createUser, listUsers } from './lib/server-auth.js';
+import { authenticateUser, listUsers } from './lib/server-auth.js';
 import { initializeDbManager, getDbManager } from './lib/db-manager.js';
 import { logger, requestLogger, logDatabaseQuery, logError, log } from './lib/logger.js';
 import emailService from './lib/email-service.js';

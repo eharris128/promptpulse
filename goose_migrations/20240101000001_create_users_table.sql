@@ -1,13 +1,13 @@
 -- +goose Up
--- Create users table with all user-related fields and indexes
--- Includes display name settings for both public and team contexts
+-- Create users table for OAuth-only authentication
+-- Designed for Auth0 integration with flexibility for future providers
 
 -- Users table with KSUID as primary key
 CREATE TABLE users (
   id TEXT PRIMARY KEY,                    -- KSUID string like "2z4ow5OVJUJaib0QEHj7PC2K7dB"
-  email TEXT UNIQUE,                      -- User's email address
-  username TEXT UNIQUE NOT NULL,          -- Unique username
-  api_key_hash TEXT UNIQUE NOT NULL,      -- Hashed API key for authentication
+  auth0_id TEXT UNIQUE NOT NULL,          -- Auth0 identifier (required for authentication)
+  email TEXT UNIQUE NOT NULL,             -- User's email address (required)
+  username TEXT,                          -- Optional display username
   
   -- Display names for different contexts
   display_name TEXT,                      -- Public leaderboard display name
@@ -34,9 +34,9 @@ CREATE TABLE users (
 );
 
 -- Users table indexes for performance
-CREATE INDEX idx_users_api_key_hash ON users(api_key_hash) WHERE is_deleted = 0;
+CREATE INDEX idx_users_auth0_id ON users(auth0_id) WHERE is_deleted = 0;
 CREATE INDEX idx_users_email ON users(email) WHERE is_deleted = 0;
-CREATE INDEX idx_users_username ON users(username) WHERE is_deleted = 0;
+CREATE INDEX idx_users_username ON users(username) WHERE is_deleted = 0 AND username IS NOT NULL;
 CREATE INDEX idx_users_leaderboard ON users(leaderboard_enabled, leaderboard_updated_at) WHERE is_deleted = 0;
 CREATE INDEX idx_users_claude_plan ON users(claude_plan) WHERE is_deleted = 0;
 
@@ -55,7 +55,7 @@ DROP INDEX IF EXISTS idx_users_claude_plan;
 DROP INDEX IF EXISTS idx_users_leaderboard;
 DROP INDEX IF EXISTS idx_users_username;
 DROP INDEX IF EXISTS idx_users_email;
-DROP INDEX IF EXISTS idx_users_api_key_hash;
+DROP INDEX IF EXISTS idx_users_auth0_id;
 
 -- Drop table
 DROP TABLE IF EXISTS users;

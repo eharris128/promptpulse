@@ -45,14 +45,13 @@ program
     await collect(options);
   });
 
-// Login command (OAuth Device Flow or legacy API key support)
+// Login command (OAuth authentication only)
 program
   .command('login')
-  .description('Login with secure OAuth authentication (or legacy API key)')
-  .argument('[api-key]', 'Optional: legacy API key for backward compatibility (starts with pk_...)')
-  .action(async (apiKey) => {
+  .description('Login with secure OAuth authentication')
+  .action(async () => {
     const { smartLogin } = await import('../lib/auth-cli.js');
-    await smartLogin(apiKey);
+    await smartLogin();
   });
 
 // Logout command

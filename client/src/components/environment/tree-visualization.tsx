@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 interface TreeVisualizationProps {
   impact: {
@@ -12,27 +12,27 @@ interface TreeVisualizationProps {
 
 export function TreeVisualization({ impact }: TreeVisualizationProps) {
   // Calculate tree size based on CO2 impact (0-100 scale)
-  const maxCO2 = 10000 // 10kg as reasonable max for scaling
-  const impactScale = Math.min(impact.co2Grams / maxCO2, 1)
-  
+  const maxCO2 = 10000; // 10kg as reasonable max for scaling
+  const impactScale = Math.min(impact.co2Grams / maxCO2, 1);
+
   // Tree grows from 30% to 100% based on impact
-  const treeScale = 0.3 + (impactScale * 0.7)
-  
+  const treeScale = 0.3 + (impactScale * 0.7);
+
   // Color intensity based on impact (green to yellow to red)
   const getTreeColor = (scale: number) => {
-    if (scale < 0.3) return '#22c55e' // Green
-    if (scale < 0.6) return '#eab308' // Yellow
-    return '#ef4444' // Red
-  }
-  
-  const treeColor = getTreeColor(impactScale)
-  const leafOpacity = 0.4 + (impactScale * 0.6)
+    if (scale < 0.3) return "#22c55e"; // Green
+    if (scale < 0.6) return "#eab308"; // Yellow
+    return "#ef4444"; // Red
+  };
+
+  const treeColor = getTreeColor(impactScale);
+  const leafOpacity = 0.4 + (impactScale * 0.6);
 
   return (
     <div className="flex items-center justify-center h-64 bg-gradient-to-b from-sky-50 to-green-50 dark:from-sky-900/20 dark:to-green-900/20 rounded-lg">
-      <svg 
-        width="200" 
-        height="200" 
+      <svg
+        width="200"
+        height="200"
         viewBox="0 0 200 200"
         className="drop-shadow-sm"
       >
@@ -45,7 +45,7 @@ export function TreeVisualization({ impact }: TreeVisualizationProps) {
           fill="#8b4513"
           rx="2"
         />
-        
+
         {/* Tree crown - main body */}
         <ellipse
           cx="100"
@@ -55,7 +55,7 @@ export function TreeVisualization({ impact }: TreeVisualizationProps) {
           fill={treeColor}
           opacity={leafOpacity}
         />
-        
+
         {/* Tree crown - upper layer for depth */}
         <ellipse
           cx="95"
@@ -65,7 +65,7 @@ export function TreeVisualization({ impact }: TreeVisualizationProps) {
           fill={treeColor}
           opacity={leafOpacity + 0.1}
         />
-        
+
         {/* Tree crown - top layer */}
         <ellipse
           cx="105"
@@ -75,7 +75,7 @@ export function TreeVisualization({ impact }: TreeVisualizationProps) {
           fill={treeColor}
           opacity={leafOpacity + 0.2}
         />
-        
+
         {/* Ground line */}
         <line
           x1="20"
@@ -86,7 +86,7 @@ export function TreeVisualization({ impact }: TreeVisualizationProps) {
           strokeWidth="2"
           opacity="0.3"
         />
-        
+
         {/* Small grass elements */}
         {[...Array(5)].map((_, i) => (
           <line
@@ -101,15 +101,15 @@ export function TreeVisualization({ impact }: TreeVisualizationProps) {
           />
         ))}
       </svg>
-      
+
       <div className="ml-6 text-center">
         <div className="text-2xl font-bold text-foreground mb-2">
-          {impact.co2Grams < 1000 
-            ? `${impact.co2Grams.toFixed(1)}g` 
+          {impact.co2Grams < 1000
+            ? `${impact.co2Grams.toFixed(1)}g`
             : `${(impact.co2Grams / 1000).toFixed(2)}kg`}
         </div>
         <div className="text-sm text-muted-foreground">CO₂ equivalent</div>
-        
+
         <div className="mt-4 text-xs text-muted-foreground">
           {impactScale < 0.3 && "🌱 Low impact"}
           {impactScale >= 0.3 && impactScale < 0.6 && "🌿 Moderate impact"}
@@ -117,5 +117,5 @@ export function TreeVisualization({ impact }: TreeVisualizationProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

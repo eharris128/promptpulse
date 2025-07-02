@@ -1,9 +1,9 @@
-'use client'
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCost, formatTokens } from '@/lib/utils'
-import { ProjectData } from '@/types'
-import { FolderOpen, Calendar, Activity } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCost, formatTokens } from "@/lib/utils";
+import { ProjectData } from "@/types";
+import { FolderOpen, Calendar, Activity } from "lucide-react";
 
 interface ProjectsWidgetProps {
   data: ProjectData[]
@@ -11,22 +11,22 @@ interface ProjectsWidgetProps {
 
 export function ProjectsWidget({ data }: ProjectsWidgetProps) {
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-    
-    if (diffDays === 0) return 'Today'
-    if (diffDays === 1) return 'Yesterday'
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
     if (diffDays < 7) {
-      return diffDays === 1 ? '1 day ago' : `${diffDays} days ago`
+      return diffDays === 1 ? "1 day ago" : `${diffDays} days ago`;
     }
     if (diffDays < 30) {
-      const weeks = Math.floor(diffDays / 7)
-      return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`
+      const weeks = Math.floor(diffDays / 7);
+      return weeks === 1 ? "1 week ago" : `${weeks} weeks ago`;
     }
-    return date.toLocaleDateString()
-  }
+    return date.toLocaleDateString();
+  };
 
   if (!data || data.length === 0) {
     return (
@@ -49,7 +49,7 @@ export function ProjectsWidget({ data }: ProjectsWidgetProps) {
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -109,5 +109,5 @@ export function ProjectsWidget({ data }: ProjectsWidgetProps) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

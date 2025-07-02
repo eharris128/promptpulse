@@ -1,21 +1,21 @@
-'use client'
+"use client";
 
-import { useAuth } from '@/contexts/auth-context'
-import { usePathname } from 'next/navigation'
-import { AppLayout } from './app-layout'
-import { LoginForm } from '@/components/auth/login-form'
+import { useAuth } from "@/contexts/auth-context";
+import { usePathname } from "next/navigation";
+import { AppLayout } from "./app-layout";
+import { LoginForm } from "@/components/auth/login-form";
 
 interface AppLayoutWrapperProps {
   children: React.ReactNode
 }
 
 export function AppLayoutWrapper({ children }: AppLayoutWrapperProps) {
-  const { isAuthenticated, loading, logout } = useAuth()
-  const pathname = usePathname()
-  
+  const { isAuthenticated, loading, logout } = useAuth();
+  const pathname = usePathname();
+
   // Routes that don't require authentication
-  const publicRoutes = ['/teams/join/']
-  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
+  const publicRoutes = ["/teams/join/"];
+  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
 
   if (loading) {
     return (
@@ -25,12 +25,12 @@ export function AppLayoutWrapper({ children }: AppLayoutWrapperProps) {
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
-    )
+    );
   }
 
   // For public routes, render children directly without authentication check
   if (isPublicRoute) {
-    return <>{children}</>
+    return <>{children}</>;
   }
 
   if (!isAuthenticated) {
@@ -38,12 +38,12 @@ export function AppLayoutWrapper({ children }: AppLayoutWrapperProps) {
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <LoginForm />
       </div>
-    )
+    );
   }
 
   return (
     <AppLayout onLogout={logout}>
       {children}
     </AppLayout>
-  )
+  );
 }

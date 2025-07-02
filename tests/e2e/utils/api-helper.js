@@ -1,18 +1,18 @@
-import { request } from '@playwright/test';
+import { request } from "@playwright/test";
 
 export class APIHelper {
-  constructor(baseURL = process.env.API_BASE_URL || 'http://localhost:3000') {
+  constructor(baseURL = process.env.API_BASE_URL || "http://localhost:3000") {
     this.baseURL = baseURL;
   }
 
   async createContext(apiKey = null) {
     const headers = {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
+      "Accept": "application/json",
+      "Content-Type": "application/json",
     };
 
     if (apiKey) {
-      headers['X-API-Key'] = apiKey;
+      headers["X-API-Key"] = apiKey;
     }
 
     return await request.newContext({
@@ -31,8 +31,8 @@ export class APIHelper {
         headers: response.headers(),
       };
     } catch (error) {
-      if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch failed')) {
-        throw new Error('⚠️  Test server not running. Please configure DATABASE_URL in .env.test and ensure server starts properly.');
+      if (error.message.includes("ECONNREFUSED") || error.message.includes("fetch failed")) {
+        throw new Error("⚠️  Test server not running. Please configure DATABASE_URL in .env.test and ensure server starts properly.");
       }
       throw error;
     } finally {
@@ -50,8 +50,8 @@ export class APIHelper {
         headers: response.headers(),
       };
     } catch (error) {
-      if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch failed')) {
-        throw new Error('⚠️  Test server not running. Please configure DATABASE_URL in .env.test and ensure server starts properly.');
+      if (error.message.includes("ECONNREFUSED") || error.message.includes("fetch failed")) {
+        throw new Error("⚠️  Test server not running. Please configure DATABASE_URL in .env.test and ensure server starts properly.");
       }
       throw error;
     } finally {
@@ -69,8 +69,8 @@ export class APIHelper {
         headers: response.headers(),
       };
     } catch (error) {
-      if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch failed')) {
-        throw new Error('⚠️  Test server not running. Please configure DATABASE_URL in .env.test and ensure server starts properly.');
+      if (error.message.includes("ECONNREFUSED") || error.message.includes("fetch failed")) {
+        throw new Error("⚠️  Test server not running. Please configure DATABASE_URL in .env.test and ensure server starts properly.");
       }
       throw error;
     } finally {
@@ -88,8 +88,8 @@ export class APIHelper {
         headers: response.headers(),
       };
     } catch (error) {
-      if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch failed')) {
-        throw new Error('⚠️  Test server not running. Please configure DATABASE_URL in .env.test and ensure server starts properly.');
+      if (error.message.includes("ECONNREFUSED") || error.message.includes("fetch failed")) {
+        throw new Error("⚠️  Test server not running. Please configure DATABASE_URL in .env.test and ensure server starts properly.");
       }
       throw error;
     } finally {

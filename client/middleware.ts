@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 
 export async function middleware(request: any) {
-    console.log('🔧 MIDDLEWARE TEST - Running for:', request.nextUrl.pathname);
-    
+    console.log("🔧 MIDDLEWARE TEST - Running for:", request.nextUrl.pathname);
+
     // Simple test - just return next() to see if middleware runs
     if (request.nextUrl.pathname.startsWith("/auth")) {
-        console.log('🔐 AUTH ROUTE TEST - Would handle auth here');
+        console.log("🔐 AUTH ROUTE TEST - Would handle auth here");
         return NextResponse.next();
     }
 
@@ -24,4 +24,4 @@ export const config = {
          */
         "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|api).*)",
     ],
-}
+};

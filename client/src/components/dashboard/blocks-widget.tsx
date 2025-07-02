@@ -1,10 +1,10 @@
-'use client'
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { formatCost, formatTokens } from '@/lib/utils'
-import { BlockData } from '@/types'
-import { Activity, Clock, Zap } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { formatCost, formatTokens } from "@/lib/utils";
+import { BlockData } from "@/types";
+import { Activity, Clock, Zap } from "lucide-react";
 
 interface BlocksWidgetProps {
   data: BlockData[]
@@ -12,38 +12,38 @@ interface BlocksWidgetProps {
 
 export function BlocksWidget({ data }: BlocksWidgetProps) {
   const formatDuration = (startTime: string, endTime?: string, actualEndTime?: string) => {
-    const start = new Date(startTime)
-    const end = actualEndTime ? new Date(actualEndTime) : (endTime ? new Date(endTime) : new Date())
-    const diffMs = end.getTime() - start.getTime()
-    const diffMinutes = Math.floor(diffMs / (1000 * 60))
-    
-    if (diffMinutes < 60) return `${diffMinutes}m`
-    const hours = Math.floor(diffMinutes / 60)
-    const minutes = diffMinutes % 60
-    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`
-  }
+    const start = new Date(startTime);
+    const end = actualEndTime ? new Date(actualEndTime) : (endTime ? new Date(endTime) : new Date());
+    const diffMs = end.getTime() - start.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+    if (diffMinutes < 60) return `${diffMinutes}m`;
+    const hours = Math.floor(diffMinutes / 60);
+    const minutes = diffMinutes % 60;
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  };
 
   const formatBlockStart = (startTime: string) => {
-    const date = new Date(startTime)
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const blockDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-    
-    const time = date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
-    })
-    
+    const date = new Date(startTime);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const blockDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    const time = date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true
+    });
+
     if (blockDate.getTime() === today.getTime()) {
-      return time
+      return time;
     } else {
-      const month = date.getMonth() + 1
-      const day = date.getDate()
-      const year = date.getFullYear()
-      return `${month}/${day}/${year}, ${time}`
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+      const year = date.getFullYear();
+      return `${month}/${day}/${year}, ${time}`;
     }
-  }
+  };
 
   const getModelBadges = (modelsUsed: string[]) => {
     if (!modelsUsed || !Array.isArray(modelsUsed)) {
@@ -51,26 +51,26 @@ export function BlocksWidget({ data }: BlocksWidgetProps) {
     }
     // Filter out synthetic models and map to badges
     return modelsUsed
-      .filter(model => !model.includes('synthetic') && model)
+      .filter(model => !model.includes("synthetic") && model)
       .map(model => {
-        let variant: "default" | "secondary" | "destructive" | "outline" = "default"
-        let displayName = model
-        
-        if (model.includes('opus')) {
-          variant = "destructive"
-          displayName = 'opus-4'
-        } else if (model.includes('sonnet')) {
-          variant = "default"
-          displayName = 'sonnet-4'
+        let variant: "default" | "secondary" | "destructive" | "outline" = "default";
+        let displayName = model;
+
+        if (model.includes("opus")) {
+          variant = "destructive";
+          displayName = "opus-4";
+        } else if (model.includes("sonnet")) {
+          variant = "default";
+          displayName = "sonnet-4";
         }
-        
+
         return (
           <Badge key={model} variant={variant} className="text-xs">
             {displayName}
           </Badge>
-        )
-      })
-  }
+        );
+      });
+  };
 
   if (!data || data.length === 0) {
     return (
@@ -87,7 +87,7 @@ export function BlocksWidget({ data }: BlocksWidgetProps) {
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -95,10 +95,10 @@ export function BlocksWidget({ data }: BlocksWidgetProps) {
       <CardContent className="pt-6">
         <div className="space-y-3">
           {data.map((block) => (
-            <div 
-              key={`${block.machine_id}-${block.block_id}`} 
+            <div
+              key={`${block.machine_id}-${block.block_id}`}
               className={`flex items-center justify-between p-3 rounded-lg border ${
-                block.is_active ? 'bg-blue-50/50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800' : 'bg-card hover:bg-muted/50'
+                block.is_active ? "bg-blue-50/50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800" : "bg-card hover:bg-muted/50"
               } transition-colors`}
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -116,7 +116,7 @@ export function BlocksWidget({ data }: BlocksWidgetProps) {
                     </span>
                     <span className="text-xs text-muted-foreground">
                       ({formatDuration(block.start_time, block.end_time, block.actual_end_time)}
-                      {block.is_active && ' elapsed, ongoing'})
+                      {block.is_active && " elapsed, ongoing"})
                     </span>
                     {block.is_active ? (
                       <Badge variant="outline" className="text-xs">
@@ -149,5 +149,5 @@ export function BlocksWidget({ data }: BlocksWidgetProps) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

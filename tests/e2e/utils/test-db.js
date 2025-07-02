@@ -1,17 +1,17 @@
-import { execSync } from 'child_process';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
-import { Database } from '@sqlitecloud/drivers';
-import bcrypt from 'bcrypt';
-import crypto from 'crypto';
-import { initializeDbManager } from '../../../lib/db-manager.js';
+import { execSync } from "child_process";
+import path from "path";
+import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+import { Database } from "@sqlitecloud/drivers";
+import bcrypt from "bcrypt";
+import crypto from "crypto";
+import { initializeDbManager } from "../../../lib/db-manager.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load test environment
-dotenv.config({ path: path.join(__dirname, '../../../.env.test') });
+dotenv.config({ path: path.join(__dirname, "../../../.env.test") });
 
 class TestDatabase {
   constructor() {
@@ -27,29 +27,29 @@ class TestDatabase {
   }
 
   async setup() {
-    console.log('Setting up test database...');
-    
+    console.log("Setting up test database...");
+
     // Check if DATABASE_URL is configured properly
-    if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes('your-test-host')) {
-      console.warn('⚠️  DATABASE_URL not configured in .env.test');
-      console.warn('   Using mock setup for development. Please configure a real test database for full testing.');
-      
+    if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes("your-test-host")) {
+      console.warn("⚠️  DATABASE_URL not configured in .env.test");
+      console.warn("   Using mock setup for development. Please configure a real test database for full testing.");
+
       // Skip database setup but create mock test users
       this.testUsers = [
-        { id: 'test-user-1', api_key: 'test-api-key-1', username: 'testuser1', email: 'test1@example.com' },
-        { id: 'test-user-2', api_key: 'test-api-key-2', username: 'testuser2', email: 'test2@example.com' },
-        { id: 'test-user-3', api_key: 'test-api-key-3', username: 'leaderboarduser', email: 'leaderboard@example.com' }
+        { id: "test-user-1", api_key: "test-api-key-1", username: "testuser1", email: "test1@example.com" },
+        { id: "test-user-2", api_key: "test-api-key-2", username: "testuser2", email: "test2@example.com" },
+        { id: "test-user-3", api_key: "test-api-key-3", username: "leaderboarduser", email: "leaderboard@example.com" }
       ];
       return;
     }
-    
+
     // Run proper migrations using the project's migration runner
     try {
-      console.log('Running database migrations...');
+      console.log("Running database migrations...");
       await this.runMigrations();
-      console.log('✅ Migrations applied successfully');
+      console.log("✅ Migrations applied successfully");
     } catch (error) {
-      console.error('❌ Migration failed:', error.message);
+      console.error("❌ Migration failed:", error.message);
       throw error;
     }
 
@@ -59,16 +59,16 @@ class TestDatabase {
 
   async runMigrations() {
     // Use the project's migration runner for consistency
-    const migrationsScript = path.join(__dirname, '../../../scripts/run-goose-migrations.js');
-    
+    const migrationsScript = path.join(__dirname, "../../../scripts/run-goose-migrations.js");
+
     try {
       // First, clear any existing data
       await this.clearDatabase();
-      
+
       // Run migrations using Node.js script (works with SQLite Cloud)
       execSync(`node "${migrationsScript}"`, {
-        stdio: 'inherit',
-        env: { ...process.env, NODE_ENV: 'test' }
+        stdio: "inherit",
+        env: { ...process.env, NODE_ENV: "test" }
       });
     } catch (error) {
       throw new Error(`Migration execution failed: ${error.message}`);
@@ -77,7 +77,7 @@ class TestDatabase {
 
   async clearDatabase() {
     const db = await this.connect();
-    
+
     // Get all tables except sqlite system tables and goose version table
     const tables = await db.sql`
       SELECT name FROM sqlite_master 
@@ -86,14 +86,14 @@ class TestDatabase {
       AND name != 'goose_db_version'
       ORDER BY name
     `;
-    
+
     // Disable foreign keys for cleanup
     try {
       await db.sql`PRAGMA foreign_keys = OFF`;
     } catch (error) {
-      console.warn('Could not disable foreign keys:', error.message);
+      console.warn("Could not disable foreign keys:", error.message);
     }
-    
+
     // Drop all tables to ensure clean slate
     for (const table of tables) {
       try {
@@ -103,12 +103,12 @@ class TestDatabase {
         console.warn(`Warning: Could not drop table ${table.name}:`, error.message);
       }
     }
-    
+
     // Re-enable foreign keys
     try {
       await db.sql`PRAGMA foreign_keys = ON`;
     } catch (error) {
-      console.warn('Could not re-enable foreign keys:', error.message);
+      console.warn("Could not re-enable foreign keys:", error.message);
     }
   }
 
@@ -194,47 +194,47 @@ class TestDatabase {
     for (const sql of tables) {
       await db.sql(sql);
     }
-    
-    console.log('Test tables created successfully');
+
+    console.log("Test tables created successfully");
   }
 
   async createTestUsers() {
     // Skip if using mock setup
-    if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes('your-test-host')) {
+    if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes("your-test-host")) {
       return;
     }
-    
+
     const db = await this.connect();
-    
+
     // Create main test user
     const mainUser = {
-      id: 'test-user-1',
-      username: 'testuser1',
-      email: 'test1@example.com',
-      api_key: 'test-api-key-1',
-      api_key_hash: await bcrypt.hash('test-api-key-1', 10),
+      id: "test-user-1",
+      username: "testuser1",
+      email: "test1@example.com",
+      api_key: "test-api-key-1",
+      api_key_hash: await bcrypt.hash("test-api-key-1", 10),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
 
     // Create secondary test user for team tests
     const secondUser = {
-      id: 'test-user-2',
-      username: 'testuser2',
-      email: 'test2@example.com',
-      api_key: 'test-api-key-2',
-      api_key_hash: await bcrypt.hash('test-api-key-2', 10),
+      id: "test-user-2",
+      username: "testuser2",
+      email: "test2@example.com",
+      api_key: "test-api-key-2",
+      api_key_hash: await bcrypt.hash("test-api-key-2", 10),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
 
     // Create user for leaderboard tests (with opt-in)
     const leaderboardUser = {
-      id: 'test-user-3',
-      username: 'leaderboarduser',
-      email: 'leaderboard@example.com',
-      api_key: 'test-api-key-3',
-      api_key_hash: await bcrypt.hash('test-api-key-3', 10),
+      id: "test-user-3",
+      username: "leaderboarduser",
+      email: "leaderboard@example.com",
+      api_key: "test-api-key-3",
+      api_key_hash: await bcrypt.hash("test-api-key-3", 10),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -263,7 +263,7 @@ class TestDatabase {
         VALUES (${leaderboardUser.id}, true, 'LeaderboardDisplay', true, 'TeamLeaderboard')
       `;
     } catch (error) {
-      console.warn('Warning: Could not create leaderboard settings:', error.message);
+      console.warn("Warning: Could not create leaderboard settings:", error.message);
     }
 
     // Add some test usage data
@@ -273,14 +273,14 @@ class TestDatabase {
   async seedUsageData() {
     const db = await this.connect();
     const now = new Date();
-    
+
     // Add usage data for main test user
     const usageData = {
-      user_id: 'test-user-1',
-      machine_id: 'test-machine-1',
-      session_id: 'test-session-1',
-      project_path: '/test/project',
-      model: 'claude-3-opus-20240229',
+      user_id: "test-user-1",
+      machine_id: "test-machine-1",
+      session_id: "test-session-1",
+      project_path: "/test/project",
+      model: "claude-3-opus-20240229",
       input_tokens: 1000,
       output_tokens: 500,
       cache_write_tokens: 100,
@@ -311,7 +311,7 @@ class TestDatabase {
         total_input_tokens, total_output_tokens, total_cache_write_tokens,
         total_cache_read_tokens, total_cost, created_at, updated_at
       ) VALUES (
-        'test-user-1', 'test-machine-1', ${now.toISOString().split('T')[0]},
+        'test-user-1', 'test-machine-1', ${now.toISOString().split("T")[0]},
         1, 5, 1000, 500, 100, 50, 0.025, ${now.toISOString()}, ${now.toISOString()}
       )
     `;
@@ -319,12 +319,12 @@ class TestDatabase {
 
   async cleanup() {
     // Skip if using mock setup
-    if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes('your-test-host')) {
+    if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes("your-test-host")) {
       return;
     }
-    
+
     const db = await this.connect();
-    
+
     // Get all tables except sqlite system tables and goose version table
     const tables = await db.sql`
       SELECT name FROM sqlite_master 
@@ -338,7 +338,7 @@ class TestDatabase {
     try {
       await db.sql`PRAGMA foreign_keys = OFF`;
     } catch (error) {
-      console.warn('Could not disable foreign keys:', error.message);
+      console.warn("Could not disable foreign keys:", error.message);
     }
 
     // Clean all data from tables (keep schema intact)
@@ -355,7 +355,7 @@ class TestDatabase {
     try {
       await db.sql`PRAGMA foreign_keys = ON`;
     } catch (error) {
-      console.warn('Could not re-enable foreign keys:', error.message);
+      console.warn("Could not re-enable foreign keys:", error.message);
     }
 
     // Clear the test users array

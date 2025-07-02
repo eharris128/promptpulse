@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Leaf, Zap, Droplets } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Leaf, Zap, Droplets } from "lucide-react";
 
 interface EnvironmentStatsProps {
   impact: {
@@ -15,30 +15,30 @@ interface EnvironmentStatsProps {
 
 export function EnvironmentStats({ impact }: EnvironmentStatsProps) {
   const formatCO2 = (grams: number) => {
-    if (grams < 1000) return `${grams.toFixed(1)}g`
-    return `${(grams / 1000).toFixed(2)}kg`
-  }
+    if (grams < 1000) return `${grams.toFixed(1)}g`;
+    return `${(grams / 1000).toFixed(2)}kg`;
+  };
 
   const formatEnergy = (wh: number) => {
-    if (wh < 1000) return `${wh.toFixed(1)}Wh`
-    return `${(wh / 1000).toFixed(2)}kWh`
-  }
+    if (wh < 1000) return `${wh.toFixed(1)}Wh`;
+    return `${(wh / 1000).toFixed(2)}kWh`;
+  };
 
   const formatWater = (liters: number) => {
-    if (liters < 1) return `${(liters * 1000).toFixed(0)}mL`
-    return `${liters.toFixed(3)}L`
-  }
+    if (liters < 1) return `${(liters * 1000).toFixed(0)}mL`;
+    return `${liters.toFixed(3)}L`;
+  };
 
   const getEquivalent = (co2Grams: number) => {
     // Simple equivalencies for context
-    const milesInCar = (co2Grams / 404000).toFixed(3) // ~404g CO2 per mile
-    const hoursLight = (impact.energyWh / 10).toFixed(1) // ~10W LED bulb
-    
-    if (co2Grams < 50) return `≈ ${(co2Grams / 21).toFixed(1)} smartphone charges`
-    if (co2Grams < 500) return `≈ ${milesInCar} miles driving`
-    if (co2Grams < 5000) return `≈ ${hoursLight} hours of LED lighting`
-    return `≈ ${(co2Grams / 21000).toFixed(1)} gallons of gasoline`
-  }
+    const milesInCar = (co2Grams / 404000).toFixed(3); // ~404g CO2 per mile
+    const hoursLight = (impact.energyWh / 10).toFixed(1); // ~10W LED bulb
+
+    if (co2Grams < 50) return `≈ ${(co2Grams / 21).toFixed(1)} smartphone charges`;
+    if (co2Grams < 500) return `≈ ${milesInCar} miles driving`;
+    if (co2Grams < 5000) return `≈ ${hoursLight} hours of LED lighting`;
+    return `≈ ${(co2Grams / 21000).toFixed(1)} gallons of gasoline`;
+  };
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
@@ -91,7 +91,7 @@ export function EnvironmentStats({ impact }: EnvironmentStatsProps) {
             Datacenter cooling water
           </p>
           <p className="text-xs text-muted-foreground mt-2">
-            {impact.waterLiters < 0.1 ? 
+            {impact.waterLiters < 0.1 ?
               `≈ ${Math.round(impact.waterLiters * 4)} cups of water` :
               `≈ ${(impact.waterLiters / 3.785).toFixed(2)} gallons`
             }
@@ -99,5 +99,5 @@ export function EnvironmentStats({ impact }: EnvironmentStatsProps) {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

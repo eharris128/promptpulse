@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { HelpCircle, Menu, X } from 'lucide-react'
-import { UserMenu } from './user-menu'
-import { ContactModal } from '../modals/contact-modal'
-import { ThemeToggle } from '../theme-toggle'
+import { useState } from "react";
+import Link from "next/link";
+import { HelpCircle, Menu, X } from "lucide-react";
+import { UserMenu } from "./user-menu";
+import { ContactModal } from "../modals/contact-modal";
+import { ThemeToggle } from "../theme-toggle";
 
 interface TopHeaderProps {
   onLogout: () => void
@@ -13,12 +13,12 @@ interface TopHeaderProps {
   isMobileMenuOpen: boolean
 }
 
-export function TopHeader({ 
-  onLogout, 
-  onMenuClick, 
-  isMobileMenuOpen 
+export function TopHeader({
+  onLogout,
+  onMenuClick,
+  isMobileMenuOpen
 }: TopHeaderProps) {
-  const [isContactModalOpen, setIsContactModalOpen] = useState(false)
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
   return (
     <>
@@ -56,17 +56,17 @@ export function TopHeader({
           </button>
 
           {/* User menu */}
-          <UserMenu 
+          <UserMenu
             onLogout={onLogout}
           />
         </div>
       </header>
 
       {/* Contact Modal */}
-      <ContactModal 
+      <ContactModal
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}
       />
     </>
-  )
+  );
 }

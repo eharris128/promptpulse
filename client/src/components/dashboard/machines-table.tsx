@@ -1,9 +1,9 @@
-'use client'
+"use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCost } from '@/lib/utils'
-import { Machine } from '@/types'
-import { format, parseISO } from 'date-fns'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCost } from "@/lib/utils";
+import { Machine } from "@/types";
+import { format, parseISO } from "date-fns";
 
 interface MachinesTableProps {
   machines: Machine[]
@@ -13,11 +13,11 @@ export function MachinesTable({ machines }: MachinesTableProps) {
 
   const formatDate = (dateString: string) => {
     try {
-      return format(parseISO(dateString), 'MMM dd, yyyy')
+      return format(parseISO(dateString), "MMM dd, yyyy");
     } catch {
-      return dateString
+      return dateString;
     }
-  }
+  };
 
 
   return (
@@ -58,5 +58,5 @@ export function MachinesTable({ machines }: MachinesTableProps) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

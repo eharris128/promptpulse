@@ -1,69 +1,69 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { StatsCards } from '@/components/dashboard/stats-cards'
-import { UsageChart } from '@/components/dashboard/usage-chart'
-import { MachinesTable } from '@/components/dashboard/machines-table'
-import { FixedPlanComparison } from '@/components/dashboard/fixed-plan-comparison'
-import { ProjectsWidget } from '@/components/dashboard/projects-widget'
-import { EmptyState } from '@/components/dashboard/empty-state'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { apiClient } from '@/lib/api'
-import { AggregateData, Machine, ProjectData, LeaderboardData, PlanSettings } from '@/types'
+import { useEffect, useState } from "react";
+import { StatsCards } from "@/components/dashboard/stats-cards";
+import { UsageChart } from "@/components/dashboard/usage-chart";
+import { MachinesTable } from "@/components/dashboard/machines-table";
+import { FixedPlanComparison } from "@/components/dashboard/fixed-plan-comparison";
+import { ProjectsWidget } from "@/components/dashboard/projects-widget";
+import { EmptyState } from "@/components/dashboard/empty-state";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { apiClient } from "@/lib/api";
+import { AggregateData, Machine, ProjectData, LeaderboardData, PlanSettings } from "@/types";
 
 export default function Dashboard() {
-  const [dataLoading, setDataLoading] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [usageData, setUsageData] = useState<AggregateData | null>(null)
-  const [machines, setMachines] = useState<Machine[]>([])
-  const [projectsData, setProjectsData] = useState<ProjectData[]>([])
-  const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null)
-  const [planSettings, setPlanSettings] = useState<PlanSettings | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [dataLoading, setDataLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [usageData, setUsageData] = useState<AggregateData | null>(null);
+  const [machines, setMachines] = useState<Machine[]>([]);
+  const [projectsData, setProjectsData] = useState<ProjectData[]>([]);
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null);
+  const [planSettings, setPlanSettings] = useState<PlanSettings | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadDashboardData()
-  }, [])
+    loadDashboardData();
+  }, []);
 
 
   const loadDashboardData = async (isRefresh = false) => {
     try {
       if (isRefresh) {
-        setIsRefreshing(true)
+        setIsRefreshing(true);
       } else {
-        setDataLoading(true)
+        setDataLoading(true);
       }
-      setError(null)
+      setError(null);
       const [usageResponse, machinesResponse, planResponse, projectsResponse] = await Promise.all([
         apiClient.getUsageAggregate(),
         apiClient.getMachines(),
         apiClient.getPlanSettings(),
         apiClient.getProjects({ limit: 10 })
-      ])
-      
-      setUsageData(usageResponse)
-      setMachines(machinesResponse)
-      setPlanSettings(planResponse)
-      setProjectsData(projectsResponse)
-      
+      ]);
+
+      setUsageData(usageResponse);
+      setMachines(machinesResponse);
+      setPlanSettings(planResponse);
+      setProjectsData(projectsResponse);
+
       try {
-        const leaderboard = await apiClient.getLeaderboard('daily')
-        setLeaderboardData(leaderboard)
+        const leaderboard = await apiClient.getLeaderboard("daily");
+        setLeaderboardData(leaderboard);
       } catch (err) {
-        console.log('Leaderboard not available or user not opted in', err)
+        console.log("Leaderboard not available or user not opted in", err);
       }
     } catch (err) {
-      console.error('Failed to load dashboard data:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load data')
+      console.error("Failed to load dashboard data:", err);
+      setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
       if (isRefresh) {
-        setIsRefreshing(false)
+        setIsRefreshing(false);
       } else {
-        setDataLoading(false)
+        setDataLoading(false);
       }
     }
-  }
+  };
 
 
   return (
@@ -71,12 +71,12 @@ export default function Dashboard() {
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
           <div className="flex items-center space-x-2">
-            <Button 
-              variant="outline" 
-              onClick={() => loadDashboardData(true)} 
+            <Button
+              variant="outline"
+              onClick={() => loadDashboardData(true)}
               disabled={dataLoading || isRefreshing}
             >
-              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              {isRefreshing ? "Refreshing..." : "Refresh"}
             </Button>
           </div>
         </div>
@@ -99,15 +99,15 @@ export default function Dashboard() {
       {!dataLoading && usageData && usageData.totals && planSettings && (
         <>
           {/* Check if user has any usage data - more robust condition */}
-          {(!usageData.totals.total_cost && !usageData.totals.total_tokens) || 
+          {(!usageData.totals.total_cost && !usageData.totals.total_tokens) ||
            (usageData.totals.total_cost <= 0 && usageData.totals.total_tokens <= 0) ? (
             <EmptyState />
           ) : (
             <>
               <StatsCards data={usageData} />
-              <FixedPlanComparison 
-                actualCost={usageData.totals?.total_cost || 0} 
-                userPlan={planSettings.claude_plan} 
+              <FixedPlanComparison
+                actualCost={usageData.totals?.total_cost || 0}
+                userPlan={planSettings.claude_plan}
               />
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
                 <UsageChart data={usageData} type="cost" />
@@ -137,10 +137,10 @@ export default function Dashboard() {
                             {Math.round(((leaderboardData.total_participants - leaderboardData.user_rank + 1) / leaderboardData.total_participants) * 100)}%
                           </span>
                         </div>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           className="w-full mt-4"
-                          onClick={() => window.location.href = '/leaderboard'}
+                          onClick={() => window.location.href = "/leaderboard"}
                         >
                           View Full Leaderboard
                         </Button>
@@ -161,5 +161,5 @@ export default function Dashboard() {
         <EmptyState />
       )}
       </div>
-  )
+  );
 }

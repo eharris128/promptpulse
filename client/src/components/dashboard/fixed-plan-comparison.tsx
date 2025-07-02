@@ -1,9 +1,9 @@
-'use client'
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCost, formatSavings, calculatePlanROI, CLAUDE_PLAN_PRICING } from '@/lib/utils'
-import { ClaudePlan } from '@/types'
-import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCost, formatSavings, calculatePlanROI, CLAUDE_PLAN_PRICING } from "@/lib/utils";
+import { ClaudePlan } from "@/types";
+import { TrendingUp, TrendingDown, DollarSign } from "lucide-react";
 
 interface FixedPlanComparisonProps {
   actualCost: number
@@ -13,13 +13,13 @@ interface FixedPlanComparisonProps {
 export function FixedPlanComparison({ actualCost, userPlan }: FixedPlanComparisonProps) {
   // Don't show the component if there's no actual usage/cost
   if (!actualCost || actualCost === 0) {
-    return null
+    return null;
   }
 
-  const userPlanROI = calculatePlanROI(actualCost, userPlan)
+  const userPlanROI = calculatePlanROI(actualCost, userPlan);
   const otherPlans = (Object.keys(CLAUDE_PLAN_PRICING) as ClaudePlan[])
     .filter(plan => plan !== userPlan)
-    .map(plan => calculatePlanROI(actualCost, plan))
+    .map(plan => calculatePlanROI(actualCost, plan));
 
   return (
     <Card>
@@ -47,12 +47,12 @@ export function FixedPlanComparison({ actualCost, userPlan }: FixedPlanCompariso
             <div className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
               vs {userPlanROI.planName} {formatCost(userPlanROI.planPrice)}
             </div>
-            <div className={`text-xl font-bold ${userPlanROI.isOver ? 'text-green-600' : 'text-yellow-600'}`}>
+            <div className={`text-xl font-bold ${userPlanROI.isOver ? "text-green-600" : "text-yellow-600"}`}>
               {formatSavings(userPlanROI.savings, userPlanROI.isOver)}
             </div>
-            <div className={`flex items-center gap-1 text-sm ${userPlanROI.isOver ? 'text-green-600' : 'text-yellow-600'}`}>
+            <div className={`flex items-center gap-1 text-sm ${userPlanROI.isOver ? "text-green-600" : "text-yellow-600"}`}>
               {userPlanROI.isOver ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-              {userPlanROI.isOver ? 'Great value!' : 'Light usage'}
+              {userPlanROI.isOver ? "Great value!" : "Light usage"}
             </div>
           </div>
 
@@ -62,12 +62,12 @@ export function FixedPlanComparison({ actualCost, userPlan }: FixedPlanCompariso
               <div className="text-sm font-medium mb-2">
                 vs {planROI.planName} {formatCost(planROI.planPrice)}
               </div>
-              <div className={`text-xl font-bold ${planROI.isOver ? 'text-green-600' : 'text-yellow-600'}`}>
+              <div className={`text-xl font-bold ${planROI.isOver ? "text-green-600" : "text-yellow-600"}`}>
                 {formatSavings(planROI.savings, planROI.isOver)}
               </div>
-              <div className={`flex items-center gap-1 text-sm ${planROI.isOver ? 'text-green-600' : 'text-yellow-600'}`}>
+              <div className={`flex items-center gap-1 text-sm ${planROI.isOver ? "text-green-600" : "text-yellow-600"}`}>
                 {planROI.isOver ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                {planROI.isOver ? 'Great value!' : 'Light usage'}
+                {planROI.isOver ? "Great value!" : "Light usage"}
               </div>
             </div>
           ))}
@@ -86,5 +86,5 @@ export function FixedPlanComparison({ actualCost, userPlan }: FixedPlanCompariso
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

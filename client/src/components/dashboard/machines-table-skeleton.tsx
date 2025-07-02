@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function MachinesTableSkeleton() {
   return (
@@ -16,7 +16,7 @@ export function MachinesTableSkeleton() {
             <Skeleton className="h-4 w-20" />
             <Skeleton className="h-4 w-24" />
           </div>
-          
+
           {/* Table rows */}
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="grid grid-cols-3 gap-4 py-2">
@@ -28,5 +28,5 @@ export function MachinesTableSkeleton() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

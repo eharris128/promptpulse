@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { Inter } from 'next/font/google'
-import { ThemeProvider } from '@/components/theme-provider'
-import { AuthProvider } from '@/contexts/auth-context'
-import { AppLayoutWrapper } from '@/components/layout/app-layout-wrapper'
-import './globals.css'
+import { Inter } from "next/font/google";
+import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/contexts/auth-context";
+import { AppLayoutWrapper } from "@/components/layout/app-layout-wrapper";
+import "./globals.css";
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({
   children,
@@ -34,5 +34,5 @@ export default function RootLayout({
         </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }

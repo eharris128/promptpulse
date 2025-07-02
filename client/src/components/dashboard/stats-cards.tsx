@@ -1,16 +1,16 @@
-'use client'
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCost, formatTokens } from '@/lib/utils'
-import { AggregateData } from '@/types'
-import { DollarSign, Zap, ArrowRight, ArrowLeft } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCost, formatTokens } from "@/lib/utils";
+import { AggregateData } from "@/types";
+import { DollarSign, Zap, ArrowRight, ArrowLeft } from "lucide-react";
 
 interface StatsCardsProps {
   data: AggregateData
 }
 
 export function StatsCards({ data }: StatsCardsProps) {
-  const { totals } = data
+  const { totals } = data;
 
   // Ensure totals exists with default values and handle NaN
   const safeTotal = totals || {
@@ -19,11 +19,11 @@ export function StatsCards({ data }: StatsCardsProps) {
     total_input_tokens: 0,
     total_output_tokens: 0,
     total_machines: 0
-  }
+  };
 
   // Additional safety for cost field to handle NaN
   if (isNaN(safeTotal.total_cost)) {
-    safeTotal.total_cost = 0
+    safeTotal.total_cost = 0;
   }
 
   return (
@@ -36,7 +36,7 @@ export function StatsCards({ data }: StatsCardsProps) {
         <CardContent>
           <div className="text-2xl font-bold">{formatCost(safeTotal.total_cost)}</div>
           <p className="text-xs text-muted-foreground">
-            Across {safeTotal.total_machines} machine{safeTotal.total_machines !== 1 ? 's' : ''}
+            Across {safeTotal.total_machines} machine{safeTotal.total_machines !== 1 ? "s" : ""}
           </p>
         </CardContent>
       </Card>
@@ -80,5 +80,5 @@ export function StatsCards({ data }: StatsCardsProps) {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

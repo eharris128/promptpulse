@@ -1,62 +1,62 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { BlocksWidget } from '@/components/dashboard/blocks-widget'
-import { BlocksWidgetSkeleton } from '@/components/dashboard/blocks-widget-skeleton'
-import { Button } from '@/components/ui/button'
-import { apiClient } from '@/lib/api'
-import { BlockData } from '@/types'
+import { useEffect, useState } from "react";
+import { BlocksWidget } from "@/components/dashboard/blocks-widget";
+import { BlocksWidgetSkeleton } from "@/components/dashboard/blocks-widget-skeleton";
+import { Button } from "@/components/ui/button";
+import { apiClient } from "@/lib/api";
+import { BlockData } from "@/types";
 
 export default function SessionsPage() {
-  const [dataLoading, setDataLoading] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [blocksData, setBlocksData] = useState<BlockData[]>([])
-  const [error, setError] = useState<string | null>(null)
+  const [dataLoading, setDataLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [blocksData, setBlocksData] = useState<BlockData[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadSessionsData()
-  }, [])
+    loadSessionsData();
+  }, []);
 
   const loadSessionsData = async (isRefresh = false) => {
     try {
       if (isRefresh) {
-        setIsRefreshing(true)
+        setIsRefreshing(true);
       } else {
-        setDataLoading(true)
+        setDataLoading(true);
       }
-      setError(null)
-      
-      const blocksResponse = await apiClient.getBlocks({ activeOnly: false })
+      setError(null);
+
+      const blocksResponse = await apiClient.getBlocks({ activeOnly: false });
       // Filter out zero-token sessions and limit to 20
       // Handle cases where total_tokens is incorrect but individual token fields have values
       const filteredBlocks = blocksResponse.filter(block => {
         const calculatedTotal = block.input_tokens + block.output_tokens + block.cache_creation_tokens + block.cache_read_tokens;
         return block.total_tokens > 0 || calculatedTotal > 0;
-      })
-      setBlocksData(filteredBlocks.slice(0, 20))
+      });
+      setBlocksData(filteredBlocks.slice(0, 20));
     } catch (err) {
-      console.error('Failed to load sessions data:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load data')
+      console.error("Failed to load sessions data:", err);
+      setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
       if (isRefresh) {
-        setIsRefreshing(false)
+        setIsRefreshing(false);
       } else {
-        setDataLoading(false)
+        setDataLoading(false);
       }
     }
-  }
+  };
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Sessions</h2>
         <div className="flex items-center space-x-2">
-          <Button 
-            variant="outline" 
-            onClick={() => loadSessionsData(true)} 
+          <Button
+            variant="outline"
+            onClick={() => loadSessionsData(true)}
             disabled={dataLoading || isRefreshing}
           >
-            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            {isRefreshing ? "Refreshing..." : "Refresh"}
           </Button>
         </div>
       </div>
@@ -88,5 +88,5 @@ export default function SessionsPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

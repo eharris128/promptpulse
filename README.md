@@ -2,6 +2,9 @@
 
 Track and analyze your Claude Code usage with beautiful dashboards and competitive leaderboards. PromptPulse is a hosted service that automatically collects your usage data and provides insights across all your machines.
 
+[![npm version](https://img.shields.io/npm/v/promptpulse)](https://www.npmjs.com/package/promptpulse)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## Features
 
 - **Secure API key authentication** for private data access

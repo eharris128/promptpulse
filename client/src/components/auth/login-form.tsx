@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { useAuth } from '@/contexts/auth-context'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/auth-context";
 
 export function LoginForm() {
-  const { login } = useAuth()
+  const { login } = useAuth();
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
@@ -21,7 +21,7 @@ export function LoginForm() {
             <Button onClick={login} className="w-full" size="lg">
               Sign In
             </Button>
-            
+
             <div className="text-sm text-muted-foreground text-center">
               <p>Secure authentication powered by Auth0</p>
             </div>
@@ -29,5 +29,5 @@ export function LoginForm() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

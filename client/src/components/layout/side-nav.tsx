@@ -1,9 +1,9 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { BarChart3, Trophy, Settings, Users, Activity, Leaf, X } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { BarChart3, Trophy, Settings, Users, Activity, Leaf, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SideNavProps {
   className?: string
@@ -12,46 +12,46 @@ interface SideNavProps {
 }
 
 export function SideNav({ className, onClose, showCloseButton }: SideNavProps) {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   const navItems = [
-    { 
-      href: '/', 
-      label: 'Dashboard', 
+    {
+      href: "/",
+      label: "Dashboard",
       icon: BarChart3,
-      active: pathname === '/' 
+      active: pathname === "/"
     },
-    { 
-      href: '/sessions', 
-      label: 'Sessions', 
+    {
+      href: "/sessions",
+      label: "Sessions",
       icon: Activity,
-      active: pathname === '/sessions' 
+      active: pathname === "/sessions"
     },
-    { 
-      href: '/leaderboard', 
-      label: 'Leaderboard', 
+    {
+      href: "/leaderboard",
+      label: "Leaderboard",
       icon: Trophy,
-      active: pathname === '/leaderboard' 
+      active: pathname === "/leaderboard"
     },
-    { 
-      href: '/teams', 
-      label: 'Teams', 
+    {
+      href: "/teams",
+      label: "Teams",
       icon: Users,
-      active: pathname === '/teams' || pathname?.startsWith('/teams/') 
+      active: pathname === "/teams" || pathname?.startsWith("/teams/")
     },
-    { 
-      href: '/environment', 
-      label: 'Environment', 
+    {
+      href: "/environment",
+      label: "Environment",
       icon: Leaf,
-      active: pathname === '/environment' 
+      active: pathname === "/environment"
     },
-    { 
-      href: '/settings', 
-      label: 'Settings', 
+    {
+      href: "/settings",
+      label: "Settings",
       icon: Settings,
-      active: pathname === '/settings' 
+      active: pathname === "/settings"
     },
-  ]
+  ];
 
   return (
     <nav className={cn("w-64 bg-card border-r border-border h-full flex flex-col", className)}>
@@ -70,11 +70,11 @@ export function SideNav({ className, onClose, showCloseButton }: SideNavProps) {
           </button>
         </div>
       )}
-      
+
       {/* Navigation Items */}
       <div className="flex-1 px-3 py-4 space-y-1">
         {navItems.map((item) => {
-          const Icon = item.icon
+          const Icon = item.icon;
           return (
             <Link
               key={item.href}
@@ -89,7 +89,7 @@ export function SideNav({ className, onClose, showCloseButton }: SideNavProps) {
               <Icon size={18} />
               <span>{item.label}</span>
             </Link>
-          )
+          );
         })}
       </div>
 
@@ -105,5 +105,5 @@ export function SideNav({ className, onClose, showCloseButton }: SideNavProps) {
         </a>
       </div>
     </nav>
-  )
+  );
 }

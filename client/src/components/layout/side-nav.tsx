@@ -54,7 +54,7 @@ export function SideNav({ className, onClose, showCloseButton }: SideNavProps) {
   ];
 
   return (
-    <nav className={cn("w-64 bg-card border-r border-border h-full flex flex-col", className)}>
+    <nav className={cn("w-64 bg-card border-r border-border h-full flex flex-col", className || "")}>
       {/* Mobile Header */}
       {showCloseButton && onClose && (
         <div className="flex items-center justify-between p-3 border-b border-border">

@@ -29,7 +29,7 @@ export function FixedPlanComparison({ actualCost, userPlan }: FixedPlanCompariso
           Fixed Plan Comparison
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Savings compared to your current billing period
+          Value comparison vs. subscription plans
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -37,9 +37,9 @@ export function FixedPlanComparison({ actualCost, userPlan }: FixedPlanCompariso
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           {/* Current period total */}
           <div className="text-center p-4 rounded-lg border bg-muted/50">
-            <div className="text-sm text-muted-foreground mb-1">Current Billing Period Total</div>
+            <div className="text-sm text-muted-foreground mb-1">Usage Value This Period</div>
             <div className="text-2xl font-bold">{formatCost(actualCost)}</div>
-            <div className="text-xs text-muted-foreground">Pay-per-use</div>
+            <div className="text-xs text-muted-foreground">Estimated API value</div>
           </div>
 
           {/* User's current plan */}
@@ -75,10 +75,10 @@ export function FixedPlanComparison({ actualCost, userPlan }: FixedPlanCompariso
 
         <div className="text-xs text-muted-foreground pt-2 border-t">
           <p>
-            • Shows what your usage would cost if paying per-use, compared to your fixed monthly plan cost
+            • Shows estimated value of your usage vs. your fixed subscription cost (you pay subscription, not these amounts)
           </p>
           <p>
-            • <span className="text-green-600 font-medium">Green</span>: Great value from your plan (usage worth more than plan cost) • <span className="text-yellow-600 font-medium">Yellow</span>: Light usage (room to use more)
+            • <span className="text-green-600 font-medium">Green</span>: Great value from your subscription (token value exceeds plan cost) • <span className="text-yellow-600 font-medium">Yellow</span>: Light usage (room to use more)
           </p>
           <p>
             • Update your plan in Settings to see accurate calculations

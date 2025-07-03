@@ -1,9 +1,11 @@
 "use client";
 
 import { useAuth } from "@/contexts/auth-context";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AppLayout } from "./app-layout";
 import { LoginForm } from "@/components/auth/login-form";
+import { debugLogger } from "@/utils/debug-logger";
+import { useEffect } from "react";
 
 interface AppLayoutWrapperProps {
   children: React.ReactNode
@@ -12,6 +14,30 @@ interface AppLayoutWrapperProps {
 export function AppLayoutWrapper({ children }: AppLayoutWrapperProps) {
   const { isAuthenticated, loading, logout } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    debugLogger.log("AppLayoutWrapper", "Component mounted", {
+      pathname,
+      isAuthenticated,
+      loading
+    });
+  }, []);
+
+  useEffect(() => {
+    debugLogger.log("AppLayoutWrapper", "Route changed", {
+      pathname,
+      timestamp: performance.now()
+    });
+  }, [pathname]);
+
+  useEffect(() => {
+    debugLogger.log("AppLayoutWrapper", "Auth state changed", {
+      isAuthenticated,
+      loading,
+      timestamp: performance.now()
+    });
+  }, [isAuthenticated, loading]);
 
   // Routes that don't require authentication
   const publicRoutes = ["/teams/join/"];

@@ -9,7 +9,7 @@ export function NavigationTest() {
   const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(false);
 
-  const testNavigation = async (href: string, method: "push" | "replace" | "window") => {
+  const testNavigation = async (href: string, method: "push" | "replace" | "window" | "production") => {
     const startTime = performance.now();
 
     debugLogger.log("NavigationTest", `Testing navigation to ${href} via ${method}`, {
@@ -29,6 +29,13 @@ export function NavigationTest() {
           break;
         case "window":
           window.location.href = href;
+          break;
+        case "production":
+          // Same logic as production SideNav
+          if (href !== pathname) {
+            debugLogger.log("NavigationTest", "Using production navigation method", { href });
+            window.location.href = href;
+          }
           break;
       }
 
@@ -102,6 +109,12 @@ export function NavigationTest() {
               className="block w-full text-left px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded text-sm hover:bg-red-200 dark:hover:bg-red-800"
             >
               Sessions (window.location)
+            </button>
+            <button
+              onClick={() => testNavigation("/sessions", "production")}
+              className="block w-full text-left px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-sm hover:bg-green-200 dark:hover:bg-green-800"
+            >
+              Sessions (production method)
             </button>
           </div>
         </div>

@@ -14,6 +14,9 @@ const nextConfig = {
   // Set trailing slash for consistent routing in production
   trailingSlash: process.env.NODE_ENV === "production",
 
+  // Configure static export to support client-side routing
+  distDir: 'out',
+  
   // Experimental features to improve hydration
   experimental: {
     // Don't optimize specific packages that can cause hydration issues

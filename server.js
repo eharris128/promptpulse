@@ -71,16 +71,16 @@ app.use(express.json({ limit: "10mb" })); // Limit payload size for cost protect
 // Configure express-session for Auth0 session management
 app.use(session({
   secret: process.env.AUTH0_SECRET || "your-secret-key",
-  name: 'promptpulse.sid', // Explicit session name
+  name: "promptpulse.sid", // Explicit session name
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === "production" && process.env.FORCE_HTTPS !== "false", // Allow disabling for local testing
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax', // Important for Auth0 redirects
+    sameSite: "lax", // Important for Auth0 redirects
     domain: process.env.COOKIE_DOMAIN || undefined, // Allow setting custom domain
-    path: '/' // Explicit path
+    path: "/" // Explicit path
   }
 }));
 

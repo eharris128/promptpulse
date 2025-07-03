@@ -14,6 +14,20 @@ const nextConfig = {
   // Set trailing slash for consistent routing in production
   trailingSlash: process.env.NODE_ENV === "production",
 
+  // Experimental features to improve hydration
+  experimental: {
+    // Don't optimize specific packages that can cause hydration issues
+    optimizePackageImports: [],
+  },
+
+  // Compiler options for better hydration
+  compiler: {
+    // Remove console logs in production to prevent hydration issues
+    removeConsole: process.env.NODE_ENV === "production" ? {
+      exclude: ['error', 'warn']
+    } : false,
+  },
+
   // Only add rewrites in development to avoid static export warnings
   ...(process.env.NODE_ENV === "development" && {
     async rewrites() {

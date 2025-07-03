@@ -12,9 +12,23 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
     setMounted(true);
   }, []);
 
+  // For static export, always start with light theme to match server
+  // and let client-side logic handle theme switching after mount
   if (!mounted) {
-    return <>{children}</>;
+    return (
+      <div className="light" style={{ colorScheme: 'light' }}>
+        {children}
+      </div>
+    );
   }
 
-  return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
+  return (
+    <NextThemesProvider 
+      {...props}
+      enableColorScheme={false} // Disable automatic color-scheme to prevent script injection
+      enableSystem={true}
+    >
+      {children}
+    </NextThemesProvider>
+  );
 }

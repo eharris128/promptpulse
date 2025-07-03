@@ -8,6 +8,8 @@ import { DebugPanel } from "@/components/debug/debug-panel";
 import { RouterDebug } from "@/components/debug/router-debug";
 import { NavigationTest } from "@/components/debug/navigation-test";
 import { HydrationTest } from "@/components/debug/hydration-test";
+import { ClientOnly } from "@/components/client-only";
+import { HydrationBoundary } from "@/components/hydration-boundary";
 import { debugLogger } from "@/utils/debug-logger";
 import { useEffect } from "react";
 import "./globals.css";
@@ -66,22 +68,30 @@ export default function RootLayout({
         <meta name="description" content="Track and analyze your Claude Code usage across multiple machines" />
       </head>
       <body className={inter.className} suppressHydrationWarning>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AuthProvider>
-            <AppLayoutWrapper>
-              {children}
-            </AppLayoutWrapper>
-            <RouterDebug />
-          </AuthProvider>
-          <HydrationTest />
-          <NavigationTest />
-          <DebugPanel />
-        </ThemeProvider>
+        <HydrationBoundary>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+            storageKey="theme"
+            forcedTheme={undefined}
+          >
+            <AuthProvider>
+              <AppLayoutWrapper>
+                {children}
+              </AppLayoutWrapper>
+              <ClientOnly>
+                <RouterDebug />
+              </ClientOnly>
+            </AuthProvider>
+            <ClientOnly>
+              <HydrationTest />
+              <NavigationTest />
+              <DebugPanel />
+            </ClientOnly>
+          </ThemeProvider>
+        </HydrationBoundary>
       </body>
     </html>
   );

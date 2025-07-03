@@ -22,7 +22,7 @@ export function AppLayoutWrapper({ children }: AppLayoutWrapperProps) {
       isAuthenticated,
       loading
     });
-  }, []);
+  }, [pathname, isAuthenticated, loading]);
 
   useEffect(() => {
     debugLogger.log("AppLayoutWrapper", "Route changed", {

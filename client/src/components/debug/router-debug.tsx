@@ -112,7 +112,7 @@ export function RouterDebug() {
       router.back = originalBack;
       router.forward = originalForward;
     };
-  }, []);
+  }, [pathname, router]);
 
   useEffect(() => {
     debugLogger.log("RouterDebug", "Pathname changed via useEffect", {

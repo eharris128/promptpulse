@@ -18,7 +18,7 @@ export function SideNav({ className, onClose, showCloseButton }: SideNavProps) {
 
   useEffect(() => {
     debugLogger.log("SideNav", "Component mounted", { pathname });
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
     debugLogger.log("SideNav", "Pathname changed", { pathname });

@@ -27,8 +27,8 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState(null);
-  // During static generation, start with loading false to show login form
-  const [loading, setLoading] = useState(typeof window === 'undefined' ? false : true);
+  // Always start with loading true for consistent hydration
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 

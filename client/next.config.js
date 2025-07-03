@@ -14,10 +14,9 @@ const nextConfig = {
   // Set trailing slash for consistent routing in production
   trailingSlash: process.env.NODE_ENV === "production",
 
-  // Proxy auth routes in development only
-  async rewrites() {
-    // In development, proxy auth routes to Express server on port 3000
-    if (process.env.NODE_ENV === "development") {
+  // Only add rewrites in development to avoid static export warnings
+  ...(process.env.NODE_ENV === "development" && {
+    async rewrites() {
       return [
         {
           source: "/auth/:path*",
@@ -25,8 +24,7 @@ const nextConfig = {
         }
       ];
     }
-    return [];
-  }
+  })
 };
 
 module.exports = nextConfig;

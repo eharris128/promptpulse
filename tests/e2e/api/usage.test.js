@@ -18,7 +18,7 @@ test.describe("Usage Data API", () => {
   test.describe("POST /api/usage", () => {
     test("should accept single usage data entry", async () => {
       const response = await apiHelper.post("/api/usage", {
-        apiKey: process.env.TEST_USER_1_API_KEY,
+        bearerToken: process.env.TEST_USER_1_TOKEN,
         data: sampleUsageData
       });
 
@@ -35,7 +35,7 @@ test.describe("Usage Data API", () => {
         delete incompleteData[field];
 
         const response = await apiHelper.post("/api/usage", {
-          apiKey: process.env.TEST_USER_1_API_KEY,
+          bearerToken: process.env.TEST_USER_1_TOKEN,
           data: incompleteData
         });
 
@@ -55,7 +55,7 @@ test.describe("Usage Data API", () => {
       };
 
       const response = await apiHelper.post("/api/usage", {
-        apiKey: process.env.TEST_USER_1_API_KEY,
+        bearerToken: process.env.TEST_USER_1_TOKEN,
         data: dataWithZeros
       });
 
@@ -68,14 +68,14 @@ test.describe("Usage Data API", () => {
       });
 
       expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty("error", "API key required");
+      expect(response.body).toHaveProperty("error", "Authentication required");
     });
   });
 
   test.describe("GET /api/usage/aggregate", () => {
     test("should return aggregated usage data", async () => {
       const response = await apiHelper.get("/api/usage/aggregate", {
-        apiKey: process.env.TEST_USER_1_API_KEY
+        bearerToken: process.env.TEST_USER_1_TOKEN
       });
 
       expect(response.status).toBe(200);
@@ -98,7 +98,7 @@ test.describe("Usage Data API", () => {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
       const response = await apiHelper.get("/api/usage/aggregate", {
-        apiKey: process.env.TEST_USER_1_API_KEY,
+        bearerToken: process.env.TEST_USER_1_TOKEN,
         params: {
           startDate: weekAgo.toISOString(),
           endDate: now.toISOString()
@@ -111,7 +111,7 @@ test.describe("Usage Data API", () => {
 
     test("should filter by machine ID", async () => {
       const response = await apiHelper.get("/api/usage/aggregate", {
-        apiKey: process.env.TEST_USER_1_API_KEY,
+        bearerToken: process.env.TEST_USER_1_TOKEN,
         params: {
           machine_id: "test-machine-1"
         }
@@ -123,7 +123,7 @@ test.describe("Usage Data API", () => {
 
     test("should filter by project path", async () => {
       const response = await apiHelper.get("/api/usage/aggregate", {
-        apiKey: process.env.TEST_USER_1_API_KEY,
+        bearerToken: process.env.TEST_USER_1_TOKEN,
         params: {
           project_path: "/test/project"
         }
@@ -137,7 +137,7 @@ test.describe("Usage Data API", () => {
   test.describe("GET /api/usage/sessions", () => {
     test("should return session data", async () => {
       const response = await apiHelper.get("/api/usage/sessions", {
-        apiKey: process.env.TEST_USER_1_API_KEY
+        bearerToken: process.env.TEST_USER_1_TOKEN
       });
 
       expect(response.status).toBe(200);
@@ -157,7 +157,7 @@ test.describe("Usage Data API", () => {
 
     test("should paginate results", async () => {
       const response = await apiHelper.get("/api/usage/sessions", {
-        apiKey: process.env.TEST_USER_1_API_KEY,
+        bearerToken: process.env.TEST_USER_1_TOKEN,
         params: {
           limit: 5,
           offset: 0
@@ -172,7 +172,7 @@ test.describe("Usage Data API", () => {
   test.describe("GET /api/usage/projects", () => {
     test("should return project-based usage data", async () => {
       const response = await apiHelper.get("/api/usage/projects", {
-        apiKey: process.env.TEST_USER_1_API_KEY
+        bearerToken: process.env.TEST_USER_1_TOKEN
       });
 
       expect(response.status).toBe(200);
@@ -193,7 +193,7 @@ test.describe("Usage Data API", () => {
   test.describe("GET /api/usage/blocks", () => {
     test("should return individual billing blocks", async () => {
       const response = await apiHelper.get("/api/usage/blocks", {
-        apiKey: process.env.TEST_USER_1_API_KEY
+        bearerToken: process.env.TEST_USER_1_TOKEN
       });
 
       expect(response.status).toBe(200);
@@ -203,7 +203,7 @@ test.describe("Usage Data API", () => {
 
     test("should filter by session ID", async () => {
       const response = await apiHelper.get("/api/usage/blocks", {
-        apiKey: process.env.TEST_USER_1_API_KEY,
+        bearerToken: process.env.TEST_USER_1_TOKEN,
         params: {
           session_id: "test-session-1"
         }
@@ -233,7 +233,7 @@ test.describe("Usage Data API", () => {
       };
 
       const response = await apiHelper.post("/api/usage/daily/batch", {
-        apiKey: process.env.TEST_USER_1_API_KEY,
+        bearerToken: process.env.TEST_USER_1_TOKEN,
         data: batchData
       });
 
@@ -263,7 +263,7 @@ test.describe("Usage Data API", () => {
       };
 
       const response = await apiHelper.post("/api/usage/sessions/batch", {
-        apiKey: process.env.TEST_USER_1_API_KEY,
+        bearerToken: process.env.TEST_USER_1_TOKEN,
         data: batchData
       });
 
@@ -290,7 +290,7 @@ test.describe("Usage Data API", () => {
       };
 
       const response = await apiHelper.post("/api/usage/blocks/batch", {
-        apiKey: process.env.TEST_USER_1_API_KEY,
+        bearerToken: process.env.TEST_USER_1_TOKEN,
         data: batchData
       });
 
@@ -306,7 +306,7 @@ test.describe("Usage Data API", () => {
       };
 
       const response = await apiHelper.post("/api/usage/daily/batch", {
-        apiKey: process.env.TEST_USER_1_API_KEY,
+        bearerToken: process.env.TEST_USER_1_TOKEN,
         data: invalidBatch
       });
 
@@ -318,7 +318,7 @@ test.describe("Usage Data API", () => {
       const emptyBatch = { entries: [] };
 
       const response = await apiHelper.post("/api/usage/daily/batch", {
-        apiKey: process.env.TEST_USER_1_API_KEY,
+        bearerToken: process.env.TEST_USER_1_TOKEN,
         data: emptyBatch
       });
 
@@ -330,7 +330,7 @@ test.describe("Usage Data API", () => {
   test.describe("Analytics Endpoints", () => {
     test("GET /api/usage/analytics/patterns should return usage patterns", async () => {
       const response = await apiHelper.get("/api/usage/analytics/patterns", {
-        apiKey: process.env.TEST_USER_1_API_KEY
+        bearerToken: process.env.TEST_USER_1_TOKEN
       });
 
       expect(response.status).toBe(200);
@@ -343,7 +343,7 @@ test.describe("Usage Data API", () => {
 
     test("GET /api/usage/analytics/costs should return cost analytics", async () => {
       const response = await apiHelper.get("/api/usage/analytics/costs", {
-        apiKey: process.env.TEST_USER_1_API_KEY
+        bearerToken: process.env.TEST_USER_1_TOKEN
       });
 
       expect(response.status).toBe(200);
@@ -365,7 +365,7 @@ test.describe("Usage Data API", () => {
       };
 
       const response = await apiHelper.post("/api/upload-history/check", {
-        apiKey: process.env.TEST_USER_1_API_KEY,
+        bearerToken: process.env.TEST_USER_1_TOKEN,
         data: checkData
       });
 

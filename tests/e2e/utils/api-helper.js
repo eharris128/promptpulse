@@ -5,13 +5,15 @@ export class APIHelper {
     this.baseURL = baseURL;
   }
 
-  async createContext(apiKey = null) {
+  async createContext(apiKey = null, bearerToken = null) {
     const headers = {
       "Accept": "application/json",
       "Content-Type": "application/json",
     };
 
-    if (apiKey) {
+    if (bearerToken) {
+      headers["Authorization"] = `Bearer ${bearerToken}`;
+    } else if (apiKey) {
       headers["X-API-Key"] = apiKey;
     }
 
@@ -21,8 +23,8 @@ export class APIHelper {
     });
   }
 
-  async get(endpoint, { apiKey = null, params = {} } = {}) {
-    const context = await this.createContext(apiKey);
+  async get(endpoint, { apiKey = null, bearerToken = null, params = {} } = {}) {
+    const context = await this.createContext(apiKey, bearerToken);
     try {
       const response = await context.get(endpoint, { params });
       return {
@@ -40,8 +42,8 @@ export class APIHelper {
     }
   }
 
-  async post(endpoint, { apiKey = null, data = {} } = {}) {
-    const context = await this.createContext(apiKey);
+  async post(endpoint, { apiKey = null, bearerToken = null, data = {} } = {}) {
+    const context = await this.createContext(apiKey, bearerToken);
     try {
       const response = await context.post(endpoint, { data });
       return {
@@ -59,8 +61,8 @@ export class APIHelper {
     }
   }
 
-  async put(endpoint, { apiKey = null, data = {} } = {}) {
-    const context = await this.createContext(apiKey);
+  async put(endpoint, { apiKey = null, bearerToken = null, data = {} } = {}) {
+    const context = await this.createContext(apiKey, bearerToken);
     try {
       const response = await context.put(endpoint, { data });
       return {
@@ -78,8 +80,8 @@ export class APIHelper {
     }
   }
 
-  async delete(endpoint, { apiKey = null } = {}) {
-    const context = await this.createContext(apiKey);
+  async delete(endpoint, { apiKey = null, bearerToken = null } = {}) {
+    const context = await this.createContext(apiKey, bearerToken);
     try {
       const response = await context.delete(endpoint);
       return {
@@ -111,6 +113,17 @@ export class APIHelper {
     }
     if (response.body?.error !== expectedError) {
       throw new Error(`Expected error "${expectedError}", got "${response.body?.error}"`);
+    }
+    return response.body;
+  }
+
+  // OAuth-specific error validation
+  validateOAuthErrorResponse(response, expectedStatus, expectedErrorPattern) {
+    if (response.status !== expectedStatus) {
+      throw new Error(`Expected status ${expectedStatus}, got ${response.status}`);
+    }
+    if (!response.body?.error?.includes(expectedErrorPattern)) {
+      throw new Error(`Expected error containing "${expectedErrorPattern}", got "${response.body?.error}"`);
     }
     return response.body;
   }

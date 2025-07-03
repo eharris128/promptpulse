@@ -8,7 +8,7 @@ test.describe("Leaderboard API", () => {
     test.beforeAll(async () => {
       // Ensure test user has leaderboard visibility enabled
       await apiHelper.put("/api/user/leaderboard-settings", {
-        apiKey: process.env.TEST_USER_3_API_KEY,
+        bearerToken: process.env.TEST_USER_3_TOKEN,
         data: {
           is_public: true,
           display_name: "LeaderboardTestUser",
@@ -21,7 +21,7 @@ test.describe("Leaderboard API", () => {
     for (const period of periods) {
       test(`should return ${period} leaderboard`, async () => {
         const response = await apiHelper.get(`/api/leaderboard/${period}`, {
-          apiKey: process.env.TEST_USER_1_API_KEY
+          bearerToken: process.env.TEST_USER_1_TOKEN
         });
 
         expect(response.status).toBe(200);
@@ -50,12 +50,12 @@ test.describe("Leaderboard API", () => {
       const response = await apiHelper.get("/api/leaderboard/week");
 
       expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty("error", "API key required");
+      apiHelper.validateOAuthErrorResponse(response, 401, "Authentication required");
     });
 
     test("should validate period parameter", async () => {
       const response = await apiHelper.get("/api/leaderboard/invalid-period", {
-        apiKey: process.env.TEST_USER_1_API_KEY
+        bearerToken: process.env.TEST_USER_1_TOKEN
       });
 
       expect(response.status).toBe(400);
@@ -65,12 +65,12 @@ test.describe("Leaderboard API", () => {
     test("should only show users who opted into public leaderboard", async () => {
       // First, opt user 1 out of leaderboard
       await apiHelper.put("/api/user/leaderboard-settings", {
-        apiKey: process.env.TEST_USER_1_API_KEY,
+        bearerToken: process.env.TEST_USER_1_TOKEN,
         data: { is_public: false }
       });
 
       const response = await apiHelper.get("/api/leaderboard/all", {
-        apiKey: process.env.TEST_USER_1_API_KEY
+        bearerToken: process.env.TEST_USER_1_TOKEN
       });
 
       expect(response.status).toBe(200);
@@ -90,7 +90,7 @@ test.describe("Leaderboard API", () => {
 
     test("should use display names not real names", async () => {
       const response = await apiHelper.get("/api/leaderboard/all", {
-        apiKey: process.env.TEST_USER_3_API_KEY
+        bearerToken: process.env.TEST_USER_3_TOKEN
       });
 
       expect(response.status).toBe(200);
@@ -109,12 +109,12 @@ test.describe("Leaderboard API", () => {
     test("should respect date filters for periods", async () => {
       // Today's leaderboard should only include today's data
       const todayResponse = await apiHelper.get("/api/leaderboard/today", {
-        apiKey: process.env.TEST_USER_3_API_KEY
+        bearerToken: process.env.TEST_USER_3_TOKEN
       });
 
       // Week's leaderboard should include last 7 days
       const weekResponse = await apiHelper.get("/api/leaderboard/week", {
-        apiKey: process.env.TEST_USER_3_API_KEY
+        bearerToken: process.env.TEST_USER_3_TOKEN
       });
 
       expect(todayResponse.status).toBe(200);

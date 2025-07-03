@@ -7,18 +7,22 @@ test.describe("Health and Metrics API", () => {
       const response = await apiHelper.get("/health");
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ status: "OK" });
+      expect(response.body).toHaveProperty("status", "healthy");
+      expect(response.body).toHaveProperty("database", "connected");
+      expect(response.body).toHaveProperty("timestamp");
+      expect(response.body).toHaveProperty("version");
     });
 
     test("GET /api/health/db should check database connectivity", async () => {
       const response = await apiHelper.get("/api/health/db");
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("status", "OK");
-      expect(response.body).toHaveProperty("database", "connected");
+      expect(response.body).toHaveProperty("status", "healthy");
+      expect(response.body).toHaveProperty("database");
+      expect(response.body.database).toHaveProperty("healthy");
+      expect(response.body.database).toHaveProperty("total");
+      expect(response.body.database).toHaveProperty("activeConnections");
       expect(response.body).toHaveProperty("timestamp");
-      expect(response.body).toHaveProperty("uptime");
-      expect(typeof response.body.uptime).toBe("number");
     });
 
     test("should handle database connection errors gracefully", async () => {
@@ -41,24 +45,25 @@ test.describe("Health and Metrics API", () => {
       const response = await apiHelper.get("/api/metrics");
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("uptime");
+      expect(response.body).toHaveProperty("server");
+      expect(response.body).toHaveProperty("database");
       expect(response.body).toHaveProperty("timestamp");
-      expect(response.body).toHaveProperty("memory");
-      expect(response.body).toHaveProperty("process");
+
+      // Validate server metrics
+      expect(response.body.server).toHaveProperty("uptime");
+      expect(response.body.server).toHaveProperty("memory");
+      expect(response.body.server).toHaveProperty("pid");
 
       // Validate memory metrics
-      expect(response.body.memory).toHaveProperty("rss");
-      expect(response.body.memory).toHaveProperty("heapTotal");
-      expect(response.body.memory).toHaveProperty("heapUsed");
-      expect(response.body.memory).toHaveProperty("external");
-      expect(response.body.memory).toHaveProperty("arrayBuffers");
+      expect(response.body.server.memory).toHaveProperty("rss");
+      expect(response.body.server.memory).toHaveProperty("heapTotal");
+      expect(response.body.server.memory).toHaveProperty("heapUsed");
+      expect(response.body.server.memory).toHaveProperty("external");
+      expect(response.body.server.memory).toHaveProperty("arrayBuffers");
 
-      // Validate process info
-      expect(response.body.process).toHaveProperty("pid");
-      expect(response.body.process).toHaveProperty("version");
-      expect(response.body.process).toHaveProperty("platform");
-      expect(response.body.process).toHaveProperty("arch");
-      expect(response.body.process).toHaveProperty("node_env", "test");
+      // Validate process info (pid is directly on server object)
+      expect(response.body.server).toHaveProperty("pid");
+      expect(typeof response.body.server.pid).toBe("number");
     });
 
     test("metrics values should be reasonable", async () => {
@@ -67,17 +72,16 @@ test.describe("Health and Metrics API", () => {
       expect(response.status).toBe(200);
 
       // Uptime should be positive
-      expect(response.body.uptime).toBeGreaterThan(0);
+      expect(response.body.server.uptime).toBeGreaterThan(0);
 
       // Memory values should be positive numbers
-      expect(response.body.memory.rss).toBeGreaterThan(0);
-      expect(response.body.memory.heapTotal).toBeGreaterThan(0);
-      expect(response.body.memory.heapUsed).toBeGreaterThan(0);
-      expect(response.body.memory.heapUsed).toBeLessThanOrEqual(response.body.memory.heapTotal);
+      expect(response.body.server.memory.rss).toBeGreaterThan(0);
+      expect(response.body.server.memory.heapTotal).toBeGreaterThan(0);
+      expect(response.body.server.memory.heapUsed).toBeGreaterThan(0);
+      expect(response.body.server.memory.heapUsed).toBeLessThanOrEqual(response.body.server.memory.heapTotal);
 
       // Process info validation
-      expect(response.body.process.pid).toBeGreaterThan(0);
-      expect(response.body.process.version).toMatch(/^v\d+\.\d+\.\d+/);
+      expect(response.body.server.pid).toBeGreaterThan(0);
     });
 
     test("metrics endpoint should not require authentication", async () => {
@@ -87,7 +91,7 @@ test.describe("Health and Metrics API", () => {
 
       // Test with API key (should also work)
       const responseWithKey = await apiHelper.get("/api/metrics", {
-        apiKey: process.env.TEST_USER_1_API_KEY
+        bearerToken: process.env.TEST_USER_1_TOKEN
       });
       expect(responseWithKey.status).toBe(200);
     });

@@ -13,7 +13,7 @@ test.describe("Teams Management API", () => {
       };
 
       const response = await apiHelper.post("/api/teams", {
-        apiKey: process.env.TEST_USER_1_API_KEY,
+        bearerToken: process.env.TEST_USER_1_TOKEN,
         data: teamData
       });
 
@@ -34,7 +34,7 @@ test.describe("Teams Management API", () => {
 
     test("should validate required fields", async () => {
       const response = await apiHelper.post("/api/teams", {
-        apiKey: process.env.TEST_USER_1_API_KEY,
+        bearerToken: process.env.TEST_USER_1_TOKEN,
         data: { description: "No name provided" }
       });
 
@@ -54,7 +54,7 @@ test.describe("Teams Management API", () => {
   test.describe("GET /api/teams - List Teams", () => {
     test("should list user teams", async () => {
       const response = await apiHelper.get("/api/teams", {
-        apiKey: process.env.TEST_USER_1_API_KEY
+        bearerToken: process.env.TEST_USER_1_TOKEN
       });
 
       expect(response.status).toBe(200);
@@ -69,7 +69,7 @@ test.describe("Teams Management API", () => {
 
     test("different users should see different teams", async () => {
       const response = await apiHelper.get("/api/teams", {
-        apiKey: process.env.TEST_USER_2_API_KEY
+        bearerToken: process.env.TEST_USER_2_TOKEN
       });
 
       expect(response.status).toBe(200);
@@ -84,7 +84,7 @@ test.describe("Teams Management API", () => {
   test.describe("GET /api/teams/:teamId/members - Team Members", () => {
     test("should list team members", async () => {
       const response = await apiHelper.get(`/api/teams/${createdTeamId}/members`, {
-        apiKey: process.env.TEST_USER_1_API_KEY
+        bearerToken: process.env.TEST_USER_1_TOKEN
       });
 
       expect(response.status).toBe(200);
@@ -100,7 +100,7 @@ test.describe("Teams Management API", () => {
 
     test("non-members cannot view team members", async () => {
       const response = await apiHelper.get(`/api/teams/${createdTeamId}/members`, {
-        apiKey: process.env.TEST_USER_2_API_KEY
+        bearerToken: process.env.TEST_USER_2_TOKEN
       });
 
       expect(response.status).toBe(403);
@@ -123,7 +123,7 @@ test.describe("Teams Management API", () => {
 
     test("POST /api/teams/join/:inviteCode should allow joining team", async () => {
       const response = await apiHelper.post(`/api/teams/join/${inviteCode}`, {
-        apiKey: process.env.TEST_USER_2_API_KEY
+        bearerToken: process.env.TEST_USER_2_TOKEN
       });
 
       expect(response.status).toBe(200);
@@ -134,7 +134,7 @@ test.describe("Teams Management API", () => {
 
     test("should not allow joining same team twice", async () => {
       const response = await apiHelper.post(`/api/teams/join/${inviteCode}`, {
-        apiKey: process.env.TEST_USER_2_API_KEY
+        bearerToken: process.env.TEST_USER_2_TOKEN
       });
 
       expect(response.status).toBe(409);
@@ -144,7 +144,7 @@ test.describe("Teams Management API", () => {
 
     test("should handle invalid invite codes", async () => {
       const response = await apiHelper.post("/api/teams/join/INVALID_CODE", {
-        apiKey: process.env.TEST_USER_3_API_KEY
+        bearerToken: process.env.TEST_USER_3_TOKEN
       });
 
       expect(response.status).toBe(404);
@@ -160,7 +160,7 @@ test.describe("Teams Management API", () => {
       };
 
       const response = await apiHelper.put(`/api/teams/${createdTeamId}`, {
-        apiKey: process.env.TEST_USER_1_API_KEY,
+        bearerToken: process.env.TEST_USER_1_TOKEN,
         data: updateData
       });
 
@@ -171,7 +171,7 @@ test.describe("Teams Management API", () => {
 
     test("members should not be able to update team", async () => {
       const response = await apiHelper.put(`/api/teams/${createdTeamId}`, {
-        apiKey: process.env.TEST_USER_2_API_KEY,
+        bearerToken: process.env.TEST_USER_2_TOKEN,
         data: { name: "Unauthorized Update" }
       });
 
@@ -184,7 +184,7 @@ test.describe("Teams Management API", () => {
     test("DELETE /api/teams/:teamId/members/me - Leave team", async () => {
       // User 2 leaves the team
       const response = await apiHelper.delete(`/api/teams/${createdTeamId}/members/me`, {
-        apiKey: process.env.TEST_USER_2_API_KEY
+        bearerToken: process.env.TEST_USER_2_TOKEN
       });
 
       expect(response.status).toBe(200);
@@ -192,7 +192,7 @@ test.describe("Teams Management API", () => {
 
       // Verify they're no longer a member
       const teamsResponse = await apiHelper.get("/api/teams", {
-        apiKey: process.env.TEST_USER_2_API_KEY
+        bearerToken: process.env.TEST_USER_2_TOKEN
       });
       const isStillMember = teamsResponse.body.teams.some(t => t.id === createdTeamId);
       expect(isStillMember).toBe(false);
@@ -200,7 +200,7 @@ test.describe("Teams Management API", () => {
 
     test("owner cannot leave their own team", async () => {
       const response = await apiHelper.delete(`/api/teams/${createdTeamId}/members/me`, {
-        apiKey: process.env.TEST_USER_1_API_KEY
+        bearerToken: process.env.TEST_USER_1_TOKEN
       });
 
       expect(response.status).toBe(403);
@@ -211,13 +211,13 @@ test.describe("Teams Management API", () => {
     test("DELETE /api/teams/:teamId/members/:userId - Remove member", async () => {
       // First, have user 3 join the team
       await apiHelper.post(`/api/teams/join/${inviteCode}`, {
-        apiKey: process.env.TEST_USER_3_API_KEY
+        bearerToken: process.env.TEST_USER_3_TOKEN
       });
 
       // Owner removes user 3
       const response = await apiHelper.delete(
         `/api/teams/${createdTeamId}/members/${process.env.TEST_USER_3_ID}`,
-        { apiKey: process.env.TEST_USER_1_API_KEY }
+        { bearerToken: process.env.TEST_USER_1_TOKEN }
       );
 
       expect(response.status).toBe(200);
@@ -227,13 +227,13 @@ test.describe("Teams Management API", () => {
     test("members cannot remove other members", async () => {
       // User 2 rejoins
       await apiHelper.post(`/api/teams/join/${inviteCode}`, {
-        apiKey: process.env.TEST_USER_2_API_KEY
+        bearerToken: process.env.TEST_USER_2_TOKEN
       });
 
       // User 2 tries to remove user 1 (owner)
       const response = await apiHelper.delete(
         `/api/teams/${createdTeamId}/members/${process.env.TEST_USER_1_ID}`,
-        { apiKey: process.env.TEST_USER_2_API_KEY }
+        { bearerToken: process.env.TEST_USER_2_TOKEN }
       );
 
       expect(response.status).toBe(403);
@@ -247,7 +247,7 @@ test.describe("Teams Management API", () => {
       for (const period of periods) {
         const response = await apiHelper.get(
           `/api/teams/${createdTeamId}/leaderboard/${period}`,
-          { apiKey: process.env.TEST_USER_1_API_KEY }
+          { bearerToken: process.env.TEST_USER_1_TOKEN }
         );
 
         expect(response.status).toBe(200);
@@ -269,7 +269,7 @@ test.describe("Teams Management API", () => {
     test("non-members cannot view team leaderboard", async () => {
       const response = await apiHelper.get(
         `/api/teams/${createdTeamId}/leaderboard/week`,
-        { apiKey: process.env.TEST_USER_3_API_KEY }
+        { bearerToken: process.env.TEST_USER_3_TOKEN }
       );
 
       expect(response.status).toBe(403);
@@ -278,7 +278,7 @@ test.describe("Teams Management API", () => {
     test("should validate period parameter", async () => {
       const response = await apiHelper.get(
         `/api/teams/${createdTeamId}/leaderboard/invalid-period`,
-        { apiKey: process.env.TEST_USER_1_API_KEY }
+        { bearerToken: process.env.TEST_USER_1_TOKEN }
       );
 
       expect(response.status).toBe(400);
@@ -292,7 +292,7 @@ test.describe("Teams Management API", () => {
       const response = await apiHelper.put(
         `/api/teams/${createdTeamId}/members/${process.env.TEST_USER_2_ID}/promote`,
         {
-          apiKey: process.env.TEST_USER_1_API_KEY,
+          bearerToken: process.env.TEST_USER_1_TOKEN,
           data: { new_role: "admin" }
         }
       );
@@ -305,14 +305,14 @@ test.describe("Teams Management API", () => {
     test("only owners can promote members", async () => {
       // User 3 joins again
       await apiHelper.post(`/api/teams/join/${inviteCode}`, {
-        apiKey: process.env.TEST_USER_3_API_KEY
+        bearerToken: process.env.TEST_USER_3_TOKEN
       });
 
       // Admin (User 2) tries to promote User 3
       const response = await apiHelper.put(
         `/api/teams/${createdTeamId}/members/${process.env.TEST_USER_3_ID}/promote`,
         {
-          apiKey: process.env.TEST_USER_2_API_KEY,
+          bearerToken: process.env.TEST_USER_2_TOKEN,
           data: { new_role: "admin" }
         }
       );
@@ -324,7 +324,7 @@ test.describe("Teams Management API", () => {
       const response = await apiHelper.put(
         `/api/teams/${createdTeamId}/members/${process.env.TEST_USER_2_ID}/promote`,
         {
-          apiKey: process.env.TEST_USER_1_API_KEY,
+          bearerToken: process.env.TEST_USER_1_TOKEN,
           data: { new_role: "superuser" } // Invalid role
         }
       );

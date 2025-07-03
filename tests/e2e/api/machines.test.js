@@ -5,7 +5,7 @@ test.describe("Machines API", () => {
   test.describe("GET /api/machines", () => {
     test("should return user machines", async () => {
       const response = await apiHelper.get("/api/machines", {
-        apiKey: process.env.TEST_USER_1_API_KEY
+        bearerToken: process.env.TEST_USER_1_TOKEN
       });
 
       expect(response.status).toBe(200);
@@ -27,16 +27,16 @@ test.describe("Machines API", () => {
       const response = await apiHelper.get("/api/machines");
 
       expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty("error", "API key required");
+      expect(response.body).toHaveProperty("error", "Authentication required");
     });
 
     test("should isolate machines by user", async () => {
       const user1Response = await apiHelper.get("/api/machines", {
-        apiKey: process.env.TEST_USER_1_API_KEY
+        bearerToken: process.env.TEST_USER_1_TOKEN
       });
 
       const user2Response = await apiHelper.get("/api/machines", {
-        apiKey: process.env.TEST_USER_2_API_KEY
+        bearerToken: process.env.TEST_USER_2_TOKEN
       });
 
       expect(user1Response.status).toBe(200);
@@ -59,7 +59,7 @@ test.describe("Machines API", () => {
 
     test("should order machines by last_seen desc", async () => {
       const response = await apiHelper.get("/api/machines", {
-        apiKey: process.env.TEST_USER_1_API_KEY
+        bearerToken: process.env.TEST_USER_1_TOKEN
       });
 
       expect(response.status).toBe(200);
@@ -77,7 +77,7 @@ test.describe("Machines API", () => {
 
     test("should include usage statistics", async () => {
       const response = await apiHelper.get("/api/machines", {
-        apiKey: process.env.TEST_USER_1_API_KEY
+        bearerToken: process.env.TEST_USER_1_TOKEN
       });
 
       expect(response.status).toBe(200);

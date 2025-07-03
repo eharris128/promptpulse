@@ -3,9 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import { Database } from "@sqlitecloud/drivers";
-import bcrypt from "bcrypt";
-import crypto from "crypto";
-import { initializeDbManager } from "../../../lib/db-manager.js";
+import oauthHelper from "./oauth-helper.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,11 +32,41 @@ class TestDatabase {
       console.warn("⚠️  DATABASE_URL not configured in .env.test");
       console.warn("   Using mock setup for development. Please configure a real test database for full testing.");
 
-      // Skip database setup but create mock test users
+      // Skip database setup but create mock test users for OAuth
       this.testUsers = [
-        { id: "test-user-1", api_key: "test-api-key-1", username: "testuser1", email: "test1@example.com" },
-        { id: "test-user-2", api_key: "test-api-key-2", username: "testuser2", email: "test2@example.com" },
-        { id: "test-user-3", api_key: "test-api-key-3", username: "leaderboarduser", email: "leaderboard@example.com" }
+        { 
+          id: "test-user-1", 
+          username: "testuser1", 
+          email: "test1@example.com", 
+          auth0_id: "auth0|test-user-1",
+          bearer_token: oauthHelper.generateMockToken({
+            sub: "auth0|test-user-1",
+            email: "test1@example.com",
+            nickname: "testuser1"
+          })
+        },
+        { 
+          id: "test-user-2", 
+          username: "testuser2", 
+          email: "test2@example.com", 
+          auth0_id: "auth0|test-user-2",
+          bearer_token: oauthHelper.generateMockToken({
+            sub: "auth0|test-user-2",
+            email: "test2@example.com",
+            nickname: "testuser2"
+          })
+        },
+        { 
+          id: "test-user-3", 
+          username: "leaderboarduser", 
+          email: "leaderboard@example.com", 
+          auth0_id: "auth0|test-user-3",
+          bearer_token: oauthHelper.generateMockToken({
+            sub: "auth0|test-user-3",
+            email: "leaderboard@example.com",
+            nickname: "leaderboarduser"
+          })
+        }
       ];
       return;
     }
@@ -53,7 +81,10 @@ class TestDatabase {
       throw error;
     }
 
-    // Create test users
+    // Verify schema is correct before proceeding
+    await this.verifySchema();
+
+    // Create test users with the correct OAuth schema
     await this.createTestUsers();
   }
 
@@ -62,20 +93,23 @@ class TestDatabase {
     const migrationsScript = path.join(__dirname, "../../../scripts/run-goose-migrations.js");
 
     try {
-      // First, clear any existing data
-      await this.clearDatabase();
-
+      // DON'T drop tables before migrations - just run migrations to ensure tables exist
+      // Goose will handle creating tables if they don't exist
+      
       // Run migrations using Node.js script (works with SQLite Cloud)
       execSync(`node "${migrationsScript}"`, {
         stdio: "inherit",
         env: { ...process.env, NODE_ENV: "test" }
       });
+      
+      // After migrations, clean data from tables (but keep schema)
+      await this.cleanAllData();
     } catch (error) {
       throw new Error(`Migration execution failed: ${error.message}`);
     }
   }
 
-  async clearDatabase() {
+  async cleanAllData() {
     const db = await this.connect();
 
     // Get all tables except sqlite system tables and goose version table
@@ -89,113 +123,72 @@ class TestDatabase {
 
     // Disable foreign keys for cleanup
     try {
-      await db.sql`PRAGMA foreign_keys = OFF`;
+      await db.exec("PRAGMA foreign_keys = OFF");
     } catch (error) {
       console.warn("Could not disable foreign keys:", error.message);
     }
 
-    // Drop all tables to ensure clean slate
-    for (const table of tables) {
-      try {
-        await db.sql`DROP TABLE IF EXISTS ${table.name}`;
-        console.log(`Dropped table: ${table.name}`);
-      } catch (error) {
-        console.warn(`Warning: Could not drop table ${table.name}:`, error.message);
+    // Clean all data from tables in proper order to handle foreign key dependencies
+    // Order matters: clean child tables before parent tables
+    const cleanupOrder = [
+      'email_send_log',
+      'team_invitations', 
+      'team_members',
+      'user_email_preferences',
+      'upload_history',
+      'usage_blocks',
+      'usage_sessions', 
+      'usage_data',
+      'teams',
+      'users'
+    ];
+    
+    // Clean tables in dependency order
+    for (const tableName of cleanupOrder) {
+      const table = tables.find(t => t.name === tableName);
+      if (table) {
+        try {
+          // Use exec() with string concatenation to avoid parameter interpolation issues
+          await db.exec(`DELETE FROM "${table.name}"`);
+          console.log(`Cleaned data from table: ${table.name}`);
+        } catch (error) {
+          console.warn(`Warning: Could not clean table ${table.name}:`, error.message);
+        }
       }
     }
 
     // Re-enable foreign keys
     try {
-      await db.sql`PRAGMA foreign_keys = ON`;
+      await db.exec("PRAGMA foreign_keys = ON");
     } catch (error) {
       console.warn("Could not re-enable foreign keys:", error.message);
     }
   }
 
-  async setupTablesManually(db) {
-    // Create essential tables for testing
-    const tables = [
-      `CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        username TEXT UNIQUE NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        api_key_hash TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      )`,
-      `CREATE TABLE IF NOT EXISTS user_leaderboard_settings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL REFERENCES users(id),
-        is_public BOOLEAN DEFAULT false,
-        display_name TEXT,
-        is_team_visible BOOLEAN DEFAULT false,
-        team_display_name TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-      )`,
-      `CREATE TABLE IF NOT EXISTS user_email_preferences (
-        user_id TEXT PRIMARY KEY REFERENCES users(id),
-        weekly_report BOOLEAN DEFAULT true,
-        monthly_report BOOLEAN DEFAULT true,
-        achievement_notifications BOOLEAN DEFAULT true,
-        team_updates BOOLEAN DEFAULT true,
-        product_updates BOOLEAN DEFAULT false,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-      )`,
-      `CREATE TABLE IF NOT EXISTS usage_data (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        machine_id TEXT NOT NULL,
-        session_id TEXT NOT NULL,
-        project_path TEXT,
-        model TEXT NOT NULL,
-        input_tokens INTEGER DEFAULT 0,
-        output_tokens INTEGER DEFAULT 0,
-        cache_write_tokens INTEGER DEFAULT 0,
-        cache_read_tokens INTEGER DEFAULT 0,
-        total_cost REAL DEFAULT 0,
-        timestamp TEXT NOT NULL,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      )`,
-      `CREATE TABLE IF NOT EXISTS daily_usage (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        machine_id TEXT NOT NULL,
-        date TEXT NOT NULL,
-        total_sessions INTEGER DEFAULT 0,
-        total_blocks INTEGER DEFAULT 0,
-        total_input_tokens INTEGER DEFAULT 0,
-        total_output_tokens INTEGER DEFAULT 0,
-        total_cache_write_tokens INTEGER DEFAULT 0,
-        total_cache_read_tokens INTEGER DEFAULT 0,
-        total_cost REAL DEFAULT 0,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-      )`,
-      `CREATE TABLE IF NOT EXISTS teams (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        description TEXT,
-        invite_code TEXT UNIQUE NOT NULL,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-      )`,
-      `CREATE TABLE IF NOT EXISTS team_members (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        team_id TEXT NOT NULL REFERENCES teams(id),
-        user_id TEXT NOT NULL REFERENCES users(id),
-        role TEXT NOT NULL DEFAULT 'member',
-        joined_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(team_id, user_id)
-      )`
-    ];
-
-    for (const sql of tables) {
-      await db.sql(sql);
+  async verifySchema() {
+    console.log("🔍 Verifying database schema...");
+    const db = await this.connect();
+    
+    try {
+      // Check that users table has correct OAuth schema
+      const columns = await db.sql`PRAGMA table_info(users)`;
+      const hasAuth0Id = columns.some(col => col.name === 'auth0_id');
+      const hasApiKeyHash = columns.some(col => col.name === 'api_key_hash');
+      
+      if (!hasAuth0Id) {
+        throw new Error("❌ Users table missing auth0_id column - OAuth schema not applied");
+      }
+      
+      if (hasApiKeyHash) {
+        throw new Error("❌ Users table still has api_key_hash column - old schema detected");
+      }
+      
+      console.log("✅ Schema verification passed - OAuth schema is correct");
+      
+    } catch (error) {
+      console.error("❌ Schema verification failed:", error.message);
+      throw error;
     }
-
-    console.log("Test tables created successfully");
   }
 
   async createTestUsers() {
@@ -206,65 +199,85 @@ class TestDatabase {
 
     const db = await this.connect();
 
-    // Create main test user
-    const mainUser = {
-      id: "test-user-1",
-      username: "testuser1",
-      email: "test1@example.com",
-      api_key: "test-api-key-1",
-      api_key_hash: await bcrypt.hash("test-api-key-1", 10),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    // Define test users with OAuth schema
+    const testUserDefinitions = [
+      {
+        id: "test-user-1",
+        username: "testuser1",
+        email: "test1@example.com",
+        auth0_id: "auth0|test-user-1"
+      },
+      {
+        id: "test-user-2",
+        username: "testuser2",
+        email: "test2@example.com",
+        auth0_id: "auth0|test-user-2"
+      },
+      {
+        id: "test-user-3",
+        username: "leaderboarduser",
+        email: "leaderboard@example.com",
+        auth0_id: "auth0|test-user-3"
+      }
+    ];
 
-    // Create secondary test user for team tests
-    const secondUser = {
-      id: "test-user-2",
-      username: "testuser2",
-      email: "test2@example.com",
-      api_key: "test-api-key-2",
-      api_key_hash: await bcrypt.hash("test-api-key-2", 10),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    // Create user for leaderboard tests (with opt-in)
-    const leaderboardUser = {
-      id: "test-user-3",
-      username: "leaderboarduser",
-      email: "leaderboard@example.com",
-      api_key: "test-api-key-3",
-      api_key_hash: await bcrypt.hash("test-api-key-3", 10),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    // Insert users with conflict handling
-    for (const user of [mainUser, secondUser, leaderboardUser]) {
+    console.log("🔧 Creating test users with OAuth authentication...");
+    
+    // Create and insert test users
+    for (const userDef of testUserDefinitions) {
       try {
+        // Generate OAuth token
+        const bearerToken = oauthHelper.generateMockToken({
+          sub: userDef.auth0_id,
+          email: userDef.email,
+          nickname: userDef.username
+        });
+
+        // Create complete user object
+        const user = {
+          ...userDef,
+          bearer_token: bearerToken,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        // Insert into database
         await db.sql`
-          INSERT OR REPLACE INTO users (id, username, email, api_key_hash, created_at, updated_at)
+          INSERT OR REPLACE INTO users (id, username, email, auth0_id, created_at, updated_at)
           VALUES (${user.id}, ${user.username}, ${user.email}, 
-                  ${user.api_key_hash}, ${user.created_at}, ${user.updated_at})
+                  ${user.auth0_id}, ${user.created_at}, ${user.updated_at})
         `;
+
+        // Add to test users array
         this.testUsers.push(user);
-        console.log(`Created test user: ${user.username} (${user.id})`);
+        console.log(`✅ Created user: ${user.username} (${user.id})`);
+        
       } catch (error) {
-        console.warn(`Warning: Could not create user ${user.id}:`, error.message);
-        // Still add to testUsers array for consistency
-        this.testUsers.push(user);
+        console.error(`❌ Failed to create user ${userDef.username}:`, error.message);
+        throw new Error(`User creation failed for ${userDef.username}: ${error.message}`);
       }
     }
 
-    // Set up leaderboard settings for the third user (with conflict handling)
-    try {
-      await db.sql`
-        INSERT OR REPLACE INTO user_leaderboard_settings (user_id, is_public, display_name, is_team_visible, team_display_name)
-        VALUES (${leaderboardUser.id}, true, 'LeaderboardDisplay', true, 'TeamLeaderboard')
-      `;
-    } catch (error) {
-      console.warn("Warning: Could not create leaderboard settings:", error.message);
+    // Configure leaderboard settings for test user 3
+    const leaderboardUser = this.testUsers.find(u => u.username === "leaderboarduser");
+    if (leaderboardUser) {
+      try {
+        await db.sql`
+          UPDATE users 
+          SET leaderboard_enabled = 1, 
+              team_leaderboard_enabled = 1,
+              display_name = 'LeaderboardDisplay',
+              team_display_name = 'TeamLeaderboard',
+              leaderboard_updated_at = CURRENT_TIMESTAMP
+          WHERE id = ${leaderboardUser.id}
+        `;
+        console.log(`✅ Leaderboard settings configured for: ${leaderboardUser.username}`);
+      } catch (error) {
+        console.warn("Warning: Could not update leaderboard settings:", error.message);
+      }
     }
+
+    console.log(`✅ Successfully created ${this.testUsers.length} test users with OAuth authentication`);
 
     // Add some test usage data
     await this.seedUsageData();
@@ -273,48 +286,98 @@ class TestDatabase {
   async seedUsageData() {
     const db = await this.connect();
     const now = new Date();
+    const today = now.toISOString().split("T")[0]; // YYYY-MM-DD format
 
-    // Add usage data for main test user
-    const usageData = {
-      user_id: "test-user-1",
-      machine_id: "test-machine-1",
-      session_id: "test-session-1",
-      project_path: "/test/project",
-      model: "claude-3-opus-20240229",
-      input_tokens: 1000,
-      output_tokens: 500,
-      cache_write_tokens: 100,
-      cache_read_tokens: 50,
-      total_cost: 0.025,
-      timestamp: now.toISOString(),
-      created_at: now.toISOString()
-    };
+    try {
+      // Add daily aggregate data to usage_data table
+      const dailyUsageData = {
+        user_id: "test-user-1",
+        machine_id: "test-machine-1",
+        date: today,
+        input_tokens: 1000,
+        output_tokens: 500,
+        cache_creation_tokens: 100,
+        cache_read_tokens: 50,
+        total_tokens: 1650,
+        total_cost: 0.025,
+        models_used: JSON.stringify(["claude-3-opus-20240229"]),
+        model_breakdowns: JSON.stringify({
+          "claude-3-opus-20240229": {
+            input_tokens: 1000,
+            output_tokens: 500,
+            cache_creation_tokens: 100,
+            cache_read_tokens: 50,
+            total_cost: 0.025
+          }
+        }),
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      };
 
-    await db.sql`
-      INSERT INTO usage_data (
-        user_id, machine_id, session_id, project_path, model,
-        input_tokens, output_tokens, cache_write_tokens, cache_read_tokens,
-        total_cost, timestamp, created_at
-      ) VALUES (
-        ${usageData.user_id}, ${usageData.machine_id}, ${usageData.session_id}, 
-        ${usageData.project_path}, ${usageData.model}, ${usageData.input_tokens}, 
-        ${usageData.output_tokens}, ${usageData.cache_write_tokens}, 
-        ${usageData.cache_read_tokens}, ${usageData.total_cost}, 
-        ${usageData.timestamp}, ${usageData.created_at}
-      )
-    `;
+      await db.sql`
+        INSERT OR REPLACE INTO usage_data (
+          user_id, machine_id, date, input_tokens, output_tokens, 
+          cache_creation_tokens, cache_read_tokens, total_tokens, total_cost,
+          models_used, model_breakdowns, created_at, updated_at
+        ) VALUES (
+          ${dailyUsageData.user_id}, ${dailyUsageData.machine_id}, ${dailyUsageData.date},
+          ${dailyUsageData.input_tokens}, ${dailyUsageData.output_tokens},
+          ${dailyUsageData.cache_creation_tokens}, ${dailyUsageData.cache_read_tokens},
+          ${dailyUsageData.total_tokens}, ${dailyUsageData.total_cost},
+          ${dailyUsageData.models_used}, ${dailyUsageData.model_breakdowns},
+          ${dailyUsageData.created_at}, ${dailyUsageData.updated_at}
+        )
+      `;
 
-    // Add daily aggregate data
-    await db.sql`
-      INSERT INTO daily_usage (
-        user_id, machine_id, date, total_sessions, total_blocks,
-        total_input_tokens, total_output_tokens, total_cache_write_tokens,
-        total_cache_read_tokens, total_cost, created_at, updated_at
-      ) VALUES (
-        'test-user-1', 'test-machine-1', ${now.toISOString().split("T")[0]},
-        1, 5, 1000, 500, 100, 50, 0.025, ${now.toISOString()}, ${now.toISOString()}
-      )
-    `;
+      // Add session-level data to usage_sessions table
+      const sessionData = {
+        user_id: "test-user-1",
+        machine_id: "test-machine-1",
+        session_id: "test-session-1",
+        project_path: "/test/project",
+        start_time: new Date(now.getTime() - 3600000).toISOString(), // 1 hour ago
+        end_time: now.toISOString(),
+        duration_minutes: 60,
+        input_tokens: 1000,
+        output_tokens: 500,
+        cache_creation_tokens: 100,
+        cache_read_tokens: 50,
+        total_tokens: 1650,
+        total_cost: 0.025,
+        models_used: JSON.stringify(["claude-3-opus-20240229"]),
+        model_breakdowns: JSON.stringify({
+          "claude-3-opus-20240229": {
+            input_tokens: 1000,
+            output_tokens: 500,
+            cache_creation_tokens: 100,
+            cache_read_tokens: 50,
+            total_cost: 0.025
+          }
+        }),
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      };
+
+      await db.sql`
+        INSERT OR REPLACE INTO usage_sessions (
+          user_id, machine_id, session_id, project_path, start_time, end_time,
+          duration_minutes, input_tokens, output_tokens, cache_creation_tokens,
+          cache_read_tokens, total_tokens, total_cost, models_used, model_breakdowns,
+          created_at, updated_at
+        ) VALUES (
+          ${sessionData.user_id}, ${sessionData.machine_id}, ${sessionData.session_id},
+          ${sessionData.project_path}, ${sessionData.start_time}, ${sessionData.end_time},
+          ${sessionData.duration_minutes}, ${sessionData.input_tokens}, ${sessionData.output_tokens},
+          ${sessionData.cache_creation_tokens}, ${sessionData.cache_read_tokens},
+          ${sessionData.total_tokens}, ${sessionData.total_cost}, ${sessionData.models_used},
+          ${sessionData.model_breakdowns}, ${sessionData.created_at}, ${sessionData.updated_at}
+        )
+      `;
+
+      console.log("✅ Test usage data seeded successfully");
+    } catch (error) {
+      console.warn("Warning: Could not seed usage data:", error.message);
+    }
   }
 
   async cleanup() {
@@ -336,24 +399,55 @@ class TestDatabase {
 
     // First, try to disable foreign key constraints
     try {
-      await db.sql`PRAGMA foreign_keys = OFF`;
+      await db.exec("PRAGMA foreign_keys = OFF");
     } catch (error) {
       console.warn("Could not disable foreign keys:", error.message);
     }
 
-    // Clean all data from tables (keep schema intact)
+    // Clean all data from tables in proper order to handle foreign key dependencies
+    // Order matters: clean child tables before parent tables
+    const cleanupOrder = [
+      'email_send_log',
+      'team_invitations', 
+      'team_members',
+      'user_email_preferences',
+      'upload_history',
+      'usage_blocks',
+      'usage_sessions', 
+      'usage_data',
+      'teams',
+      'users'
+    ];
+    
+    // Clean tables in dependency order
+    for (const tableName of cleanupOrder) {
+      const table = tables.find(t => t.name === tableName);
+      if (table) {
+        try {
+          // Use exec() with string concatenation for DDL/DML operations to avoid parameter interpolation issues
+          await db.exec(`DELETE FROM "${table.name}"`);
+          console.log(`Cleaned table: ${table.name}`);
+        } catch (error) {
+          console.warn(`Warning: Could not clean table ${table.name}:`, error.message);
+        }
+      }
+    }
+    
+    // Clean any remaining tables not in the cleanup order
     for (const table of tables) {
-      try {
-        await db.sql`DELETE FROM ${table.name}`;
-        console.log(`Cleaned table: ${table.name}`);
-      } catch (error) {
-        console.warn(`Warning: Could not clean table ${table.name}:`, error.message);
+      if (!cleanupOrder.includes(table.name)) {
+        try {
+          await db.exec(`DELETE FROM "${table.name}"`);
+          console.log(`Cleaned remaining table: ${table.name}`);
+        } catch (error) {
+          console.warn(`Warning: Could not clean table ${table.name}:`, error.message);
+        }
       }
     }
 
     // Re-enable foreign key constraints
     try {
-      await db.sql`PRAGMA foreign_keys = ON`;
+      await db.exec("PRAGMA foreign_keys = ON");
     } catch (error) {
       console.warn("Could not re-enable foreign keys:", error.message);
     }
@@ -371,6 +465,10 @@ class TestDatabase {
 
   getTestUser(index = 0) {
     return this.testUsers[index];
+  }
+
+  getTestUserToken(index = 0) {
+    return this.testUsers[index]?.bearer_token;
   }
 }
 

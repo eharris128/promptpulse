@@ -11,6 +11,7 @@ const labelVariants = cva(
 );
 
 const Label = React.forwardRef<
+  // TODO - Rm deprecated reference
   React.ElementRef<typeof LabelPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> &
     VariantProps<typeof labelVariants>

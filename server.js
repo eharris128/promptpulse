@@ -509,6 +509,7 @@ app.get("/api/metrics", async (req, res) => {
   }
 });
 
+// TODO - likely deprecate
 // Authentication validation endpoint
 app.get("/api/auth/validate", authenticateUser, async (req, res) => {
   // If we get here, the API key is valid (middleware already validated)
@@ -559,31 +560,7 @@ app.get("/api/users/by-username/:username", async (req, res) => {
   }
 });
 
-// User management endpoints
-app.post("/api/users", async (req, res) => {
-  const { email, username } = req.body;
-
-  if (!username) {
-    return res.status(400).json({ error: "Username is required" });
-  }
-
-  try {
-    const user = await createUser({ email, username });
-    res.json({
-      message: "User created successfully",
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        apiKey: user.api_key
-      }
-    });
-  } catch (error) {
-    console.error("Error creating user:", error);
-    res.status(400).json({ error: error.message });
-  }
-});
-
+// TODO - likely deprecate
 // API key validation endpoint
 app.get("/api/auth/validate", authenticateUser, async (req, res) => {
   try {

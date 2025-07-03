@@ -5,7 +5,7 @@ test.describe("User Management API", () => {
   test.describe("GET /api/users", () => {
     test("should return current user info", async () => {
       const response = await apiHelper.get("/api/users", {
-        apiKey: process.env.TEST_USER_1_API_KEY
+        bearerToken: process.env.TEST_USER_1_TOKEN
       });
 
       expect(response.status).toBe(200);
@@ -21,19 +21,19 @@ test.describe("User Management API", () => {
       const response = await apiHelper.get("/api/users");
 
       expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty("error", "API key required");
+      apiHelper.validateOAuthErrorResponse(response, 401, "Authentication required");
     });
 
     test("different users should see their own data", async () => {
       // User 1
       const response1 = await apiHelper.get("/api/users", {
-        apiKey: process.env.TEST_USER_1_API_KEY
+        bearerToken: process.env.TEST_USER_1_TOKEN
       });
       expect(response1.body.user.username).toBe("testuser1");
 
       // User 2
       const response2 = await apiHelper.get("/api/users", {
-        apiKey: process.env.TEST_USER_2_API_KEY
+        bearerToken: process.env.TEST_USER_2_TOKEN
       });
       expect(response2.body.user.username).toBe("testuser2");
     });
@@ -126,7 +126,7 @@ test.describe("User Management API", () => {
     test.describe("Leaderboard Settings", () => {
       test("GET /api/user/leaderboard-settings should return settings", async () => {
         const response = await apiHelper.get("/api/user/leaderboard-settings", {
-          apiKey: process.env.TEST_USER_3_API_KEY
+          bearerToken: process.env.TEST_USER_3_TOKEN
         });
 
         expect(response.status).toBe(200);
@@ -148,7 +148,7 @@ test.describe("User Management API", () => {
         };
 
         const response = await apiHelper.put("/api/user/leaderboard-settings", {
-          apiKey: process.env.TEST_USER_1_API_KEY,
+          bearerToken: process.env.TEST_USER_1_TOKEN,
           data: newSettings
         });
 
@@ -166,7 +166,7 @@ test.describe("User Management API", () => {
     test.describe("Email Preferences", () => {
       test("GET /api/user/email-preferences should return preferences", async () => {
         const response = await apiHelper.get("/api/user/email-preferences", {
-          apiKey: process.env.TEST_USER_1_API_KEY
+          bearerToken: process.env.TEST_USER_1_TOKEN
         });
 
         expect(response.status).toBe(200);
@@ -188,7 +188,7 @@ test.describe("User Management API", () => {
         };
 
         const response = await apiHelper.put("/api/user/email-preferences", {
-          apiKey: process.env.TEST_USER_1_API_KEY,
+          bearerToken: process.env.TEST_USER_1_TOKEN,
           data: newPreferences
         });
 
@@ -203,7 +203,7 @@ test.describe("User Management API", () => {
         const newEmail = `updated_${Date.now()}@example.com`;
 
         const response = await apiHelper.put("/api/user/email", {
-          apiKey: process.env.TEST_USER_2_API_KEY,
+          bearerToken: process.env.TEST_USER_2_TOKEN,
           data: { email: newEmail }
         });
 
@@ -214,7 +214,7 @@ test.describe("User Management API", () => {
 
       test("should reject invalid email format", async () => {
         const response = await apiHelper.put("/api/user/email", {
-          apiKey: process.env.TEST_USER_1_API_KEY,
+          bearerToken: process.env.TEST_USER_1_TOKEN,
           data: { email: "invalid-email" }
         });
 
@@ -224,7 +224,7 @@ test.describe("User Management API", () => {
 
       test("should reject duplicate email", async () => {
         const response = await apiHelper.put("/api/user/email", {
-          apiKey: process.env.TEST_USER_2_API_KEY,
+          bearerToken: process.env.TEST_USER_2_TOKEN,
           data: { email: "test1@example.com" } // Already used by user1
         });
 

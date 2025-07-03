@@ -2,9 +2,9 @@ import { test, expect } from "@playwright/test";
 import apiHelper from "../utils/api-helper.js";
 
 test.describe("Authentication API", () => {
-  test("should validate API key successfully", async () => {
+  test("should validate OAuth Bearer token successfully", async () => {
     const response = await apiHelper.get("/api/auth/validate", {
-      apiKey: process.env.TEST_USER_1_API_KEY
+      bearerToken: process.env.TEST_USER_1_TOKEN
     });
 
     expect(response.status).toBe(200);
@@ -16,33 +16,33 @@ test.describe("Authentication API", () => {
     });
   });
 
-  test("should reject request without API key", async () => {
+  test("should reject request without Bearer token", async () => {
     const response = await apiHelper.get("/api/auth/validate");
 
     expect(response.status).toBe(401);
-    expect(response.body).toHaveProperty("error", "API key required");
+    apiHelper.validateOAuthErrorResponse(response, 401, "Authentication required");
   });
 
-  test("should reject request with invalid API key", async () => {
+  test("should reject request with invalid Bearer token", async () => {
     const response = await apiHelper.get("/api/auth/validate", {
-      apiKey: "invalid-api-key"
+      bearerToken: "invalid-bearer-token"
     });
 
     expect(response.status).toBe(401);
-    expect(response.body).toHaveProperty("error", "Invalid API key");
+    apiHelper.validateOAuthErrorResponse(response, 401, "Invalid token format");
   });
 
-  test("should validate different users with their respective API keys", async () => {
+  test("should validate different users with their respective Bearer tokens", async () => {
     // Test User 1
     const response1 = await apiHelper.get("/api/auth/validate", {
-      apiKey: process.env.TEST_USER_1_API_KEY
+      bearerToken: process.env.TEST_USER_1_TOKEN
     });
     expect(response1.status).toBe(200);
     expect(response1.body.user.username).toBe("testuser1");
 
     // Test User 2
     const response2 = await apiHelper.get("/api/auth/validate", {
-      apiKey: process.env.TEST_USER_2_API_KEY
+      bearerToken: process.env.TEST_USER_2_TOKEN
     });
     expect(response2.status).toBe(200);
     expect(response2.body.user.username).toBe("testuser2");
@@ -87,7 +87,7 @@ test.describe("Authentication API", () => {
     for (const endpoint of protectedEndpoints) {
       const response = await apiHelper.get(endpoint);
       expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty("error", "API key required");
+      apiHelper.validateOAuthErrorResponse(response, 401, "Authentication required");
     }
   });
 });

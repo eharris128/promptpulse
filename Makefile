@@ -180,14 +180,6 @@ docker-build:
 	@echo "🐳 Building Docker images..."
 	@docker build -t promptpulse-api .
 
-docker-dev:
-	@echo "🐳 Starting Docker development environment..."
-	@docker-compose -f docker-compose.dev.yml up -d
-
-docker-stop:
-	@echo "🐳 Stopping Docker environment..."
-	@docker-compose -f docker-compose.dev.yml down
-
 # Information commands
 status:
 	@echo "📊 Service Status:"
@@ -197,7 +189,5 @@ info:
 	@echo "ℹ️  PromptPulse Information:"
 	@echo "  Repository: $(shell pwd)"
 	@echo "  Node.js version: $(shell node --version 2>/dev/null || echo 'Not installed')"
-	@echo "  Python version: $(shell python3 --version 2>/dev/null || echo 'Not installed')"
-	@echo "  uv version: $(shell uv --version 2>/dev/null || echo 'Not installed')"
 	@echo "  API URL: http://localhost:3000"
 	@echo "  Client URL: http://localhost:3001"

@@ -1,6 +1,5 @@
 import { test, expect } from "@playwright/test";
 import apiHelper from "../utils/api-helper.js";
-import crypto from "crypto";
 
 test.describe("User Management API", () => {
   test.describe("GET /api/users", () => {

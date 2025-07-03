@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { TopHeader } from "./top-header";
 import { SideNav } from "./side-nav";
-import { cn } from "@/lib/utils";
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -23,7 +22,6 @@ export function AppLayout({ children, onLogout }: AppLayoutProps) {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      {/* Top Header */}
       <TopHeader
         onLogout={onLogout}
         onMenuClick={toggleMobileMenu}
@@ -31,12 +29,10 @@ export function AppLayout({ children, onLogout }: AppLayoutProps) {
       />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Desktop Side Navigation */}
         <div className="hidden lg:block">
           <SideNav />
         </div>
 
-        {/* Mobile Side Navigation Overlay */}
         {isMobileMenuOpen && (
           <>
             {/* Backdrop */}

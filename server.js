@@ -326,6 +326,88 @@ app.get("/auth/profile", async (req, res) => {
   }
 });
 
+// Logged out page for CLI logout redirect
+app.get("/logged-out", (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Logged Out - PromptPulse</title>
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+          color: #ffffff;
+          margin: 0;
+          padding: 0;
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .container {
+          text-align: center;
+          max-width: 500px;
+          padding: 40px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(10px);
+        }
+        .icon {
+          font-size: 64px;
+          margin-bottom: 24px;
+          display: block;
+        }
+        h1 {
+          font-size: 28px;
+          margin-bottom: 16px;
+          font-weight: 600;
+        }
+        p {
+          font-size: 16px;
+          line-height: 1.5;
+          margin-bottom: 24px;
+          opacity: 0.8;
+        }
+        .button {
+          display: inline-block;
+          padding: 12px 24px;
+          background: #3b82f6;
+          color: white;
+          text-decoration: none;
+          border-radius: 8px;
+          font-weight: 500;
+          transition: background 0.2s;
+        }
+        .button:hover {
+          background: #2563eb;
+        }
+        .secondary {
+          margin-top: 16px;
+          font-size: 14px;
+          opacity: 0.6;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <span class="icon">✅</span>
+        <h1>Successfully Logged Out</h1>
+        <p>You have been logged out from the PromptPulse CLI.</p>
+        <p>You can safely close this browser tab.</p>
+        <a href="/" class="button">Continue to Web Dashboard</a>
+        <div class="secondary">
+          To use the CLI again, run <code>promptpulse login</code>
+        </div>
+      </div>
+    </body>
+    </html>
+  `);
+});
+
 const DATABASE_URL = process.env.DATABASE_URL;
 
 if (!DATABASE_URL) {

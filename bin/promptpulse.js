@@ -58,9 +58,11 @@ program
 program
   .command("logout")
   .description("Clear authentication and log out")
-  .action(async () => {
+  .option("--browser", "also clear browser session (default: true)")
+  .option("--no-browser", "only clear CLI session, keep browser session")
+  .action(async (options) => {
     const { logout } = await import("../lib/auth-cli.js");
-    await logout();
+    await logout(options);
   });
 
 // Who am I command

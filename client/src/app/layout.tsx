@@ -7,6 +7,7 @@ import { AppLayoutWrapper } from "@/components/layout/app-layout-wrapper";
 import { DebugPanel } from "@/components/debug/debug-panel";
 import { RouterDebug } from "@/components/debug/router-debug";
 import { NavigationTest } from "@/components/debug/navigation-test";
+import { HydrationTest } from "@/components/debug/hydration-test";
 import { debugLogger } from "@/utils/debug-logger";
 import { useEffect } from "react";
 import "./globals.css";
@@ -64,7 +65,7 @@ export default function RootLayout({
         <title>PromptPulse Dashboard</title>
         <meta name="description" content="Track and analyze your Claude Code usage across multiple machines" />
       </head>
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -77,6 +78,7 @@ export default function RootLayout({
             </AppLayoutWrapper>
             <RouterDebug />
           </AuthProvider>
+          <HydrationTest />
           <NavigationTest />
           <DebugPanel />
         </ThemeProvider>

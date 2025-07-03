@@ -115,8 +115,54 @@ class DebugLogger {
     }
   }
 
+  startHydrationMonitoring() {
+    if (typeof window === "undefined") return;
+    
+    // Capture React hydration errors
+    const originalError = console.error;
+    console.error = (...args) => {
+      const message = args.join(' ');
+      if (message.includes('Hydration') || message.includes('418') || message.includes('Minified React error')) {
+        this.error("HydrationError", "React hydration error detected", {
+          error: message,
+          args: args,
+          timestamp: performance.now(),
+          url: window.location.href
+        });
+      }
+      originalError.apply(console, args);
+    };
+    
+    // Monitor for React errors globally
+    window.addEventListener('error', (event) => {
+      if (event.message.includes('Hydration') || event.message.includes('418')) {
+        this.error("HydrationError", "Global hydration error", {
+          message: event.message,
+          filename: event.filename,
+          lineno: event.lineno,
+          colno: event.colno,
+          timestamp: performance.now()
+        });
+      }
+    });
+    
+    // Monitor unhandled promise rejections that might be React-related
+    window.addEventListener('unhandledrejection', (event) => {
+      const reason = event.reason?.toString() || '';
+      if (reason.includes('Hydration') || reason.includes('418')) {
+        this.error("HydrationError", "Unhandled hydration rejection", {
+          reason: reason,
+          timestamp: performance.now()
+        });
+      }
+    });
+  }
+
   startNetworkMonitoring() {
     if (typeof window === "undefined") return;
+    
+    // Start hydration monitoring too
+    this.startHydrationMonitoring();
 
     // Monitor network changes
     if ((navigator as any).connection) {

@@ -2,8 +2,9 @@
 node_modules/
 client/node_modules/
 
-# Client-side code (not needed for API)
-client/
+# Client build artifacts (will be built fresh)
+client/.next/
+client/out/
 
 # Development & Configuration files
 .env*

@@ -1,33 +1,44 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Loader2, Users } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
 
-interface JoinTeamPageProps {
-  params: Promise<{
-    token: string
-  }>
-}
-
-export default function JoinTeamPage({ params }: JoinTeamPageProps) {
-  const resolvedParams = use(params);
+export default function JoinTeamPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isAuthenticated, login, loading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
   const [teamName, setTeamName] = useState("");
   const [error, setError] = useState("");
+  const [token, setToken] = useState("");
+
+  // Extract token from URL path or search params
+  useEffect(() => {
+    const pathToken = window.location.pathname.split("/").pop();
+    const searchToken = searchParams.get("token");
+    const finalToken = searchToken || pathToken;
+
+    if (finalToken && finalToken !== "join") {
+      setToken(finalToken);
+    } else {
+      setError("No invitation token provided");
+      setIsLoading(false);
+    }
+  }, [searchParams]);
 
   // Fetch team preview
   useEffect(() => {
+    if (!token) return;
+
     const fetchTeamPreview = async () => {
       try {
         setIsLoading(true);
-        const { teamName } = await apiClient.getTeamPreview(resolvedParams.token);
+        const { teamName } = await apiClient.getTeamPreview(token);
         setTeamName(teamName);
       } catch (error) {
         console.error("Error fetching team preview:", error);
@@ -38,18 +49,18 @@ export default function JoinTeamPage({ params }: JoinTeamPageProps) {
     };
 
     fetchTeamPreview();
-  }, [resolvedParams.token]);
+  }, [token]);
 
   const handleJoin = async () => {
     if (!isAuthenticated) {
-      sessionStorage.setItem("pendingTeamInvite", resolvedParams.token);
+      sessionStorage.setItem("pendingTeamInvite", token);
       login();
       return;
     }
 
     try {
       setIsJoining(true);
-      await apiClient.joinTeam(resolvedParams.token);
+      await apiClient.joinTeam(token);
       sessionStorage.removeItem("pendingTeamInvite");
       router.push("/");
     } catch (error) {
@@ -148,7 +159,7 @@ export default function JoinTeamPage({ params }: JoinTeamPageProps) {
                   variant="link"
                   className="p-0 h-auto font-normal"
                   onClick={() => {
-                    sessionStorage.setItem("pendingTeamInvite", resolvedParams.token);
+                    sessionStorage.setItem("pendingTeamInvite", token);
                     login();
                   }}
                 >

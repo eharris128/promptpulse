@@ -4,7 +4,7 @@ import tseslint from "typescript-eslint";
 
 export default defineConfig([
   {
-    ignores: ["docs/**/*", "client/.next/**/*"]
+    ignores: ["docs/**/*", "client/.next/**/*", "client/out/**/*"]
   },
   {
     files: ["**/*.{js,mjs,cjs,ts,tsx}"],

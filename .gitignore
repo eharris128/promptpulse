@@ -3,6 +3,7 @@ node_modules/
 logs/
 .claude/
 client/.next/
+client/out
 *.tgz
 .vscode
 

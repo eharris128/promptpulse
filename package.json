@@ -10,6 +10,8 @@
   },
   "scripts": {
     "dev": "concurrently --names \"SERVER,CLIENT\" --prefix-colors \"blue,green\" \"npm run server:dev\" \"npm run client:dev\"",
+    "build": "cd client && npm install && npm run build",
+    "start": "NODE_ENV=production node server.js",
     "server:dev": "node --watch server.js",
     "server:test": "node server-test.js",
     "client:dev": "cd client && npm run dev",

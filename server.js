@@ -2,6 +2,8 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import crypto from "crypto";
+import path from "path";
+import { fileURLToPath } from "url";
 import KSUID from "ksuid";
 import rateLimit from "express-rate-limit";
 import session from "express-session";
@@ -20,6 +22,10 @@ import {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ES module __dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Trust proxy for Railway deployment (fixes X-Forwarded-For header validation)
 app.set("trust proxy", 1);
@@ -73,12 +79,16 @@ app.use(express.json({ limit: "10mb" })); // Limit payload size for cost protect
 // Configure express-session for Auth0 session management
 app.use(session({
   secret: process.env.AUTH0_SECRET || "your-secret-key",
+  name: 'promptpulse.sid', // Explicit session name
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+    secure: process.env.NODE_ENV === "production" && process.env.FORCE_HTTPS !== "false", // Allow disabling for local testing
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax', // Important for Auth0 redirects
+    domain: process.env.COOKIE_DOMAIN || undefined, // Allow setting custom domain
+    path: '/' // Explicit path
   }
 }));
 
@@ -2880,6 +2890,33 @@ app.get("/api/usage/analytics/costs", authenticateUser, async (req, res) => {
     res.status(500).json({ error: "Database error" });
   }
 });
+
+// Serve Next.js static files (for Railway deployment)
+if (process.env.NODE_ENV === "production") {
+  // Serve static files from Next.js export
+  app.use(express.static(path.join(__dirname, "client", "out"), {
+    maxAge: "1d", // Cache static assets
+    etag: true,
+    index: false // Don't auto-serve index.html from subdirectories
+  }));
+
+  // For all other routes, serve the Next.js app
+  app.get("*", (req, res, next) => {
+    // Skip API routes and auth routes
+    if (req.path.startsWith("/api/") || req.path.startsWith("/auth/")) {
+      return next();
+    }
+
+    // For team join routes, serve the main index.html (client-side routing will handle it)
+    const indexPath = path.join(__dirname, "client", "out", "index.html");
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        logger.error("Error serving Next.js app", { error: err.message, path: req.path });
+        res.status(404).send("Page not found");
+      }
+    });
+  });
+}
 
 async function initializeServer() {
   try {

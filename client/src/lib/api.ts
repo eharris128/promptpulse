@@ -1,6 +1,6 @@
 import { AggregateData, Machine, SessionData, BlockData, ProjectData, ApiResponse, LeaderboardData, TeamLeaderboardData, LeaderboardSettings, EmailPreferences, PlanSettings, Team, TeamWithRole, TeamMember, TeamInvitation } from "@/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://exciting-patience-production.up.railway.app";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 class ApiClient {
 

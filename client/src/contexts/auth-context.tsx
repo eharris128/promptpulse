@@ -51,7 +51,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const wasAuthenticated = !!user;
 
     // During static generation (build time), skip authentication
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       setLoading(false);
       setUser(null);
       return;

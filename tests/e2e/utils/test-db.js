@@ -34,10 +34,10 @@ class TestDatabase {
 
       // Skip database setup but create mock test users for OAuth
       this.testUsers = [
-        { 
-          id: "test-user-1", 
-          username: "testuser1", 
-          email: "test1@example.com", 
+        {
+          id: "test-user-1",
+          username: "testuser1",
+          email: "test1@example.com",
           auth0_id: "auth0|test-user-1",
           bearer_token: oauthHelper.generateMockToken({
             sub: "auth0|test-user-1",
@@ -45,10 +45,10 @@ class TestDatabase {
             nickname: "testuser1"
           })
         },
-        { 
-          id: "test-user-2", 
-          username: "testuser2", 
-          email: "test2@example.com", 
+        {
+          id: "test-user-2",
+          username: "testuser2",
+          email: "test2@example.com",
           auth0_id: "auth0|test-user-2",
           bearer_token: oauthHelper.generateMockToken({
             sub: "auth0|test-user-2",
@@ -56,10 +56,10 @@ class TestDatabase {
             nickname: "testuser2"
           })
         },
-        { 
-          id: "test-user-3", 
-          username: "leaderboarduser", 
-          email: "leaderboard@example.com", 
+        {
+          id: "test-user-3",
+          username: "leaderboarduser",
+          email: "leaderboard@example.com",
           auth0_id: "auth0|test-user-3",
           bearer_token: oauthHelper.generateMockToken({
             sub: "auth0|test-user-3",
@@ -95,13 +95,13 @@ class TestDatabase {
     try {
       // DON'T drop tables before migrations - just run migrations to ensure tables exist
       // Goose will handle creating tables if they don't exist
-      
+
       // Run migrations using Node.js script (works with SQLite Cloud)
       execSync(`node "${migrationsScript}"`, {
         stdio: "inherit",
         env: { ...process.env, NODE_ENV: "test" }
       });
-      
+
       // After migrations, clean data from tables (but keep schema)
       await this.cleanAllData();
     } catch (error) {
@@ -131,18 +131,18 @@ class TestDatabase {
     // Clean all data from tables in proper order to handle foreign key dependencies
     // Order matters: clean child tables before parent tables
     const cleanupOrder = [
-      'email_send_log',
-      'team_invitations', 
-      'team_members',
-      'user_email_preferences',
-      'upload_history',
-      'usage_blocks',
-      'usage_sessions', 
-      'usage_data',
-      'teams',
-      'users'
+      "email_send_log",
+      "team_invitations",
+      "team_members",
+      "user_email_preferences",
+      "upload_history",
+      "usage_blocks",
+      "usage_sessions",
+      "usage_data",
+      "teams",
+      "users"
     ];
-    
+
     // Clean tables in dependency order
     for (const tableName of cleanupOrder) {
       const table = tables.find(t => t.name === tableName);
@@ -168,23 +168,23 @@ class TestDatabase {
   async verifySchema() {
     console.log("🔍 Verifying database schema...");
     const db = await this.connect();
-    
+
     try {
       // Check that users table has correct OAuth schema
       const columns = await db.sql`PRAGMA table_info(users)`;
-      const hasAuth0Id = columns.some(col => col.name === 'auth0_id');
-      const hasApiKeyHash = columns.some(col => col.name === 'api_key_hash');
-      
+      const hasAuth0Id = columns.some(col => col.name === "auth0_id");
+      const hasApiKeyHash = columns.some(col => col.name === "api_key_hash");
+
       if (!hasAuth0Id) {
         throw new Error("❌ Users table missing auth0_id column - OAuth schema not applied");
       }
-      
+
       if (hasApiKeyHash) {
         throw new Error("❌ Users table still has api_key_hash column - old schema detected");
       }
-      
+
       console.log("✅ Schema verification passed - OAuth schema is correct");
-      
+
     } catch (error) {
       console.error("❌ Schema verification failed:", error.message);
       throw error;
@@ -222,7 +222,7 @@ class TestDatabase {
     ];
 
     console.log("🔧 Creating test users with OAuth authentication...");
-    
+
     // Create and insert test users
     for (const userDef of testUserDefinitions) {
       try {
@@ -251,7 +251,7 @@ class TestDatabase {
         // Add to test users array
         this.testUsers.push(user);
         console.log(`✅ Created user: ${user.username} (${user.id})`);
-        
+
       } catch (error) {
         console.error(`❌ Failed to create user ${userDef.username}:`, error.message);
         throw new Error(`User creation failed for ${userDef.username}: ${error.message}`);
@@ -407,18 +407,18 @@ class TestDatabase {
     // Clean all data from tables in proper order to handle foreign key dependencies
     // Order matters: clean child tables before parent tables
     const cleanupOrder = [
-      'email_send_log',
-      'team_invitations', 
-      'team_members',
-      'user_email_preferences',
-      'upload_history',
-      'usage_blocks',
-      'usage_sessions', 
-      'usage_data',
-      'teams',
-      'users'
+      "email_send_log",
+      "team_invitations",
+      "team_members",
+      "user_email_preferences",
+      "upload_history",
+      "usage_blocks",
+      "usage_sessions",
+      "usage_data",
+      "teams",
+      "users"
     ];
-    
+
     // Clean tables in dependency order
     for (const tableName of cleanupOrder) {
       const table = tables.find(t => t.name === tableName);
@@ -432,7 +432,7 @@ class TestDatabase {
         }
       }
     }
-    
+
     // Clean any remaining tables not in the cleanup order
     for (const table of tables) {
       if (!cleanupOrder.includes(table.name)) {

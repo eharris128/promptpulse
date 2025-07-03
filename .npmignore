@@ -99,7 +99,7 @@ playwright-report/
 test-results/
 
 .dockerignore                                                 
-.env.example                                                  
+.env.*                                         
 .github/workflows/hugo.yml                                    
 .gitmodules                                                   
 .vercelignore                                                 

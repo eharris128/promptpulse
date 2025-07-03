@@ -30,7 +30,7 @@ export function AppLayout({ children, onLogout }: AppLayoutProps) {
 
       <div className="flex flex-1 overflow-hidden">
         <div className="hidden lg:block">
-          <SideNav />
+          <SideNav className="_" />
         </div>
 
         {isMobileMenuOpen && (

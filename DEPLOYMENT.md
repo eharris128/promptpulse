@@ -1,6 +1,6 @@
 # PromptPulse Deployment Guide
 
-This guide walks you through deploying PromptPulse to Railway.
+This guide walks you through deploying PromptPulse to Railway using Docker.
 
 ## Prerequisites
 
@@ -82,28 +82,9 @@ export DATABASE_URL="your_sqlite_cloud_connection_string"
 npm run migrate
 ```
 
-## Step 4: Deploy Dashboard (Optional)
+## Step 4: Test Your Deployment
 
-### 4.1 Vercel Deployment
-
-1. Go to [vercel.com](https://vercel.com) and sign up
-2. Import your project's `client` folder
-3. Set environment variables:
-   ```bash
-   NEXT_PUBLIC_API_URL=https://your-app.railway.app
-   ```
-4. Deploy and get your dashboard URL
-
-### 4.2 Update Dashboard URL
-
-Update your Railway environment variables:
-```bash
-PROMPTPULSE_DASHBOARD_URL=https://www.promptpulse.dev
-```
-
-## Step 5: Test Your Deployment
-
-### 5.1 Health Check
+### 4.1 Health Check
 
 Visit: `https://your-app.railway.app/health`
 
@@ -117,7 +98,7 @@ Expected response:
 }
 ```
 
-### 5.2 Test CLI
+### 4.2 Test CLI
 
 Update your npm package and test:
 
@@ -131,15 +112,15 @@ promptpulse login
 promptpulse collect
 ```
 
-## Step 6: Publish to NPM
+## Step 5: Publish to NPM
 
-### 6.1 Update Package Version
+### 5.1 Update Package Version
 
 ```bash
 npm version patch  # or minor/major
 ```
 
-### 6.2 Publish
+### 5.2 Publish
 
 ```bash
 npm publish

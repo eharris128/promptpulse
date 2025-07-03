@@ -7,7 +7,7 @@ Thank you for your interest in contributing to PromptPulse! This guide will help
 PromptPulse is a SaaS service with three main components:
 - **CLI Package** - Published to npm for end users
 - **API Server** - Hosted on Railway for data collection
-- **Dashboard** - Hosted on Vercel for analytics visualization
+- **Dashboard** - Self-hosted or deployed with Railway for analytics visualization
 
 ## Ways to Contribute
 

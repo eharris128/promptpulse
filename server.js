@@ -45,14 +45,6 @@ const corsOptions = {
       "http://localhost:3000"
     ];
 
-    // Allow all Vercel preview and production domains
-    if (origin && (
-      origin.endsWith(".vercel.app") ||
-      origin.endsWith(".vercel.com") ||
-      origin.includes("promptpulse") // Allow custom domains with promptpulse
-    )) {
-      allowedOrigins.push(origin);
-    }
 
     // Add custom domain from environment variable
     if (process.env.PROMPTPULSE_DASHBOARD_URL) {

@@ -332,7 +332,7 @@ promptpulse setup --remove              # Remove automatic collection
 
 
 ### Deployment
-- API server can be deployed to any Node.js platform
-- Dashboard can be deployed to Vercel/Netlify
+- API server can be deployed to any Node.js platform (Railway recommended)
+- Dashboard can be deployed to Railway, Netlify, or self-hosted
 - Ensure environment variables are configured
 - Run migrations before first deployment

@@ -2,34 +2,6 @@
 
 The web dashboard for PromptPulse - track and analyze your Claude Code usage across multiple machines.
 
-## Quick Deployment to Vercel
-
-### 1. Deploy to Vercel
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone)
-
-Or manually:
-
-1. **Import to Vercel**: Go to [vercel.com/new](https://vercel.com/new)
-2. **Select Repository**: Import your GitHub repository
-3. **Configure Project**: 
-   - **Root Directory**: `client`
-   - **Framework**: Next.js (auto-detected)
-   - **Build Command**: `npm run build` (auto-detected)
-   - **Output Directory**: `.next` (auto-detected)
-
-### 2. Set Environment Variables
-
-In Vercel dashboard, add these environment variables:
-
-```bash
-NEXT_PUBLIC_API_URL=https://exciting-patience-production.up.railway.app
-```
-
-### 3. Deploy
-
-Vercel will automatically build and deploy your dashboard.
-
 ## Local Development
 
 ### Prerequisites
@@ -95,12 +67,12 @@ The dashboard uses:
 
 ## Production Deployment
 
-This dashboard is optimized for deployment on:
+This dashboard can be deployed on:
 
-- **Vercel** (recommended) - Zero configuration, global CDN
+- **Railway** - Full-stack hosting with your API server
 - **Netlify** - Static site hosting
-- **Railway** - Full-stack hosting
 - **AWS Amplify** - AWS integration
+- **Self-hosted** - Any static web server
 
 ## License
 

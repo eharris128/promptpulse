@@ -108,10 +108,10 @@ export default function EnvironmentPage() {
       thinkingSessions: usageData.totals.thinking_sessions_count
     });
     console.log("AI-Carbon result:", environmentalImpact);
-    console.log("Cache tokens represent:", `${Math.round(((usageData.totals.total_cache_read_tokens || 0) / usageData.totals.total_tokens) * 100)  }% of total tokens`);
+    console.log("Cache tokens represent:", `${usageData.totals.total_tokens > 0 ? Math.round(((usageData.totals.total_cache_read_tokens || 0) / usageData.totals.total_tokens) * 100) : 0}% of total tokens`);
     console.log("Cache tokens have 0.12x environmental impact of regular tokens");
     if (usageData.totals.total_thinking_tokens > 0) {
-      console.log("Thinking tokens:", usageData.totals.total_thinking_tokens, `(${(usageData.totals.average_thinking_percentage * 100).toFixed(1)}% avg)`);
+      console.log("Thinking tokens:", usageData.totals.total_thinking_tokens, `(${((usageData.totals.average_thinking_percentage || 0) * 100).toFixed(1)}% avg)`);
       console.log("Thinking mode sessions:", usageData.totals.thinking_sessions_count);
       console.log("Thinking tokens have 2.5x environmental impact of regular tokens");
     }
@@ -202,17 +202,17 @@ export default function EnvironmentPage() {
                     {usageData && (
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">
-                          <strong>Note:</strong> Cache reads ({Math.round(((usageData.totals.total_cache_read_tokens || 0) / usageData.totals.total_tokens) * 100)}% of your tokens)
+                          <strong>Note:</strong> Cache reads ({usageData.totals.total_tokens > 0 ? Math.round(((usageData.totals.total_cache_read_tokens || 0) / usageData.totals.total_tokens) * 100) : 0}% of your tokens)
                           have 88% lower environmental impact than regular token processing.
                         </p>
                         {usageData.totals.total_thinking_tokens > 0 && (
                           <p className="text-xs text-muted-foreground">
                             <strong>Thinking mode:</strong> {usageData.totals.thinking_sessions_count} sessions used thinking mode
-                            ({(usageData.totals.average_thinking_percentage * 100).toFixed(1)}% avg thinking content)
+                            ({((usageData.totals.average_thinking_percentage || 0) * 100).toFixed(1)}% avg thinking content)
                             with 2.5x higher environmental impact.
                           </p>
                         )}
-                        {naiveImpact && (
+                        {naiveImpact && usageData.totals.total_tokens > 0 && (
                           <p className="text-xs text-muted-foreground">
                             If all {(usageData.totals.total_tokens / 1000000).toFixed(1)}M tokens were processed normally:
                             {naiveImpact.co2Grams < 1000 ? `${naiveImpact.co2Grams.toFixed(1)}g` : `${(naiveImpact.co2Grams / 1000).toFixed(2)}kg`} CO₂

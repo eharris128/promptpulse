@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Loader2, Users } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
 
-export default function JoinTeamPage() {
+function JoinTeamContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated, login, loading: authLoading } = useAuth();
@@ -183,5 +183,17 @@ export default function JoinTeamPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function JoinTeamPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    }>
+      <JoinTeamContent />
+    </Suspense>
   );
 }

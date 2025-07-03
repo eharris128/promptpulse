@@ -3,16 +3,16 @@ const nextConfig = {
   // Optimized for Railway deployment
   poweredByHeader: false,
 
-  // Disable static export - causes issues with authentication
-  // output: process.env.NODE_ENV === "production" ? "export" : undefined,
+  // Configure for static export in production only
+  output: process.env.NODE_ENV === "production" ? "export" : undefined,
 
-  // Re-enable image optimization
+  // Disable features that don't work with static export (production only)
   images: {
-    unoptimized: false
+    unoptimized: process.env.NODE_ENV === "production"
   },
 
-  // Remove trailing slash requirement
-  // trailingSlash: process.env.NODE_ENV === "production",
+  // Set trailing slash for consistent routing in production
+  trailingSlash: process.env.NODE_ENV === "production",
 
   // Proxy auth routes in development only
   async rewrites() {

@@ -27,7 +27,8 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // During static generation, start with loading false to show login form
+  const [loading, setLoading] = useState(typeof window === 'undefined' ? false : true);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -48,6 +49,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Custom function to fetch user profile from Express server
   const fetchUserProfile = async (isBackgroundPoll = false) => {
     const wasAuthenticated = !!user;
+
+    // During static generation (build time), skip authentication
+    if (typeof window === 'undefined') {
+      setLoading(false);
+      setUser(null);
+      return;
+    }
 
     try {
       // Only show loading spinner for initial auth check, not background polling

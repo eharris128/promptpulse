@@ -7,9 +7,14 @@ WORKDIR /app/client
 
 # Copy client package files
 COPY client/package*.json ./
+RUN ls
 
 # Install client dependencies
-RUN npm ci
+RUN if [ -f package-lock.json ]; then \
+      npm ci; \
+    else \
+      npm install; \
+    fi
 
 # Copy client source code
 COPY client/ ./
@@ -28,9 +33,13 @@ WORKDIR /app
 
 # Copy server package files
 COPY package*.json ./
-
+RUN ls
 # Install production dependencies only
-RUN npm ci --omit=dev
+RUN if [ -f package-lock.json ]; then \
+      npm ci --omit=dev; \
+    else \
+      npm install --omit=dev; \
+    fi
 
 # Copy server source code
 COPY . .

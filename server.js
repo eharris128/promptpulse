@@ -2951,19 +2951,26 @@ if (process.env.NODE_ENV === "production") {
     index: false // Don't auto-serve index.html from subdirectories
   }));
 
-  // For all other routes, serve the Next.js app
+  // For all other routes, try to serve static files first, then fallback to main app
   app.get("*", (req, res, next) => {
     // Skip API routes and auth routes
     if (req.path.startsWith("/api/") || req.path.startsWith("/auth/")) {
       return next();
     }
 
-    // For team join routes, serve the main index.html (client-side routing will handle it)
-    const indexPath = path.join(__dirname, "client", "out", "index.html");
-    res.sendFile(indexPath, (err) => {
+    // First, try to serve the static file for this route
+    const staticPath = path.join(__dirname, "client", "out", req.path, "index.html");
+    res.sendFile(staticPath, (err) => {
       if (err) {
-        logger.error("Error serving Next.js app", { error: err.message, path: req.path });
-        res.status(404).send("Page not found");
+        // If static file doesn't exist, serve the main index.html as fallback
+        // This handles dynamic routes and client-side routing
+        const indexPath = path.join(__dirname, "client", "out", "index.html");
+        res.sendFile(indexPath, (fallbackErr) => {
+          if (fallbackErr) {
+            logger.error("Error serving Next.js app", { error: fallbackErr.message, path: req.path });
+            res.status(404).send("Page not found");
+          }
+        });
       }
     });
   });

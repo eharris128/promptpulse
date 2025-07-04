@@ -15,8 +15,8 @@ const nextConfig = {
   trailingSlash: process.env.NODE_ENV === "production",
 
   // Configure static export to support client-side routing
-  distDir: 'out',
-  
+  distDir: "out",
+
   // Experimental features to improve hydration
   experimental: {
     // Don't optimize specific packages that can cause hydration issues
@@ -27,7 +27,7 @@ const nextConfig = {
   compiler: {
     // Remove console logs in production to prevent hydration issues
     removeConsole: process.env.NODE_ENV === "production" ? {
-      exclude: ['error', 'warn']
+      exclude: ["error", "warn"]
     } : false,
   },
 

@@ -16,14 +16,14 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   // and let client-side logic handle theme switching after mount
   if (!mounted) {
     return (
-      <div className="light" style={{ colorScheme: 'light' }}>
+      <div className="light" style={{ colorScheme: "light" }}>
         {children}
       </div>
     );
   }
 
   return (
-    <NextThemesProvider 
+    <NextThemesProvider
       {...props}
       enableColorScheme={false} // Disable automatic color-scheme to prevent script injection
       enableSystem={true}

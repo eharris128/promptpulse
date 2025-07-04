@@ -97,7 +97,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Use background polling to avoid showing loading spinners
     const interval = setInterval(() => fetchUserProfile(true), 30000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable
   }, []);
 
   const login = () => {

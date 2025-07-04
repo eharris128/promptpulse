@@ -4,8 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, Trophy, Settings, Users, Activity, Leaf, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { debugLogger } from "@/utils/debug-logger";
-import { useEffect } from "react";
 
 interface SideNavProps {
   className?: string
@@ -15,31 +13,6 @@ interface SideNavProps {
 
 export function SideNav({ className, onClose, showCloseButton }: SideNavProps) {
   const pathname = usePathname();
-
-  useEffect(() => {
-    debugLogger.log("SideNav", "Component mounted", { pathname });
-  }, [pathname]);
-
-  useEffect(() => {
-    debugLogger.log("SideNav", "Pathname changed", { pathname });
-  }, [pathname]);
-
-  const handleNavClick = (href: string, label: string, event: React.MouseEvent) => {
-    debugLogger.log("SideNav", "Navigation clicked", {
-      href,
-      label,
-      currentPathname: pathname,
-      timestamp: Date.now()
-    });
-
-    // In production static export mode, prevent default Link behavior and use full page navigation
-    // to ensure proper page rendering (client-side routing has issues with static export)
-    if (process.env.NODE_ENV === "production" && href !== pathname) {
-      event.preventDefault();
-      debugLogger.log("SideNav", "Using full page navigation in production", { href });
-      window.location.href = href;
-    }
-  };
 
   const navItems = [
     {
@@ -106,7 +79,6 @@ export function SideNav({ className, onClose, showCloseButton }: SideNavProps) {
             <Link
               key={item.href}
               href={item.href}
-              onClick={(e) => handleNavClick(item.href, item.label, e)}
               className={cn(
                 "flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                 item.active
